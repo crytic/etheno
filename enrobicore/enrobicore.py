@@ -5,6 +5,7 @@ VERSION_NAME="ToB/v%s/source/Enrobicore" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
 
+import sha3
 from threading import Thread
 
 from flask import Flask, g, jsonify, request, abort
@@ -24,6 +25,11 @@ PYETHAPP_DEFAULT_RPC_PORT = 4000
 def to_account_address(raw_address):
     addr = "%x" % raw_address
     return "0x%s%s" % ('0'*(40 - len(addr)), addr)
+
+def decode_hex(data):
+    if data[:2] == '0x':
+        data = data[2:]
+    return data.decode('hex')
 
 MANTICORE = ManticoreEVM()
 ACCOUNTS = None
@@ -92,11 +98,14 @@ class Enrobicore(MethodView):
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None):
         if gasPrice is None:
             gasPrice = self.default_gas_price
+        else:
+            gasPrice = decode_hex(gasPrice)
         if to is None or to == 0:
             # we are creating a new contract
+            if data is not None:
+                data = decode_hex(data)
             tr = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
-            #print tr
-            return tr
+            return 0
         else:
             args = {
                 'caller' : from_addr,
