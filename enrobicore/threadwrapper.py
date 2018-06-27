@@ -8,15 +8,18 @@ def is_main_thread():
 
 class MainThreadController(object):
     def __init__(self):
+        if not is_main_thread():
+            raise Exception("A controller can only be created from the main thread")
         self._main_wake_up = Condition()
         self._main_wake_up.acquire()
         self._obj = None
         self._caller_wake_up = None
         self._args = None
+        self._kwargs = None
         self._return = None
-    def invoke(self, obj, *args):
+    def invoke(self, obj, *args, **kwargs):
         if is_main_thread():
-            raise Exception("invoke cannot be called by the main thread!")
+            return obj.__call__(*args, **kwargs)
         released = False
         self._main_wake_up.acquire()
         try:
@@ -24,6 +27,7 @@ class MainThreadController(object):
             with self._caller_wake_up:
                 self._obj = obj
                 self._args = args
+                self._kwargs = kwargs
                 # tell the main thread to wake up
                 self._main_wake_up.notify_all()
                 self._main_wake_up.release()
@@ -36,6 +40,7 @@ class MainThreadController(object):
         finally:
             self._obj = None
             self._args = None
+            self._kwargs = None
             self._caller_wake_up = None
             self._return = None
             if not released:
@@ -43,21 +48,22 @@ class MainThreadController(object):
     def run(self):
         if not is_main_thread():
             raise Exception("run can only be called from the main thread!")
-        self._main_wake_up.wait()
-        if self._caller_wake_up is None:
-            return
-        with self._caller_wake_up:
-            self._return = self._obj.__call__(*self._args)
-            self._caller_wake_up.notify_all()
-            # wait for the calling thread to confirm it received the result
-            self._caller_wake_up.wait()
+        while True:
+            self._main_wake_up.wait()
+            if self._caller_wake_up is None:
+                return
+            with self._caller_wake_up:
+                self._return = self._obj.__call__(*self._args, **self._kwargs)
+                self._caller_wake_up.notify_all()
+                # wait for the calling thread to confirm it received the result
+                self._caller_wake_up.wait()
 
 class MainThreadWrapper(object):
     def __init__(self, mainobj, controller):
         self._main = mainobj
         self._controller = controller
-    def __call__(self, *args):
-        ret = self._controller.invoke(self._main, *args)
+    def __call__(self, *args, **kwargs):
+        ret = self._controller.invoke(self._main, *args, **kwargs)
         if ret == self._main:
             return MainThreadWrapper(ret, self._controller)
         else:
