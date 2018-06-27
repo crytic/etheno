@@ -26,18 +26,18 @@ def to_account_address(raw_address):
     return "0x%s%s" % ('0'*(40 - len(addr)), addr)
 
 MANTICORE = ManticoreEVM()
+ACCOUNTS = None
 _CONTROLLER = threadwrapper.MainThreadController()
 
 class Enrobicore(MethodView):
-    def __init__(self, manticore = None, accounts = 10, default_balance_ether = 100.0, default_gas_price = 20000000000):
+    def __init__(self, manticore = None, default_gas_price = 20000000000):
         if manticore is None:
             manticore = MANTICORE
         self.manticore = threadwrapper.MainThreadWrapper(manticore, _CONTROLLER)
-        self.accounts = [self.manticore.create_account(balance=int(default_balance_ether * 10**18)) for i in range(accounts)]
         self.default_gas_price = default_gas_price
 
     def get_account_index(self, address):
-        for i, addr in enumerate(self.accounts):
+        for i, addr in enumerate(ACCOUNTS):
             if addr == address:
                 return i
         return None
@@ -63,7 +63,7 @@ class Enrobicore(MethodView):
                 kwargs = params[0]
                 # handle Python reserved words:
                 if 'from' in kwargs:
-                    kwargs['from_addr'] = kwargs['from']
+                    kwargs['from_addr'] = int(kwargs['from'], 16)
                     del kwargs['from']
                 print kwargs
             else:
@@ -87,7 +87,7 @@ class Enrobicore(MethodView):
         return '1'
 
     def eth_accounts(self):
-        return map(to_account_address, self.accounts)
+        return map(to_account_address, ACCOUNTS)
 
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None):
         if gasPrice is None:
@@ -95,10 +95,11 @@ class Enrobicore(MethodView):
         if to is None or to == 0:
             # we are creating a new contract
             tr = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
-            print tr
+            #print tr
+            return tr
         else:
             args = {
-                'caller' : self.get_account_index(from_addr),
+                'caller' : from_addr,
                 data : data
             }
             if to is not None:
@@ -111,7 +112,10 @@ class Enrobicore(MethodView):
                 #abort(500)
         return tr
 
-    def run(self, debug = True, run_publicly = False):
+    def run(self, debug = True, run_publicly = False, accounts = 10, default_balance_ether = 100.0):
+        global ACCOUNTS
+        if ACCOUNTS is None:
+            ACCOUNTS = [self.manticore.create_account(balance=int(default_balance_ether * 10**18)) for i in range(accounts)]
         # Manticore only works in the main thread, so use a threadsafe wrapper:
         def flask_thread():
             if run_publicly:
@@ -127,7 +131,7 @@ class Enrobicore(MethodView):
         print ''
         print 'Available Accounts'
         print '=================='
-        for i, addr in enumerate(self.accounts):
+        for i, addr in enumerate(ACCOUNTS):
             print "(%d) %s" % (i, to_account_address(addr))
         print ''
 
