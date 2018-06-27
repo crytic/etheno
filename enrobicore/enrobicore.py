@@ -35,6 +35,15 @@ MANTICORE = ManticoreEVM()
 ACCOUNTS = None
 _CONTROLLER = threadwrapper.MainThreadController()
 
+@app.route('/shutdown')
+def _enrobicore_shutdown():
+    # shut down the Flask server
+    shutdown = request.environ.get('werkzeug.server.shutdown')
+    if shutdown is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    shutdown()
+    return ''
+
 class Enrobicore(MethodView):
     def __init__(self, manticore = None, default_gas_price = 20000000000):
         if manticore is None:
@@ -47,7 +56,7 @@ class Enrobicore(MethodView):
             if addr == address:
                 return i
         return None
-        
+
     def post(self):
         data = request.get_json()
         if 'jsonrpc' not in data or 'method' not in data:
@@ -121,6 +130,11 @@ class Enrobicore(MethodView):
                 #abort(500)
         return tr
 
+    def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
+        # Send a web request to the server to shut down:
+        import urllib2
+        urllib2.urlopen("http://127.0.0.1:%d/shutdown" % port)
+
     def run(self, debug = True, run_publicly = False, accounts = 10, default_balance_ether = 100.0):
         global ACCOUNTS
         if ACCOUNTS is None:
@@ -145,6 +159,7 @@ class Enrobicore(MethodView):
         print ''
 
         _CONTROLLER.run()
+        self.shutdown()
         thread.join()
 
 if __name__ == '__main__':

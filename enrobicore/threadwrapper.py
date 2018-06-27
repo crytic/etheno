@@ -17,6 +17,7 @@ class MainThreadController(object):
         self._args = None
         self._kwargs = None
         self._return = None
+        self._quit = False
     def invoke(self, obj, *args, **kwargs):
         if is_main_thread():
             return obj.__call__(*args, **kwargs)
@@ -48,10 +49,17 @@ class MainThreadController(object):
     def run(self):
         if not is_main_thread():
             raise Exception("run can only be called from the main thread!")
+        import signal
+        def signal_handler(signal, frame):
+            self._quit = True
+        signal.signal(signal.SIGINT, signal_handler)
         while True:
-            self._main_wake_up.wait()
-            if self._caller_wake_up is None:
+            self._main_wake_up.wait(1.0)
+            if self._quit:
                 return
+            elif self._caller_wake_up is None:
+                # we timed out
+                continue
             with self._caller_wake_up:
                 self._return = self._obj.__call__(*self._args, **self._kwargs)
                 self._caller_wake_up.notify_all()
