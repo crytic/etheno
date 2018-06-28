@@ -49,7 +49,7 @@ class Filter(object):
     def __init__(self):
         self.logs = []
 
-class BlockFilter(object):
+class BlockFilter(Filter):
     pass
 
 class Enrobicore(object):
@@ -80,8 +80,8 @@ class Enrobicore(object):
                 return_type = None
                 converted_args = []
                 for i, arg in enumerate(args):
-                    if signature[i] in types:
-                        converted_args.append(types[signature[i]](arg))
+                    if signature[i + 1] in types:
+                        converted_args.append(types[signature[i + 1]](arg))
                     else:
                         converted_args.append(arg)
                 args = tuple(converted_args)
@@ -148,6 +148,17 @@ class Enrobicore(object):
         self.filters.append(BlockFilter())
         return len(self.filters) # 1 index filter IDs
 
+    @_jsonrpc(filter_id = QUANTITY)
+    def eth_getFilterChanges(self, filter_id):
+        # filter_id is 1-indexed:
+        filter_id -= 1
+        if filter_id >= 0 and filter_id < len(self.filters):
+            ret = self.filters[filter_id].logs
+            self.filters[filter_id].logs = []
+        else:
+            ret = []
+        return ret
+    
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
         # Send a web request to the server to shut down:
         import urllib2
