@@ -42,9 +42,15 @@ def _enrobicore_shutdown():
     shutdown()
     return ''
 
+class Filter(object):
+    def __init__(self):
+        self.logs = []
+
+class BlockFilter(object):
+    pass
+
 class Enrobicore(object):
     def __init__(self, manticore = None, accounts = 10, default_balance_ether = 100.0, default_gas_price = 20000000000):
-        print "ENROBICORE!"
         if manticore is None:
             self.manticore = ManticoreEVM()
         else:
@@ -52,6 +58,7 @@ class Enrobicore(object):
         self.accounts = [self.manticore.create_account(balance=int(default_balance_ether * 10**18)) for i in range(accounts)]
         self.manticore = threadwrapper.MainThreadWrapper(self.manticore, _CONTROLLER)
         self.default_gas_price = default_gas_price
+        self.filters = []
 
     def get_account_index(self, address):
         for i, addr in enumerate(self.accounts):
@@ -93,6 +100,10 @@ class Enrobicore(object):
                 #abort(500)
         return tr
 
+    def eth_newBlockFilter(self):
+        self.filters.append(BlockFilter())
+        return hex(len(self.filters)) # 1 index filter IDs
+
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
         # Send a web request to the server to shut down:
         import urllib2
@@ -127,6 +138,12 @@ ENROBICORE = Enrobicore()
 class EnrobicoreView(MethodView):
     def post(self):
         data = request.get_json()
+        if isinstance(data, list):
+            if len(data) == 1:
+                data = data[0]
+            else:
+                print "Unexpected POST data: %s" % data
+                abort(400)
         if 'jsonrpc' not in data or 'method' not in data:
             abort(400)
         try:
