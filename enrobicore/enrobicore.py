@@ -53,14 +53,14 @@ class BlockFilter(object):
     pass
 
 class Enrobicore(object):
-    def Int(to_convert):
+    def QUANTITY(to_convert):
         if to_convert is None:
             return None
         elif to_convert[:2] == '0x':
             return int(to_convert[2:], 16)
         else:
             return int(to_convert)
-    def Hex(to_convert):
+    def DATA(to_convert):
         return decode_hex(to_convert)
 
     def __init__(self, manticore = None, accounts = 10, default_balance_ether = 100.0, default_gas_price = 20000000000):
@@ -77,6 +77,7 @@ class Enrobicore(object):
         def decorator(function):
             signature = inspect.getargspec(function).args
             def wrapper(self, *args, **kwargs):
+                return_type = None
                 converted_args = []
                 for i, arg in enumerate(args):
                     if signature[i] in types:
@@ -86,9 +87,22 @@ class Enrobicore(object):
                 args = tuple(converted_args)
                 kwargs = dict(kwargs)
                 for arg_name, conversion in types.iteritems():
-                    if arg_name in kwargs:
+                    if arg_name == 'RETURN':
+                        return_type = conversion
+                    elif arg_name in kwargs:
                         kwargs[arg_name] = conversion(kwargs[arg_name])
-                return function(self, *args, **kwargs)
+                ret = function(self, *args, **kwargs)
+                if return_type is None:
+                    return ret
+                elif return_type.__name__ == 'DATA':
+                    if isinstance(ret, int):
+                        return hex(ret)
+                    else:
+                        return "0x%s" % ret.encode('hex')
+                elif return_type.__name__ == 'QUANTITY':
+                    return hex(ret)
+                else:
+                    return ret
             return wrapper
         return decorator
         
@@ -106,7 +120,7 @@ class Enrobicore(object):
     def eth_accounts(self):
         return map(to_account_address, self.accounts)
 
-    @_jsonrpc(gas = Int, gasPrice = Int, value = Int, data = Hex, nonce = Int)
+    @_jsonrpc(from_addr = QUANTITY, to = QUANTITY, gas = QUANTITY, gasPrice = QUANTITY, value = QUANTITY, data = DATA, nonce = QUANTITY, RETURN = DATA)
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None):
         if gasPrice is None:
             gasPrice = self.default_gas_price
@@ -129,9 +143,10 @@ class Enrobicore(object):
                 #abort(500)
         return tr
 
+    @_jsonrpc(RETURN = QUANTITY)
     def eth_newBlockFilter(self):
         self.filters.append(BlockFilter())
-        return hex(len(self.filters)) # 1 index filter IDs
+        return len(self.filters) # 1 index filter IDs
 
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
         # Send a web request to the server to shut down:
@@ -192,7 +207,7 @@ class EnrobicoreView(MethodView):
                 kwargs = params[0]
                 # handle Python reserved words:
                 if 'from' in kwargs:
-                    kwargs['from_addr'] = int(kwargs['from'], 16)
+                    kwargs['from_addr'] = kwargs['from']
                     del kwargs['from']
             else:
                 args = data['params']
