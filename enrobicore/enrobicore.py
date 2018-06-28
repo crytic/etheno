@@ -31,8 +31,6 @@ def decode_hex(data):
         data = data[2:]
     return data.decode('hex')
 
-MANTICORE = ManticoreEVM()
-ACCOUNTS = None
 _CONTROLLER = threadwrapper.MainThreadController()
 
 @app.route('/shutdown')
@@ -44,57 +42,22 @@ def _enrobicore_shutdown():
     shutdown()
     return ''
 
-class Enrobicore(MethodView):
-    def __init__(self, manticore = None, default_gas_price = 20000000000):
+class Enrobicore(object):
+    def __init__(self, manticore = None, accounts = 10, default_balance_ether = 100.0, default_gas_price = 20000000000):
+        print "ENROBICORE!"
         if manticore is None:
-            manticore = MANTICORE
-        self.manticore = threadwrapper.MainThreadWrapper(manticore, _CONTROLLER)
+            self.manticore = ManticoreEVM()
+        else:
+            self.manticore = manticore
+        self.accounts = [self.manticore.create_account(balance=int(default_balance_ether * 10**18)) for i in range(accounts)]
+        self.manticore = threadwrapper.MainThreadWrapper(self.manticore, _CONTROLLER)
         self.default_gas_price = default_gas_price
 
     def get_account_index(self, address):
-        for i, addr in enumerate(ACCOUNTS):
+        for i, addr in enumerate(self.accounts):
             if addr == address:
                 return i
         return None
-
-    def post(self):
-        data = request.get_json()
-        if 'jsonrpc' not in data or 'method' not in data:
-            abort(400)
-        try:
-            jsonrpc_version = float(data['jsonrpc'])
-        except ValueError:
-            abort(400)
-        if jsonrpc_version < 2.0:
-            abort(426)
-        elif jsonrpc_version > 2.0:
-            print "Warning: Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version
-        method = data['method']
-        args = ()
-        kwargs = {}
-        if 'params' in data:
-            params = data['params']
-            if len(params) == 1 and isinstance(params[0], dict):
-                kwargs = params[0]
-                # handle Python reserved words:
-                if 'from' in kwargs:
-                    kwargs['from_addr'] = int(kwargs['from'], 16)
-                    del kwargs['from']
-                print kwargs
-            else:
-                args = data['params']
-        if not hasattr(self, method):
-            print "Unimplemented JSONRPC method: %s" % method
-            abort(400)
-        print method
-        result = getattr(self, method)(*args, **kwargs)
-        ret = {
-            'jsonrpc' : data['jsonrpc'],
-            'result' : result
-        }
-        if 'id' in data:
-            ret['id'] = data['id']
-        return jsonify(ret)
 
     def net_version(self):
         # For now, masquerade as the Eth mainnet
@@ -102,7 +65,7 @@ class Enrobicore(MethodView):
         return '1'
 
     def eth_accounts(self):
-        return map(to_account_address, ACCOUNTS)
+        return map(to_account_address, self.accounts)
 
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None):
         if gasPrice is None:
@@ -135,10 +98,7 @@ class Enrobicore(MethodView):
         import urllib2
         urllib2.urlopen("http://127.0.0.1:%d/shutdown" % port)
 
-    def run(self, debug = True, run_publicly = False, accounts = 10, default_balance_ether = 100.0):
-        global ACCOUNTS
-        if ACCOUNTS is None:
-            ACCOUNTS = [self.manticore.create_account(balance=int(default_balance_ether * 10**18)) for i in range(accounts)]
+    def run(self, debug = True, run_publicly = False):
         # Manticore only works in the main thread, so use a threadsafe wrapper:
         def flask_thread():
             if run_publicly:
@@ -154,7 +114,7 @@ class Enrobicore(MethodView):
         print ''
         print 'Available Accounts'
         print '=================='
-        for i, addr in enumerate(ACCOUNTS):
+        for i, addr in enumerate(self.accounts):
             print "(%d) %s" % (i, to_account_address(addr))
         print ''
 
@@ -162,7 +122,49 @@ class Enrobicore(MethodView):
         self.shutdown()
         thread.join()
 
+ENROBICORE = Enrobicore()
+
+class EnrobicoreView(MethodView):
+    def post(self):
+        data = request.get_json()
+        if 'jsonrpc' not in data or 'method' not in data:
+            abort(400)
+        try:
+            jsonrpc_version = float(data['jsonrpc'])
+        except ValueError:
+            abort(400)
+        if jsonrpc_version < 2.0:
+            abort(426)
+        elif jsonrpc_version > 2.0:
+            print "Warning: Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version
+        method = data['method']
+        args = ()
+        kwargs = {}
+        if 'params' in data:
+            params = data['params']
+            if len(params) == 1 and isinstance(params[0], dict):
+                kwargs = params[0]
+                # handle Python reserved words:
+                if 'from' in kwargs:
+                    kwargs['from_addr'] = int(kwargs['from'], 16)
+                    del kwargs['from']
+            else:
+                args = data['params']
+        if not hasattr(ENROBICORE, method):
+            params = ', '.join(args + map(lambda kv : "%s = %s" % kv, kwargs.iteritems()))
+            print "Unimplemented JSONRPC method: %s(%s)" % (method, params)
+            abort(400)
+        print method
+        result = getattr(ENROBICORE, method)(*args, **kwargs)
+        ret = {
+            'jsonrpc' : data['jsonrpc'],
+            'result' : result
+        }
+        if 'id' in data:
+            ret['id'] = data['id']
+        return jsonify(ret)
+
 if __name__ == '__main__':
-    enrobicore = Enrobicore()
+    enrobicore = EnrobicoreView()
     app.add_url_rule('/', view_func=enrobicore.as_view('enrobicore'))
-    enrobicore.run()
+    ENROBICORE.run()
