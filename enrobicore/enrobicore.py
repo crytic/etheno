@@ -5,6 +5,7 @@ VERSION_NAME="ToB/v%s/source/Enrobicore" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
 
+import inspect
 import sha3
 from threading import Thread
 
@@ -27,6 +28,8 @@ def to_account_address(raw_address):
     return "0x%s%s" % ('0'*(40 - len(addr)), addr)
 
 def decode_hex(data):
+    if data is None:
+        return None
     if data[:2] == '0x':
         data = data[2:]
     return data.decode('hex')
@@ -50,6 +53,16 @@ class BlockFilter(object):
     pass
 
 class Enrobicore(object):
+    def Int(to_convert):
+        if to_convert is None:
+            return None
+        elif to_convert[:2] == '0x':
+            return int(to_convert[2:], 16)
+        else:
+            return int(to_convert)
+    def Hex(to_convert):
+        return decode_hex(to_convert)
+
     def __init__(self, manticore = None, accounts = 10, default_balance_ether = 100.0, default_gas_price = 20000000000):
         if manticore is None:
             self.manticore = ManticoreEVM()
@@ -60,6 +73,25 @@ class Enrobicore(object):
         self.default_gas_price = default_gas_price
         self.filters = []
 
+    def _jsonrpc(**types):
+        def decorator(function):
+            signature = inspect.getargspec(function).args
+            def wrapper(self, *args, **kwargs):
+                converted_args = []
+                for i, arg in enumerate(args):
+                    if signature[i] in types:
+                        converted_args.append(types[signature[i]](arg))
+                    else:
+                        converted_args.append(arg)
+                args = tuple(converted_args)
+                kwargs = dict(kwargs)
+                for arg_name, conversion in types.iteritems():
+                    if arg_name in kwargs:
+                        kwargs[arg_name] = conversion(kwargs[arg_name])
+                return function(self, *args, **kwargs)
+            return wrapper
+        return decorator
+        
     def get_account_index(self, address):
         for i, addr in enumerate(self.accounts):
             if addr == address:
@@ -74,15 +106,12 @@ class Enrobicore(object):
     def eth_accounts(self):
         return map(to_account_address, self.accounts)
 
+    @_jsonrpc(gas = Int, gasPrice = Int, value = Int, data = Hex, nonce = Int)
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None):
         if gasPrice is None:
             gasPrice = self.default_gas_price
-        else:
-            gasPrice = decode_hex(gasPrice)
         if to is None or to == 0:
             # we are creating a new contract
-            if data is not None:
-                data = decode_hex(data)
             tr = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
             return 0
         else:
