@@ -35,6 +35,17 @@ def decode_hex(data):
         data = data[2:]
     return data.decode('hex')
 
+def encode_hex(data):
+    if data is None:
+        return None
+    elif isinstance(data, int) or isinstance(data, long):
+        encoded = hex(data)
+        if encoded[-1] == 'L':
+            encoded = encoded[:-1]
+        return encoded
+    else:
+        return "0x%s" % data.encode('hex')
+
 _CONTROLLER = threadwrapper.MainThreadController()
 
 @app.route('/shutdown')
@@ -110,12 +121,9 @@ class Enrobicore(object):
                 if return_type is None:
                     return ret
                 elif return_type.__name__ == 'DATA':
-                    if isinstance(ret, int):
-                        return hex(ret)
-                    else:
-                        return "0x%s" % ret.encode('hex')
+                    return encode_hex(ret)
                 elif return_type.__name__ == 'QUANTITY':
-                    return hex(ret)
+                    return encode_hex(ret)
                 else:
                     return ret
             return wrapper
@@ -157,7 +165,7 @@ class Enrobicore(object):
                 #abort(500)
         # Register the transaction in a new block:
         new_block = self.manticore._main.world.block_hash(force_recent = False)
-        self.logs.append(BlockCreated(hex(new_block)))
+        self.logs.append(BlockCreated(encode_hex(new_block)))
         return 0
 
     @_jsonrpc(RETURN = QUANTITY)
