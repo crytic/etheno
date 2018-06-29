@@ -13,6 +13,7 @@ from flask import Flask, g, jsonify, request, abort
 from flask.views import MethodView
 
 from manticore.ethereum import ManticoreEVM
+from manticore.core.smtlib import visitors
 
 import threadwrapper
 
@@ -45,12 +46,25 @@ def _enrobicore_shutdown():
     shutdown()
     return ''
 
+class Log(object):
+    def __init__(self, raw_log):
+        self.log = raw_log
+    def __str__(self):
+        return self.log
+    __repr__ = __str__
+
+class BlockCreated(Log):
+    pass
+
 class Filter(object):
-    def __init__(self):
-        self.logs = []
+    def __init__(self, log_type):
+        self.log_type = log_type
+    def matches(self, log):
+        return isinstance(log, self.log_type)
 
 class BlockFilter(Filter):
-    pass
+    def __init__(self):
+        super(BlockFilter, self).__init__(BlockCreated)
 
 class Enrobicore(object):
     def QUANTITY(to_convert):
@@ -71,6 +85,7 @@ class Enrobicore(object):
         self.accounts = [self.manticore.create_account(balance=int(default_balance_ether * 10**18)) for i in range(accounts)]
         self.manticore = threadwrapper.MainThreadWrapper(self.manticore, _CONTROLLER)
         self.default_gas_price = default_gas_price
+        self.logs = []
         self.filters = []
 
     def _jsonrpc(**types):
@@ -127,7 +142,6 @@ class Enrobicore(object):
         if to is None or to == 0:
             # we are creating a new contract
             tr = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
-            return 0
         else:
             args = {
                 'caller' : from_addr,
@@ -141,7 +155,10 @@ class Enrobicore(object):
                 #print from_addr, to, gas, gasPrice, value, data
                 print tr
                 #abort(500)
-        return tr
+        # Register the transaction in a new block:
+        new_block = self.manticore._main.world.block_hash(force_recent = False)
+        self.logs.append(BlockCreated(hex(new_block)))
+        return 0
 
     @_jsonrpc(RETURN = QUANTITY)
     def eth_newBlockFilter(self):
@@ -153,12 +170,18 @@ class Enrobicore(object):
         # filter_id is 1-indexed:
         filter_id -= 1
         if filter_id >= 0 and filter_id < len(self.filters):
-            ret = self.filters[filter_id].logs
-            self.filters[filter_id].logs = []
+            f = self.filters[filter_id]
+            ret = []
+            num_removed = 0
+            for i, log in enumerate(tuple(self.logs)):
+                if f.matches(log):
+                    del self.logs[i - num_removed]
+                    num_removed += 1
+                    ret.append(log.log)
         else:
             ret = []
         return ret
-    
+
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
         # Send a web request to the server to shut down:
         import urllib2
