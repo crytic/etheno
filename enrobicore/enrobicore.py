@@ -155,8 +155,10 @@ ENROBICORE = Enrobicore()
 class EnrobicoreView(MethodView):
     def post(self):
         data = request.get_json()
+        was_list = False
         if isinstance(data, list):
             if len(data) == 1:
+                was_list = True
                 data = data[0]
             else:
                 print "Unexpected POST data: %s" % data
@@ -190,7 +192,10 @@ class EnrobicoreView(MethodView):
             #abort(400)
             print "Enrobing JSON RPC call to %s" % method
             getattr(ENROBICORE, method)(*args, **kwargs)
-        return jsonify(ENROBICORE.json_rpc_client.post(data))
+        ret = ENROBICORE.json_rpc_client.post(data)
+        if was_list:
+            ret = [ret]
+        return jsonify(ret)
 
 if __name__ == '__main__':
     enrobicore = EnrobicoreView()

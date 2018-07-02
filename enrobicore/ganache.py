@@ -23,7 +23,7 @@ class Ganache(object):
         self.rpc_id = 0
         if args is None:
             args = []
-        args = ['/usr/bin/env', 'ganache-cli', '-p', str(port)] + args
+        args = ['/usr/bin/env', 'ganache-cli', '-d', '-p', str(port)] + args
         self.ganache = subprocess.Popen(args)
         atexit.register(Ganache.shutdown.__get__(self, Ganache))
         # wait until Ganache has started listening:
