@@ -15,6 +15,7 @@ from flask.views import MethodView
 from manticore.ethereum import ManticoreEVM
 from manticore.core.smtlib import visitors
 
+import ganache
 import threadwrapper
 
 app = Flask(__name__)
@@ -88,12 +89,21 @@ class Enrobicore(object):
     def DATA(to_convert):
         return decode_hex(to_convert)
 
-    def __init__(self, manticore = None, accounts = 10, default_balance_ether = 100.0, default_gas_price = 20000000000):
+    def __init__(self, manticore = None, json_rpc_client = None, accounts = 10, default_balance_ether = 100.0, default_gas_price = 20000000000):
         if manticore is None:
             self.manticore = ManticoreEVM()
         else:
             self.manticore = manticore
-        self.accounts = [self.manticore.create_account(balance=int(default_balance_ether * 10**18)) for i in range(accounts)]
+        if json_rpc_client is None:
+            json_rpc_client = ganache.Ganache(args = ['-a', str(accounts), '-g', str(default_gas_price), '-e', str(default_balance_ether)], port = ganache.find_open_port(GETH_DEFAULT_RPC_PORT + 1))
+        self.accounts = map(lambda a : int(a, 16), json_rpc_client.post({
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'eth_accounts'
+        })['result'])
+        assert len(self.accounts) == accounts
+        for account in self.accounts:
+            self.manticore.create_account(balance=int(default_balance_ether * 10**18), address=account)
         self.manticore = threadwrapper.MainThreadWrapper(self.manticore, _CONTROLLER)
         self.default_gas_price = default_gas_price
         self.logs = []
