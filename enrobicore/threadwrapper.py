@@ -72,7 +72,7 @@ class MainThreadWrapper(object):
         self._controller = controller
     def __call__(self, *args, **kwargs):
         ret = self._controller.invoke(self._main, *args, **kwargs)
-        if ret == self._main:
+        if id(self._main) == id(ret):
             return MainThreadWrapper(ret, self._controller)
         else:
             return ret

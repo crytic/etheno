@@ -149,7 +149,12 @@ class Enrobicore(object):
             gasPrice = self.default_gas_price
         if to is None or to == 0:
             # we are creating a new contract
-            tr = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
+            contract_address = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
+            print ""
+            #print self.manticore.world.last_transaction
+            print "  Contract created: %s" % contract_address
+            print "  Block number: %s" % self.manticore.world.block_number()
+            print ""
         else:
             args = {
                 'caller' : from_addr,
@@ -164,7 +169,7 @@ class Enrobicore(object):
                 print tr
                 #abort(500)
         # Register the transaction in a new block:
-        new_block = self.manticore._main.world.block_hash(force_recent = False)
+        new_block = self.manticore.world.block_hash(force_recent = False)
         self.logs.append(BlockCreated(encode_hex(new_block)))
         return 0
 
