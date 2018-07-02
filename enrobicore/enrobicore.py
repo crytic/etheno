@@ -58,26 +58,6 @@ def _enrobicore_shutdown():
     shutdown()
     return ''
 
-class Log(object):
-    def __init__(self, raw_log):
-        self.log = raw_log
-    def __str__(self):
-        return self.log
-    __repr__ = __str__
-
-class BlockCreated(Log):
-    pass
-
-class Filter(object):
-    def __init__(self, log_type):
-        self.log_type = log_type
-    def matches(self, log):
-        return isinstance(log, self.log_type)
-
-class BlockFilter(Filter):
-    def __init__(self):
-        super(BlockFilter, self).__init__(BlockCreated)
-
 class Enrobicore(object):
     def QUANTITY(to_convert):
         if to_convert is None:
@@ -96,6 +76,7 @@ class Enrobicore(object):
             self.manticore = manticore
         if json_rpc_client is None:
             json_rpc_client = ganache.Ganache(args = ['-a', str(accounts), '-g', str(default_gas_price), '-e', str(default_balance_ether)], port = ganache.find_open_port(GETH_DEFAULT_RPC_PORT + 1))
+        self.json_rpc_client = json_rpc_client
         self.accounts = map(lambda a : int(a, 16), json_rpc_client.post({
             'id': 1,
             'jsonrpc': '2.0',
@@ -106,13 +87,12 @@ class Enrobicore(object):
             self.manticore.create_account(balance=int(default_balance_ether * 10**18), address=account)
         self.manticore = threadwrapper.MainThreadWrapper(self.manticore, _CONTROLLER)
         self.default_gas_price = default_gas_price
-        self.logs = []
-        self.filters = []
 
     def _jsonrpc(**types):
         def decorator(function):
             signature = inspect.getargspec(function).args
             def wrapper(self, *args, **kwargs):
+                rpc_kwargs = dict(kwargs)
                 return_type = None
                 converted_args = []
                 for i, arg in enumerate(args):
@@ -120,38 +100,17 @@ class Enrobicore(object):
                         converted_args.append(types[signature[i + 1]](arg))
                     else:
                         converted_args.append(arg)
+                    rpc_kwargs[signature[i + 1]] = arg
                 args = tuple(converted_args)
                 kwargs = dict(kwargs)
                 for arg_name, conversion in types.iteritems():
                     if arg_name == 'RETURN':
                         return_type = conversion
                     elif arg_name in kwargs:
-                        kwargs[arg_name] = conversion(kwargs[arg_name])
-                ret = function(self, *args, **kwargs)
-                if return_type is None:
-                    return ret
-                elif return_type.__name__ == 'DATA':
-                    return encode_hex(ret)
-                elif return_type.__name__ == 'QUANTITY':
-                    return encode_hex(ret)
-                else:
-                    return ret
+                        kwargs[arg_name] = conversion(kwargs[arg_name])              
+                return function(self, *args, **kwargs)
             return wrapper
         return decorator
-        
-    def get_account_index(self, address):
-        for i, addr in enumerate(self.accounts):
-            if addr == address:
-                return i
-        return None
-
-    def net_version(self):
-        # For now, masquerade as the Eth mainnet
-        # TODO: Figure out what Manticore uses
-        return '1'
-
-    def eth_accounts(self):
-        return map(to_account_address, self.accounts)
 
     @_jsonrpc(from_addr = QUANTITY, to = QUANTITY, gas = QUANTITY, gasPrice = QUANTITY, value = QUANTITY, data = DATA, nonce = QUANTITY, RETURN = DATA)
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None):
@@ -160,50 +119,13 @@ class Enrobicore(object):
         if to is None or to == 0:
             # we are creating a new contract
             contract_address = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
-            print ""
-            #print self.manticore.world.last_transaction
-            print "  Contract created: %s" % contract_address
-            print "  Block number: %s" % self.manticore.world.block_number()
-            print ""
+            #print ""
+            #print "  Contract created: %s" % contract_address
+            #print "  Block number: %s" % self.manticore.world.block_number()
+            #print ""
         else:
-            args = {
-                'caller' : from_addr,
-                data : data
-            }
-            if to is not None:
-                args['address'] = self.get_account_index(to)
-                if value is not None:
-                    args['value'] = value
-                tr = self.manticore.transaction(**args)
-                #print from_addr, to, gas, gasPrice, value, data
-                print tr
-                #abort(500)
-        # Register the transaction in a new block:
-        new_block = self.manticore.world.block_hash(force_recent = False)
-        self.logs.append(BlockCreated(encode_hex(new_block)))
-        return 0
-
-    @_jsonrpc(RETURN = QUANTITY)
-    def eth_newBlockFilter(self):
-        self.filters.append(BlockFilter())
-        return len(self.filters) # 1 index filter IDs
-
-    @_jsonrpc(filter_id = QUANTITY)
-    def eth_getFilterChanges(self, filter_id):
-        # filter_id is 1-indexed:
-        filter_id -= 1
-        if filter_id >= 0 and filter_id < len(self.filters):
-            f = self.filters[filter_id]
-            ret = []
-            num_removed = 0
-            for i, log in enumerate(tuple(self.logs)):
-                if f.matches(log):
-                    del self.logs[i - num_removed]
-                    num_removed += 1
-                    ret.append(log.log)
-        else:
-            ret = []
-        return ret
+            raise Exception("TODO: Implement non-contract-creation transactions")
+            abort(500)
 
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
         # Send a web request to the server to shut down:
@@ -223,12 +145,6 @@ class Enrobicore(object):
         thread.start()
 
         print "Enrobicore v%s" % VERSION
-        print ''
-        print 'Available Accounts'
-        print '=================='
-        for i, addr in enumerate(self.accounts):
-            print "(%d) %s" % (i, to_account_address(addr))
-        print ''
 
         _CONTROLLER.run()
         self.shutdown()
@@ -261,26 +177,20 @@ class EnrobicoreView(MethodView):
         if 'params' in data:
             params = data['params']
             if len(params) == 1 and isinstance(params[0], dict):
-                kwargs = params[0]
+                kwargs = dict(params[0])
                 # handle Python reserved words:
                 if 'from' in kwargs:
                     kwargs['from_addr'] = kwargs['from']
                     del kwargs['from']
             else:
                 args = data['params']
-        if not hasattr(ENROBICORE, method):
-            params = ', '.join(args + map(lambda kv : "%s = %s" % kv, kwargs.iteritems()))
-            print "Unimplemented JSONRPC method: %s(%s)" % (method, params)
-            abort(400)
-        print method
-        result = getattr(ENROBICORE, method)(*args, **kwargs)
-        ret = {
-            'jsonrpc' : data['jsonrpc'],
-            'result' : result
-        }
-        if 'id' in data:
-            ret['id'] = data['id']
-        return jsonify(ret)
+        if hasattr(ENROBICORE, method):
+            #params = ', '.join(args + map(lambda kv : "%s = %s" % kv, kwargs.iteritems()))
+            #print "Unimplemented JSONRPC method: %s(%s)" % (method, params)
+            #abort(400)
+            print "Enrobing JSON RPC call to %s" % method
+            getattr(ENROBICORE, method)(*args, **kwargs)
+        return jsonify(ENROBICORE.json_rpc_client.post(data))
 
 if __name__ == '__main__':
     enrobicore = EnrobicoreView()

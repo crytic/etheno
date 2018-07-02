@@ -20,6 +20,7 @@ def find_open_port(starting_port = 1025):
 class Ganache(object):
     def __init__(self, args = None, port = 8546):
         self.port = port
+        self.rpc_id = 0
         if args is None:
             args = []
         args = ['/usr/bin/env', 'ganache-cli', '-p', str(port)] + args
@@ -29,7 +30,17 @@ class Ganache(object):
         while is_port_free(self.port):
             time.sleep(0.25)
     def post(self, data):
-        return json.loads(urllib2.urlopen("http://127.0.0.1:%d/" % self.port, data = json.dumps(data)).read())
+        data = dict(data)
+        self.rpc_id += 1
+        rpc_id = self.rpc_id
+        return_id = None
+        if 'id' in data:
+            return_id = data['id']
+            data['id'] = self.rpc_id
+        ret = json.loads(urllib2.urlopen("http://127.0.0.1:%d/" % self.port, data = json.dumps(data)).read())
+        if return_id is not None and 'id' in ret:
+            ret['id'] = return_id
+        return ret
     def shutdown(self):
         if self.ganache is not None:
             ganache = self.ganache
