@@ -113,19 +113,28 @@ class Enrobicore(object):
         return decorator
 
     @_jsonrpc(from_addr = QUANTITY, to = QUANTITY, gas = QUANTITY, gasPrice = QUANTITY, value = QUANTITY, data = DATA, nonce = QUANTITY, RETURN = DATA)
-    def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None):
+    def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None, rpc_client_result = None):
         if gasPrice is None:
             gasPrice = self.default_gas_price
         if to is None or to == 0:
             # we are creating a new contract
+            if rpc_client_result is not None:
+                tx_hash = rpc_client_result['result']
+                receipt = self.json_rpc_client.post({
+                    'method' : 'eth_getTransactionReceipt',
+                    'params' : [tx_hash]
+                })
+                address = int(receipt['result']['contractAddress'], 16)
+            else:
+                address = None
             contract_address = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
-            #print ""
-            #print "  Contract created: %s" % contract_address
+            print ""
+            print "  Manticore contract created: %s" % encode_hex(contract_address.address)
+            print map(lambda a : hex(a.address), self.manticore.accounts._main.values())
             #print "  Block number: %s" % self.manticore.world.block_number()
-            #print ""
+            print ""
         else:
-            raise Exception("TODO: Implement non-contract-creation transactions")
-            abort(500)
+            self.manticore.transaction(address = to, data = data, caller=from_addr, value = value)
 
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
         # Send a web request to the server to shut down:
@@ -187,12 +196,14 @@ class EnrobicoreView(MethodView):
             else:
                 args = data['params']
         if hasattr(ENROBICORE, method):
-            #params = ', '.join(args + map(lambda kv : "%s = %s" % kv, kwargs.iteritems()))
-            #print "Unimplemented JSONRPC method: %s(%s)" % (method, params)
-            #abort(400)
             print "Enrobing JSON RPC call to %s" % method
-            getattr(ENROBICORE, method)(*args, **kwargs)
+            function = getattr(ENROBICORE, method)
+        else:
+            function = None
         ret = ENROBICORE.json_rpc_client.post(data)
+        if function is not None:
+            kwargs['rpc_client_result'] = ret
+            function(*args, **kwargs)
         if was_list:
             ret = [ret]
         return jsonify(ret)

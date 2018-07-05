@@ -34,6 +34,8 @@ class Ganache(object):
         self.rpc_id += 1
         rpc_id = self.rpc_id
         return_id = None
+        if 'jsonrpc' not in data:
+            data['jsonrpc'] = '2.0'
         if 'id' in data:
             return_id = data['id']
             data['id'] = self.rpc_id
