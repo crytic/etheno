@@ -12,7 +12,7 @@ from threading import Thread
 from flask import Flask, g, jsonify, request, abort
 from flask.views import MethodView
 
-from manticore.ethereum import ManticoreEVM
+from manticore.ethereum import ManticoreEVM, DetectInvalid, DetectIntegerOverflow, DetectUninitializedStorage, DetectUninitializedMemory, FilterFunctions, DetectReentrancy
 from manticore.core.smtlib import visitors
 
 import ganache
@@ -72,6 +72,12 @@ class Enrobicore(object):
     def __init__(self, manticore = None, json_rpc_client = None, accounts = 10, default_balance_ether = 100.0, default_gas_price = 20000000000):
         if manticore is None:
             self.manticore = ManticoreEVM()
+            self.manticore.register_detector(DetectInvalid())
+            self.manticore.register_detector(DetectIntegerOverflow())
+            self.manticore.register_detector(DetectUninitializedStorage())
+            self.manticore.register_detector(DetectUninitializedMemory())
+            self.manticore.register_detector(DetectReentrancy())
+            #m.multi_tx_analysis(args.argv[0], contract_name=args.contract, tx_limit=args.txlimit, tx_use_coverage=not args.txnocoverage, tx_account=args.txaccount)
         else:
             self.manticore = manticore
         if json_rpc_client is None:
@@ -138,6 +144,7 @@ class Enrobicore(object):
 
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
         # Send a web request to the server to shut down:
+        #self.manticore.finalize()
         import urllib2
         urllib2.urlopen("http://127.0.0.1:%d/shutdown" % port)
 
