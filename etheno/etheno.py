@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
 VERSION='0.0.1'
-VERSION_NAME="ToB/v%s/source/Enrobicore" % VERSION
+VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
 
@@ -49,7 +49,7 @@ def encode_hex(data):
 _CONTROLLER = threadwrapper.MainThreadController()
 
 @app.route('/shutdown')
-def _enrobicore_shutdown():
+def _etheno_shutdown():
     # shut down the Flask server
     shutdown = request.environ.get('werkzeug.server.shutdown')
     if shutdown is None:
@@ -77,7 +77,7 @@ class BlockFilter(Filter):
     def __init__(self):
         super(BlockFilter, self).__init__(BlockCreated)
 
-class Enrobicore(object):
+class Etheno(object):
     def QUANTITY(to_convert):
         if to_convert is None:
             return None
@@ -212,7 +212,7 @@ class Enrobicore(object):
         thread = Thread(target = flask_thread)
         thread.start()
 
-        print "Enrobicore v%s" % VERSION
+        print "Etheno v%s" % VERSION
         print ''
         print 'Available Accounts'
         print '=================='
@@ -224,9 +224,9 @@ class Enrobicore(object):
         self.shutdown()
         thread.join()
 
-ENROBICORE = Enrobicore()
+ETHENO = Etheno()
 
-class EnrobicoreView(MethodView):
+class EthenoView(MethodView):
     def post(self):
         data = request.get_json()
         if isinstance(data, list):
@@ -258,12 +258,12 @@ class EnrobicoreView(MethodView):
                     del kwargs['from']
             else:
                 args = data['params']
-        if not hasattr(ENROBICORE, method):
+        if not hasattr(ETHENO, method):
             params = ', '.join(args + map(lambda kv : "%s = %s" % kv, kwargs.iteritems()))
             print "Unimplemented JSONRPC method: %s(%s)" % (method, params)
             abort(400)
         print method
-        result = getattr(ENROBICORE, method)(*args, **kwargs)
+        result = getattr(ETHENO, method)(*args, **kwargs)
         ret = {
             'jsonrpc' : data['jsonrpc'],
             'result' : result
@@ -273,6 +273,6 @@ class EnrobicoreView(MethodView):
         return jsonify(ret)
 
 if __name__ == '__main__':
-    enrobicore = EnrobicoreView()
-    app.add_url_rule('/', view_func=enrobicore.as_view('enrobicore'))
-    ENROBICORE.run()
+    etheno = EthenoView()
+    app.add_url_rule('/', view_func=etheno.as_view('etheno'))
+    ETHENO.run()
