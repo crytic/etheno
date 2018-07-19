@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 
 VERSION='0.0.1'
-VERSION_NAME="ToB/v%s/source/Enrobicore" % VERSION
+VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
 
@@ -50,7 +50,7 @@ def encode_hex(data):
 _CONTROLLER = threadwrapper.MainThreadController()
 
 @app.route('/shutdown')
-def _enrobicore_shutdown():
+def _etheno_shutdown():
     # shut down the Flask server
     shutdown = request.environ.get('werkzeug.server.shutdown')
     if shutdown is None:
@@ -58,7 +58,7 @@ def _enrobicore_shutdown():
     shutdown()
     return ''
 
-class Enrobicore(object):
+class Etheno(object):
     def QUANTITY(to_convert):
         if to_convert is None:
             return None
@@ -160,15 +160,15 @@ class Enrobicore(object):
         thread = Thread(target = flask_thread)
         thread.start()
 
-        print "Enrobicore v%s" % VERSION
+        print "Etheno v%s" % VERSION
 
         _CONTROLLER.run()
         self.shutdown()
         thread.join()
 
-ENROBICORE = Enrobicore()
+ETHENO = Etheno()
 
-class EnrobicoreView(MethodView):
+class EthenoView(MethodView):
     def post(self):
         data = request.get_json()
         was_list = False
@@ -202,12 +202,12 @@ class EnrobicoreView(MethodView):
                     del kwargs['from']
             else:
                 args = data['params']
-        if hasattr(ENROBICORE, method):
+        if hasattr(ETHENO, method):
             print "Enrobing JSON RPC call to %s" % method
-            function = getattr(ENROBICORE, method)
+            function = getattr(ETHENO, method)
         else:
             function = None
-        ret = ENROBICORE.json_rpc_client.post(data)
+        ret = ETHENO.json_rpc_client.post(data)
         if function is not None:
             kwargs['rpc_client_result'] = ret
             function(*args, **kwargs)
@@ -216,6 +216,6 @@ class EnrobicoreView(MethodView):
         return jsonify(ret)
 
 if __name__ == '__main__':
-    enrobicore = EnrobicoreView()
-    app.add_url_rule('/', view_func=enrobicore.as_view('enrobicore'))
-    ENROBICORE.run()
+    etheno = EthenoView()
+    app.add_url_rule('/', view_func=etheno.as_view('etheno'))
+    ETHENO.run()
