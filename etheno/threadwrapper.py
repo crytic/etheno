@@ -94,7 +94,7 @@ if __name__ == '__main__':
     controller = MainThreadController()
 
     def dostuff(mtoc):
-        print mtoc.do_stuff()
+        print(mtoc.do_stuff())
     
     from threading import Thread
     thread = Thread(target = dostuff, args = (MainThreadWrapper(main_thread_only, controller),))

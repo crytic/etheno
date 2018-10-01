@@ -12,7 +12,7 @@ from threading import Thread
 from flask import Flask, g, jsonify, request, abort
 from flask.views import MethodView
 
-from manticore.ethereum import ManticoreEVM, DetectInvalid, DetectIntegerOverflow, DetectUninitializedStorage, DetectUninitializedMemory, FilterFunctions, DetectReentrancy
+from manticore.ethereum import ManticoreEVM, DetectInvalid, DetectIntegerOverflow, DetectUninitializedStorage, DetectUninitializedMemory, FilterFunctions#, DetectReentrancy
 from manticore.core.smtlib import visitors
 
 import ganache
@@ -34,7 +34,7 @@ def decode_hex(data):
         return None
     if data[:2] == '0x':
         data = data[2:]
-    return data.decode('hex')
+    return bytes.fromhex(data)
 
 def encode_hex(data):
     if data is None:
@@ -76,7 +76,7 @@ class Etheno(object):
             self.manticore.register_detector(DetectIntegerOverflow())
             self.manticore.register_detector(DetectUninitializedStorage())
             self.manticore.register_detector(DetectUninitializedMemory())
-            self.manticore.register_detector(DetectReentrancy())
+            #self.manticore.register_detector(DetectReentrancy())
             #m.multi_tx_analysis(args.argv[0], contract_name=args.contract, tx_limit=args.txlimit, tx_use_coverage=not args.txnocoverage, tx_account=args.txaccount)
         else:
             self.manticore = manticore
@@ -88,7 +88,7 @@ class Etheno(object):
             'jsonrpc': '2.0',
             'method': 'eth_accounts'
         })['result'])
-        assert len(self.accounts) == accounts
+        assert len(list(self.accounts)) == accounts
         for account in self.accounts:
             self.manticore.create_account(balance=int(default_balance_ether * 10**18), address=account)
         self.manticore = threadwrapper.MainThreadWrapper(self.manticore, _CONTROLLER)
@@ -96,7 +96,7 @@ class Etheno(object):
 
     def _jsonrpc(**types):
         def decorator(function):
-            signature = inspect.getargspec(function).args
+            signature = inspect.getfullargspec(function).args
             def wrapper(self, *args, **kwargs):
                 rpc_kwargs = dict(kwargs)
                 return_type = None
@@ -109,7 +109,7 @@ class Etheno(object):
                     rpc_kwargs[signature[i + 1]] = arg
                 args = tuple(converted_args)
                 kwargs = dict(kwargs)
-                for arg_name, conversion in types.iteritems():
+                for arg_name, conversion in types.items():
                     if arg_name == 'RETURN':
                         return_type = conversion
                     elif arg_name in kwargs:
@@ -134,19 +134,19 @@ class Etheno(object):
             else:
                 address = None
             contract_address = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
-            print ""
-            print "  Manticore contract created: %s" % encode_hex(contract_address.address)
-            print map(lambda a : hex(a.address), self.manticore.accounts._main.values())
-            #print "  Block number: %s" % self.manticore.world.block_number()
-            print ""
+            print("")
+            print("  Manticore contract created: %s" % encode_hex(contract_address.address))
+            print(map(lambda a : hex(a.address), self.manticore.accounts._main.values()))
+            #print("  Block number: %s" % self.manticore.world.block_number())
+            print("")
         else:
             self.manticore.transaction(address = to, data = data, caller=from_addr, value = value)
 
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
         # Send a web request to the server to shut down:
         #self.manticore.finalize()
-        import urllib2
-        urllib2.urlopen("http://127.0.0.1:%d/shutdown" % port)
+        from urllib.request import urlopen
+        urlopen("http://127.0.0.1:%d/shutdown" % port)
 
     def run(self, debug = True, run_publicly = False):
         # Manticore only works in the main thread, so use a threadsafe wrapper:
@@ -160,7 +160,7 @@ class Etheno(object):
         thread = Thread(target = flask_thread)
         thread.start()
 
-        print "Etheno v%s" % VERSION
+        print("Etheno v%s" % VERSION)
 
         _CONTROLLER.run()
         self.shutdown()
@@ -177,7 +177,7 @@ class EthenoView(MethodView):
                 was_list = True
                 data = data[0]
             else:
-                print "Unexpected POST data: %s" % data
+                print("Unexpected POST data: %s" % data)
                 abort(400)
         if 'jsonrpc' not in data or 'method' not in data:
             abort(400)
@@ -188,7 +188,7 @@ class EthenoView(MethodView):
         if jsonrpc_version < 2.0:
             abort(426)
         elif jsonrpc_version > 2.0:
-            print "Warning: Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version
+            print("Warning: Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
         method = data['method']
         args = ()
         kwargs = {}
@@ -203,7 +203,7 @@ class EthenoView(MethodView):
             else:
                 args = data['params']
         if hasattr(ETHENO, method):
-            print "Enrobing JSON RPC call to %s" % method
+            print("Enrobing JSON RPC call to %s" % method)
             function = getattr(ETHENO, method)
         else:
             function = None

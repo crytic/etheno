@@ -5,7 +5,7 @@ import json
 import socket
 import subprocess
 import time
-import urllib2
+from urllib.request import urlopen
 
 def is_port_free(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -39,7 +39,7 @@ class Ganache(object):
         if 'id' in data:
             return_id = data['id']
             data['id'] = self.rpc_id
-        ret = json.loads(urllib2.urlopen("http://127.0.0.1:%d/" % self.port, data = json.dumps(data)).read())
+        ret = json.loads(urlopen("http://127.0.0.1:%d/" % self.port, data = bytearray(json.dumps(data), 'utf8')).read())
         if return_id is not None and 'id' in ret:
             ret['id'] = return_id
         return ret
@@ -52,9 +52,9 @@ class Ganache(object):
 
 if __name__ == "__main__":
     ganache = Ganache()
-    print ganache.post({
+    print(ganache.post({
         'jsonrpc': '2.0',
         'method': 'eth_accounts',
         'params': [],
         'id': 1
-    })
+    }))
