@@ -12,7 +12,7 @@ It is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Sthen
 ## Features
 
 * **JSON RPC Multiplexing**: Etheno runs a JSON RPC server that can multiplex calls to one or more clients
-  * API for filtering and even modifying JSON RPC calls
+  * API for filtering and modifying JSON RPC calls
   * Enables differential testing by sending JSON RPC sequences to multiple Ethereum clients
   * Deploy to and interact with multiple networks at the same time
 * **Analysis Tool Wrapper**: Etheno provides a JSON RPC client for advanced analysis tools like [Manticore](https://github.com/trailofbits/manticore/)
@@ -26,7 +26,7 @@ It is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Sthen
 
 ## Quickstart
 
-Use Docker to quickly install and try Etheno. This is the easiest way to get up and running until Etheno support is included in the next release of Manticore.
+Use Docker to quickly install and try Etheno:
 
 ```
 # Clone the Etheno repo
@@ -43,14 +43,14 @@ etheno@982abdc96791:~$ cd examples/BrokenMetaCoin/
 etheno@982abdc96791:~/examples/BrokenMetaCoin$ etheno --truffle --ganache --manticore --manticore-max-depth 2 --manticore-script ExploitMetaCoinManticoreScript.py
 ```
 
-Alternatively, install and try Etheno in a few shell commands:
+Alternatively, install Etheno in a few shell commands:
 
 ```
 # Install system dependencies
 sudo apt-get update && sudo apt-get install python3 python3-pip -y
 
 # Install Manticore
-# Note: This will not work until the dev-account-address-provider-m1 is merged
+# Note: This will not work until Manticore 0.2.3 is released
 # pip3 install manticore --user
 
 # Clone and install Etheno
@@ -118,11 +118,12 @@ etheno --truffle --manticore
 
 This requires a master JSON RPC client, so will most often be used in conjunction with Ganache. If a local Ganache server is not running, you can simply add that to the command:
 ```
-etheno -t -m -g
+etheno --truffle --manticore --ganache
 ```
 
 If you would like to run a custom Manticore script instead of the standard Manticore analysis and detectors, it can be specified using the `--manticore-script` or `-r` command.
-This script does not need to import Manticore or isntantiate a `ManticoreEVM` object; Etheno will run the script with a global variable called `manticore` that already contains all of the accounts and contracts automatically provisioned.  See [the `BrokenMetaCoin` Manticore script](examples/BrokenMetaCoin/ExploitMetaCoinManticoreScript.py) for an example.
+
+This script does not need to import Manticore or create a `ManticoreEVM` object; Etheno will run the script with a global variable called `manticore` that already contains all of the accounts and contracts automatically provisioned.  See the [`BrokenMetaCoin` Manticore script](examples/BrokenMetaCoin/ExploitMetaCoinManticoreScript.py) for an example.
 
 Additional arguments can be passed to Truffle using `--truffle-args`.
 
@@ -139,11 +140,9 @@ Feel free to stop by our [Slack channel](https://empirehacking.slack.com/) for h
 
 Documentation is available in several places:
 
-  * The [wiki](https://github.com/trailofbits/etheno/wiki) contains some
-    basic information about getting started with Etheno and contributing
+  * The [wiki](https://github.com/trailofbits/etheno/wiki) contains some basic information about getting started with Etheno and contributing
 
-  * The [examples](examples) directory has some very minimal examples that
-    showcase API features
+  * The [examples](examples) directory has some very minimal examples that showcase API features
 
 ## License
 
