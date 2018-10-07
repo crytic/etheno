@@ -5,11 +5,7 @@
 <br />
 
 
-Etheno is a JSON RPC multiplexer, analysis tool wrapper, and test integration tool.
-* Etheno makes running [Manticore](https://github.com/trailofbits/manticore/) easy
-* Etheno eliminates the complexity of setting up analysis tools with a large, multi-contract project
-* Etheno does not require Solidity source code
-* Etheno simplifies writing custom Manticore scripts
+Etheno is a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools on large, multi-contract projects, like [Manticore](https://github.com/trailofbits/manticore/). In particular, custom Manticore analysis scripts require less code, are simpler to write, and integrate with Truffle.
 
 It is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Stheno), sister of Medusa, and mother of Echidna—which also happens to be the name of [our EVM property-based fuzz tester](https://github.com/trailofbits/echidna).
 
@@ -22,7 +18,7 @@ It is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Sthen
 * **Analysis Tool Wrapper**: Etheno provides a JSON RPC client for advanced analysis tools like [Manticore](https://github.com/trailofbits/manticore/)
   * Lowers barrier to entry for using advanced analysis tools
   * No need for custom scripts to set up account and contract state
-  * Analyze arbitrary transactions with no need for Solidity source code
+  * Analyze arbitrary transactions without Solidity source code
 * **Integration with Test Frameworks** like Ganache and Truffle
   * Run a local test network with a single command
   * Use Truffle migrations to bootstrap Manticore analyses
