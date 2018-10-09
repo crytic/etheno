@@ -26,7 +26,14 @@ It is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Sthen
 
 ## Quickstart
 
-Use Docker to quickly install and try Etheno:
+Use our prebuilt Docker container to quickly install and try Etheno:
+
+```
+docker pull trailofbits/etheno
+docker run -it trailofbits/etheno
+```
+
+Or, build a Docker container from source:
 
 ```
 # Clone the Etheno repo
@@ -43,7 +50,7 @@ etheno@982abdc96791:~$ cd examples/BrokenMetaCoin/
 etheno@982abdc96791:~/examples/BrokenMetaCoin$ etheno --truffle --ganache --manticore --manticore-max-depth 2 --manticore-script ExploitMetaCoinManticoreScript.py
 ```
 
-Alternatively, install Etheno in a few shell commands:
+Alternatively, natively install Etheno in a few shell commands:
 
 ```
 # Install system dependencies
