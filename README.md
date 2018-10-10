@@ -31,19 +31,6 @@ Use our prebuilt Docker container to quickly install and try Etheno:
 ```
 docker pull trailofbits/etheno
 docker run -it trailofbits/etheno
-```
-
-Or, build a Docker container from source:
-
-```
-# Clone the Etheno repo
-git clone https://github.com/trailofbits/etheno.git && cd etheno
-
-# Build the Docker image
-docker build . -t etheno
-
-# Start a new Etheno Docker container
-docker run -it etheno:latest
 
 # Run one of the examples
 etheno@982abdc96791:~$ cd examples/BrokenMetaCoin/
