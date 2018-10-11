@@ -1,5 +1,3 @@
-#!/usr/bin/env python2
-
 VERSION='0.0.1'
 VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
 JSONRPC_VERSION = '2.0'
