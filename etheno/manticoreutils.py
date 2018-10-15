@@ -33,6 +33,27 @@ class StopAtDepth(Detector):
             if reps[item] > self.max_depth:
                 state.abandon()
 
+class ManticoreTest(object):
+    def __init__(self, state, expression):
+        self.state = state
+        self.expression = expression
+    def __bool__(self):
+        return self.can_be_true()
+    def can_be_true(self):
+        return self.state.can_be_true(self.expression)
+    def solve_one(self, *variables):
+        '''Finds a solution to the state and returns all of the variables in that solution'''
+        with self.state as state:
+            state.constrain(self.expression)
+            for v in variables:
+                value = state.solve_one(v)
+                yield value
+                state.constrain(v == value)
+    def __enter__(self):
+        return self
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
 if __name__ == '__main__':
     print('Available Manticore Detectors:')
     for detector in get_detectors():
