@@ -3,7 +3,9 @@ from threading import Thread
 import time
 import sys
 
-from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, GanacheClient, ManticoreClient, RpcProxyClient, ETHENO
+from .client import RpcProxyClient
+from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
+from .utils import find_open_port
 from . import Etheno
 from . import ganache
 from . import manticoreutils
@@ -45,11 +47,11 @@ def main(argv = None):
         sys.exit(1)        
     elif args.ganache:
         if args.ganache_port is None:
-            args.ganache_port = ganache.find_open_port(args.port + 1)
+            args.ganache_port = find_open_port(args.port + 1)
 
         ganache_instance = ganache.Ganache(args = ['-a', str(args.accounts), '-g', str(args.gas_price), '-e', str(args.balance)], port=args.ganache_port)
 
-        ETHENO.master_client = GanacheClient(ganache_instance)
+        ETHENO.master_client = ganache.GanacheClient(ganache_instance)
 
         ganache_instance.start()
     elif args.master:
