@@ -11,6 +11,7 @@ from .synchronization import AddressSynchronizingClient
 from .utils import find_open_port
 from . import Etheno
 from . import ganache
+from . import geth
 from . import manticoreutils
 from . import truffle
 
@@ -32,6 +33,8 @@ def main(argv = None):
     parser.add_argument('-g', '--ganache', action='store_true', default=False, help='Run Ganache as a master JSON RPC client (cannot be used in conjunction with --master)')
     parser.add_argument('--ganache-args', type=str, default=None, help='Additional arguments to pass to Ganache')
     parser.add_argument('--ganache-port', type=int, default=None, help='Port on which to run Ganache (defaults to the closest available port to the port specified with --port plus one)')
+    parser.add_argument('-go', '--geth', action='store_true', default=False, help='Run Geth as a JSON RPC client')
+    parser.add_argument('--geth-port', type=int, default=None, help='Port on which to run Geth (defaults to the closest available port to the port specified with --port plus one)')
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
     parser.add_argument('client', type=str, nargs='*', help='One or more JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
     parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
@@ -70,7 +73,7 @@ def main(argv = None):
     elif args.client:
         ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.client[0]))
         args.client = args.client[1:]
-
+        
     if args.network_id is None:
         if ETHENO.master_client:
             args.network_id = int(ETHENO.master_client.post({
@@ -80,6 +83,18 @@ def main(argv = None):
             })['result'], 16)
         else:
             args.network_id = 0x657468656E6F # 'etheno' in hex
+
+    if args.geth:
+        if args.geth_port is None:
+            args.geth_port = find_open_port(args.port + 1)
+
+        genesis = geth.make_genesis(network_id = args.network_id, accounts = ((int(acct.address, 16), args.balance * 1000000000000000000) for acct in accounts))
+        print(genesis)
+        geth_instance = geth.GethClient(genesis = genesis, port = args.geth_port)
+        geth_instance.start()
+        ETHENO.add_client(geth_instance)
+        if ETHENO.master_client is None:
+            ETHENO.master_client = geth_instance
 
     for client in args.client:
         ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))
