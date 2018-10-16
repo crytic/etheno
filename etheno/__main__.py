@@ -90,7 +90,9 @@ def main(argv = None):
 
         genesis = geth.make_genesis(network_id = args.network_id, accounts = ((int(acct.address, 16), args.balance * 1000000000000000000) for acct in accounts))
         geth_instance = geth.GethClient(genesis = genesis, port = args.geth_port)
-        geth_instance.start()
+        for account in accounts:
+            geth_instance.import_account(account.privateKey.hex())
+        geth_instance.start(unlock_accounts = True)
         ETHENO.add_client(geth_instance)
         if ETHENO.master_client is None:
             ETHENO.master_client = geth_instance
