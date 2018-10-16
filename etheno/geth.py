@@ -15,8 +15,8 @@ def format_hex_address(addr):
         addr = "%x" % addr
     if addr.lower().startswith('0x'):
         addr = addr[2:]
-    if len(addr) % 2 != 0:
-        addr = "0%s" % addr
+    if len(addr) < 40:
+        addr = "%s%s" % ('0' * (40 - len(addr)), addr)
     return addr
 
 def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 200000000000, accounts = None):
