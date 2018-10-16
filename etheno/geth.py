@@ -85,7 +85,7 @@ class GethClient(SelfPostingClient):
     def start(self):
         if self.geth:
             return
-        self.geth = subprocess.Popen(['/usr/bin/env', 'geth', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir.name, '--mine', '--etherbase', self.etherbase.address])
+        self.geth = subprocess.Popen(['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir.name, '--mine', '--etherbase', self.etherbase.address])
         self.wait_until_running()
 
     def stop(self):
