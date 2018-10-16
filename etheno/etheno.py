@@ -5,6 +5,7 @@ VERSION_ID=67
 
 import sha3
 from threading import Thread
+import time
 
 from flask import Flask, g, jsonify, request, abort
 from flask.views import MethodView
@@ -64,11 +65,17 @@ class ManticoreClient(EthenoClient):
             # we are creating a new contract
             if rpc_client_result is not None:
                 tx_hash = rpc_client_result['result']
-                receipt = self.etheno.master_client.post({
-                    'method' : 'eth_getTransactionReceipt',
-                    'params' : [tx_hash]
-                })
-                address = int(receipt['result']['contractAddress'], 16)
+                while True:
+                    receipt = self.etheno.master_client.post({
+                        'id' : "%s_receipt" % rpc_client_result['id'],
+                        'method' : 'eth_getTransactionReceipt',
+                        'params' : [tx_hash]
+                    })
+                    if 'result' in receipt and receipt['result']:
+                        address = int(receipt['result']['contractAddress'], 16)
+                        break
+                    # The transaction is still pending
+                    time.sleep(1.0)
             else:
                 address = None
             contract_address = self.manticore.create_contract(owner = from_addr, balance = value, init=data)

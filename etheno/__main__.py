@@ -116,8 +116,8 @@ def main(argv = None):
             print("Etheno Started! Running Truffle...")
             ret = truffle_controller.run(args.truffle_args)
             if ret != 0:
-                # TODO: Print a warning/error
-                pass
+                print("Error: Truffle exited with code %s" % ret)
+                sys.exit(ret)
 
             if manticore_client is not None:
                 if args.manticore_script is not None:
