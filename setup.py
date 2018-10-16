@@ -12,7 +12,8 @@ setup(
     install_requires=[
         'manticore', # TODO: specify a specific manticore version once https://github.com/trailofbits/manticore/pull/1054 makes it into a release
         'pysha3>=1.0.2',
-        'flask>=1.0.2'
+        'flask>=1.0.2',
+        'web3'
     ],
     entry_points={
         'console_scripts': [

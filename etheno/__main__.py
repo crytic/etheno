@@ -3,6 +3,8 @@ from threading import Thread
 import time
 import sys
 
+from web3.auto import w3
+
 from .client import RpcProxyClient
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
 from .synchronization import AddressSynchronizingClient
@@ -18,8 +20,9 @@ def main(argv = None):
     parser.add_argument('--run-publicly', action='store_true', default=False, help='Allow the web server to accept external connections')
     parser.add_argument('-p', '--port', type=int, default=GETH_DEFAULT_RPC_PORT, help='Port on which to run the JSON RPC webserver (default=%d)' % GETH_DEFAULT_RPC_PORT)
     parser.add_argument('-a', '--accounts', type=int, default=10, help='Number of accounts to create in Ganache (default=10)')
-    parser.add_argument('-b', '--balance', type=float, default=100.0, help='Default balance (in Ether) to seed to each Ganache account (default=100.0)')
-    parser.add_argument('-c', '--gas-price', type=int, default=20000000000, help='Default gas price for Ganache (default=20000000000)')
+    parser.add_argument('-b', '--balance', type=float, default=100.0, help='Default balance (in Ether) to seed to each account (default=100.0)')
+    parser.add_argument('-c', '--gas-price', type=int, default=20000000000, help='Default gas price (default=20000000000)')
+    parser.add_argument('-i', '--network-id', type=int, default=None, help='Specify a network ID (default is the network ID of the master client)')
     parser.add_argument('-m', '--manticore', action='store_true', default=False, help='Run all transactions through manticore')
     parser.add_argument('-r', '--manticore-script', type=argparse.FileType('rb'), default=None, help='Instead of running automated detectors and analyses, run this Manticore script')
     parser.add_argument('--manticore-max-depth', type=int, default=None, help='Maximum state depth for Manticore to explore')
@@ -42,6 +45,8 @@ def main(argv = None):
         print(VERSION_NAME)
         sys.exit(0)
 
+    accounts = [w3.eth.account.create() for i in range(args.accounts)]
+
     if args.ganache and args.master:
         parser.print_help()
         sys.stderr.write('\nError: You cannot specify both --ganache and --master at the same time!\n')
@@ -50,7 +55,12 @@ def main(argv = None):
         if args.ganache_port is None:
             args.ganache_port = find_open_port(args.port + 1)
 
-        ganache_instance = ganache.Ganache(args = ['-a', str(args.accounts), '-g', str(args.gas_price), '-e', str(args.balance)], port=args.ganache_port)
+        if args.network_id is None:
+            args.network_id = 0x657468656E6F # 'etheno' in hex
+
+        ganache_accounts = ["--account=%s,0x%x" % (acct.privateKey.hex(), int(args.balance * 1000000000000000000)) for acct in accounts]
+
+        ganache_instance = ganache.Ganache(args = ganache_accounts + ['-g', str(args.gas_price), '-i', str(args.network_id)], port=args.ganache_port)
 
         ETHENO.master_client = ganache.GanacheClient(ganache_instance)
 
@@ -60,6 +70,16 @@ def main(argv = None):
     elif args.client:
         ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.client[0]))
         args.client = args.client[1:]
+
+    if args.network_id is None:
+        if ETHENO.master_client:
+            args.network_id = int(ETHENO.master_client.post({
+                'id': 1,
+                'jsonrpc': '2.0',
+                'method': 'net_version'
+            })['result'], 16)
+        else:
+            args.network_id = 0x657468656E6F # 'etheno' in hex
 
     for client in args.client:
         ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))
