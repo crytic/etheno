@@ -1,6 +1,6 @@
 import inspect
 import json
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 from .utils import webserver_is_up
 
@@ -42,7 +42,8 @@ class RpcHttpProxy(object):
         if 'id' in data:
             return_id = data['id']
             data['id'] = self.rpc_id
-        ret = json.loads(urlopen(self.urlstring, data = bytearray(json.dumps(data), 'utf8')).read())
+        request = Request(self.urlstring, data = bytearray(json.dumps(data), 'utf8'), headers={'Content-type': 'application/json'})
+        ret = json.loads(urlopen(request).read())
         if return_id is not None and 'id' in ret:
             ret['id'] = return_id
         return ret
