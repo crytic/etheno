@@ -5,6 +5,7 @@ import sys
 
 from .client import RpcProxyClient
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
+from .synchronization import AddressSynchronizingClient
 from .utils import find_open_port
 from . import Etheno
 from . import ganache
@@ -55,13 +56,13 @@ def main(argv = None):
 
         ganache_instance.start()
     elif args.master:
-        ETHENO.master_client = RpcProxyClient(args.master)
+        ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.master))
     elif args.client:
-        ETHENO.master_client = RpcProxyClient(args.client[0])
+        ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.client[0]))
         args.client = args.client[1:]
 
     for client in args.client:
-        ETHENO.add_client(RpcProxyClient(client))
+        ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))
 
     manticore_client = None
     if args.manticore:

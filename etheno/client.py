@@ -1,4 +1,6 @@
 import inspect
+import json
+from urllib.request import urlopen
 
 from .utils import webserver_is_up
 
@@ -26,11 +28,40 @@ def jsonrpc(**types):
         return wrapper
     return decorator
 
+class RpcHttpProxy(object):
+    def __init__(self, urlstring):
+        self.urlstring = urlstring
+        self.rpc_id = 0
+    def post(self, data):
+        data = dict(data)
+        self.rpc_id += 1
+        rpc_id = self.rpc_id
+        return_id = None
+        if 'jsonrpc' not in data:
+            data['jsonrpc'] = '2.0'
+        if 'id' in data:
+            return_id = data['id']
+            data['id'] = self.rpc_id
+        ret = json.loads(urlopen(self.urlstring, data = bytearray(json.dumps(data), 'utf8')).read())
+        if return_id is not None and 'id' in ret:
+            ret['id'] = return_id
+        return ret
+
 class EthenoClient(object):
     etheno = None
 
-    def create_account(self, balance, address):
-        pass
+    def create_account(self, balance = 0, address = None):
+        '''
+        A request for the client to create a new account.
+
+        Subclasses implementing this function should raise a NotImplementedError if an address
+        was provided that the client is unable to create an account at that address
+
+        :param balance: The initial balance for the account
+        :param address: The address for the account, or None if the address should be auto-generated
+        :return: returns the address of the account created
+        '''
+        raise NotImplementedError('Clients must extend this function')
 
     def shutdown(self):
         pass
@@ -38,6 +69,19 @@ class EthenoClient(object):
 class SelfPostingClient(EthenoClient):
     def __init__(self, client):
         self.client = client
+        self._accounts = []
+        self._created_account_index = -1
+    def create_account(self, balance = 0, address = None):
+        if address is not None:
+            raise NotImplementedError()
+        if self._accounts is None:
+            self._accounts = list(map(lambda a : int(a, 16), self.post({
+                'id': 1,
+                'jsonrpc': '2.0',
+                'method': 'eth_accounts'
+            })['result']))
+        self._created_account_index += 1
+        return self._accounts[self._created_account_index]
     def wait_until_running(self):
         pass
     def post(self, data):
@@ -49,7 +93,7 @@ class SelfPostingClient(EthenoClient):
 
 class RpcProxyClient(SelfPostingClient):
     def __init__(self, rpcurl):
-        super().__init__(ganache.RpcHttpProxy(rpcurl))
+        super().__init__(RpcHttpProxy(rpcurl))
     def wait_until_running(self):
         while not webserver_is_up(self.client.urlstring):
             time.sleep(1.0)
