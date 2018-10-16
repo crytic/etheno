@@ -89,7 +89,6 @@ def main(argv = None):
             args.geth_port = find_open_port(args.port + 1)
 
         genesis = geth.make_genesis(network_id = args.network_id, accounts = ((int(acct.address, 16), args.balance * 1000000000000000000) for acct in accounts))
-        print(genesis)
         geth_instance = geth.GethClient(genesis = genesis, port = args.geth_port)
         geth_instance.start()
         ETHENO.add_client(geth_instance)
