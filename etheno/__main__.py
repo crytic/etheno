@@ -93,9 +93,10 @@ def main(argv = None):
         for account in accounts:
             geth_instance.import_account(account.privateKey.hex())
         geth_instance.start(unlock_accounts = True)
-        ETHENO.add_client(geth_instance)
         if ETHENO.master_client is None:
             ETHENO.master_client = geth_instance
+        else:
+            ETHENO.add_client(geth_instance)
 
     for client in args.client:
         ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))
