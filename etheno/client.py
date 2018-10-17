@@ -70,7 +70,7 @@ class EthenoClient(object):
 class SelfPostingClient(EthenoClient):
     def __init__(self, client):
         self.client = client
-        self._accounts = []
+        self._accounts = None
         self._created_account_index = -1
     def create_account(self, balance = 0, address = None):
         if address is not None:
