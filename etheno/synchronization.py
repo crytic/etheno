@@ -85,6 +85,15 @@ class ChainSynchronizer(object):
         elif 'filter' in method.lower() and 'new' in method.lower() and 'result' in ret:
             # a new filter was just created, so record the mapping
             self.filter_mapping[self._client.etheno.rpc_client_result['result']] = ret['result']
+        elif method == 'eth_sendTransaction' or method == 'eth_sendRawTransaction':
+            # record the transaction hash mapping
+            if 'result' in ret and ret['result']:
+                old_decoded = _decode_value(self._client.etheno.rpc_client_result['result'])
+                new_decoded = _decode_value(ret['result'])
+                if old_decoded is not None and new_decoded is not None:
+                    self.mapping[old_decoded] = new_decoded
+                elif not (old_decoded is None and new_decoded is None):
+                    print("Warning: call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result'], self._client))
         elif method == 'eth_getTransactionReceipt':
             # TODO: update the mapping with the address if a new contract was created
             pass
