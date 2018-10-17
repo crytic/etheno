@@ -5,7 +5,7 @@ def _decode_value(value):
     if isinstance(value, int):
         return value
     try:
-        return decode_hex(value)
+        return int(value, 16)
     except Exception:
         return None
 
