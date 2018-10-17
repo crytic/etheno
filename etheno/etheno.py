@@ -190,6 +190,7 @@ class Etheno(object):
             self._create_accounts(client)
 
     def add_plugin(self, plugin):
+        plugin.etheno = self
         self.plugins.append(plugin)
 
     def _create_accounts(self, client):
