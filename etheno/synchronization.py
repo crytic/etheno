@@ -11,7 +11,7 @@ def AddressSynchronizingClient(etheno_client):
         except NotImplementedError:
             pass
         new_address = old_create_account(balance = balance, address = None)
-        mapping[address] = new_Address
+        mapping[address] = new_address
         return new_address
 
     setattr(etheno_client, 'create_account', create_account)
