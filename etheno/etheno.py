@@ -3,7 +3,6 @@ VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
 
-from abc import ABCMeta, abstractmethod
 import sha3
 from threading import Thread
 import time
@@ -133,10 +132,9 @@ class ManticoreClient(EthenoClient):
     def __str__(self): return 'manticore'
     __repr__ = __str__
 
-class EthenoPlugin(metaclass=ABCMeta):
+class EthenoPlugin():
     etheno = None
     
-    @abstractmethod
     def before_post(self, post_data):
         '''
         A callback when Etheno receives a JSON RPC POST, but before it is processed.
@@ -145,7 +143,6 @@ class EthenoPlugin(metaclass=ABCMeta):
         '''
         pass
 
-    @abstractmethod
     def after_post(self, post_data, client_results):
         '''
         A callback when Etheno receives a JSON RPC POST after it is processed by all clients.
