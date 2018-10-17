@@ -16,7 +16,7 @@ def _remap_params(params, mapping, method, remap_data = False):
             if decoded is None:
                 params[key] = _remap_params(value, mapping, "%s['%s']" % (method, key))
             elif decoded in mapping:
-                print("Converting %s parameter %s from address %x to %x" % (method, key, decoded, mapping[decoded]))
+                print("Converting %s parameter '%s' from %x to %x" % (method, key, decoded, mapping[decoded]))
                 params[key] = format_hex_address(mapping[decoded])
             elif remap_data and key == 'data':
                 new_value = params['data']
@@ -24,7 +24,7 @@ def _remap_params(params, mapping, method, remap_data = False):
                     prev = new_value
                     new_value = new_value.replace(format_hex_address(old), format_hex_address(new))
                     if prev != new_value:
-                        print("Converting address %x in %s['data'] to %x" % (old, method, new))
+                        print("Converting %x in %s['data'] to %x" % (old, method, new))
                 if new_value != params['data']:
                     params['data'] = new_value
     elif isinstance(params, list) or isinstance(params, tuple):
@@ -33,12 +33,12 @@ def _remap_params(params, mapping, method, remap_data = False):
             if decoded is None:
                 params[i] = _remap_params(p, mapping, "%s['%d']" % (method, i))
             elif decoded in mapping:
-                print("Converting %s parameter %d from address %x to %x" % (method, i, decoded, mapping[decoded]))
+                print("Converting %s parameter %d from %x to %x" % (method, i, decoded, mapping[decoded]))
                 params[i] = format_hex_address(mapping[decoded])
     else:
         decoded = _decode_value(params)
         if decoded is not None and decoded in mapping:
-            print("Converting %s from address %x to %x" % (method, decoded, mapping[decoded]))
+            print("Converting %s from %x to %x" % (method, decoded, mapping[decoded]))
             return mapping[decoded]
     return params
 
