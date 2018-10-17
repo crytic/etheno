@@ -8,16 +8,7 @@ from web3.auto import w3
 
 from .client import SelfPostingClient, RpcHttpProxy
 
-from .utils import is_port_free
-
-def format_hex_address(addr):
-    if isinstance(addr, int):
-        addr = "%x" % addr
-    if addr.lower().startswith('0x'):
-        addr = addr[2:]
-    if len(addr) < 40:
-        addr = "%s%s" % ('0' * (40 - len(addr)), addr)
-    return addr
+from .utils import format_hex_address, is_port_free
 
 def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 200000000000, accounts = None):
     if accounts:
