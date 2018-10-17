@@ -2,6 +2,22 @@ import socket
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
 
+def decode_hex(data):
+    if data is None:
+        return None
+    if data[:2] == '0x':
+        data = data[2:]
+    return bytes.fromhex(data)
+
+def format_hex_address(addr):
+    if isinstance(addr, int):
+        addr = "%x" % addr
+    if addr.lower().startswith('0x'):
+        addr = addr[2:]
+    if len(addr) < 40:
+        addr = "%s%s" % ('0' * (40 - len(addr)), addr)
+    return addr
+
 def webserver_is_up(url):
     try:
         return urlopen(url).getcode()

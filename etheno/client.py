@@ -2,7 +2,7 @@ import inspect
 import json
 from urllib.request import Request, urlopen
 
-from .utils import webserver_is_up
+from .utils import decode_hex, webserver_is_up
 
 def jsonrpc(**types):
     def decorator(function):
@@ -70,7 +70,7 @@ class EthenoClient(object):
 class SelfPostingClient(EthenoClient):
     def __init__(self, client):
         self.client = client
-        self._accounts = []
+        self._accounts = None
         self._created_account_index = -1
     def create_account(self, balance = 0, address = None):
         if address is not None:
@@ -98,13 +98,6 @@ class RpcProxyClient(SelfPostingClient):
     def wait_until_running(self):
         while not webserver_is_up(self.client.urlstring):
             time.sleep(1.0)
-
-def decode_hex(data):
-    if data is None:
-        return None
-    if data[:2] == '0x':
-        data = data[2:]
-    return bytes.fromhex(data)
 
 def QUANTITY(to_convert):
     if to_convert is None:

@@ -141,6 +141,7 @@ class Etheno(object):
         else:
             self.master_client = master_client
         self.clients = []
+        self.rpc_client_result = None
 
     @property
     def master_client(self):
@@ -247,6 +248,8 @@ class EthenoView(MethodView):
             ret = None
         else:
             ret = ETHENO.master_client.post(data)
+
+        ETHENO.rpc_client_result = ret
 
         for client in ETHENO.clients:
             if hasattr(client, method):
