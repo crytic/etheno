@@ -70,7 +70,7 @@ def main(argv = None):
         ganache_instance.start()
     elif args.master:
         ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.master))
-    elif args.client:
+    elif args.client and not args.geth:
         ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.client[0]))
         args.client = args.client[1:]
         
