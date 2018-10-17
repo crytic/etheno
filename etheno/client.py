@@ -47,6 +47,9 @@ class RpcHttpProxy(object):
         if return_id is not None and 'id' in ret:
             ret['id'] = return_id
         return ret
+    def __str__(self):
+        return "%s<%s>" % (self.__class__.__name__, self.urlstring)
+    __repr__ = __str__
 
 class EthenoClient(object):
     etheno = None
@@ -91,6 +94,9 @@ class SelfPostingClient(EthenoClient):
         return str(self.client)
     def __repr__(self):
         return repr(self.client)
+    def __str__(self):
+        return "%s[%s]" % (self.__class__.__name__, str(self.client))
+    __repr__ = __str__
 
 class RpcProxyClient(SelfPostingClient):
     def __init__(self, rpcurl):
