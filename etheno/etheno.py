@@ -87,6 +87,9 @@ class ManticoreClient(EthenoClient):
             print("")
         else:
             self.manticore.transaction(address = to, data = data, caller=from_addr, value = value)
+        # Just mimic the result from the master client
+        # We need to return something valid to appease the differential tester
+        return rpc_client_result
 
     def multi_tx_analysis(self, contract_address = None, tx_limit=None, tx_use_coverage=True, args=None):
         if contract_address is None:
@@ -236,10 +239,9 @@ ETHENO = Etheno()
 
 class EthenoView(MethodView):
     def post(self):
-        raw_data = request.get_json()
+        data = request.get_json()
         for plugin in ETHENO.plugins:
-            plugin.before_post(raw_data)
-        data = raw_data
+            plugin.before_post(data)
         was_list = False
         if isinstance(data, list):
             if len(data) == 1:
@@ -291,14 +293,16 @@ class EthenoView(MethodView):
                 results.append(client.post(data))
             else:
                 results.append(None)
+
         if ret is None:
             return None
-        elif was_list:
-            ret = [ret]
-        ret = jsonify(ret)
 
         results = [ret] + results
         for plugin in ETHENO.plugins:
-            plugin.after_post(raw_data, results)
+            plugin.after_post(data, results)
+
+        if was_list:
+            ret = [ret]
+        ret = jsonify(ret)
         
         return ret

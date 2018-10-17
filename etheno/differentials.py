@@ -8,12 +8,12 @@ class DifferentialTester(EthenoPlugin):
             if master_result and 'result' in master_result and master_result['result'] and 'contractAddress' in master_result['result'] and master_result['result']['contractAddress']:
                 # the master client created a new contract
                 # so make sure that all of the other clients did, too
-                for client, data in zip(self.etheno.clients, client_results[1:]):
+                for client, client_data in zip(self.etheno.clients, client_results[1:]):
                     created = False
                     try:
-                        created = data['result']['contractAddress']
+                        created = client_data['result']['contractAddress']
                     except Exception:
                         pass
                     if not created:
-                        print("Error: the master client created a contract for transaction %s, but %s did not!" % (master_result['transactionHash'], client))
+                        print("Error: the master client created a contract for transaction %s, but %s did not!" % (data['params'][0], client))
 
