@@ -1,1 +1,2 @@
-from .etheno import Etheno, EthenoClient, SelfPostingClient, RpcProxyClient
+from .etheno import Etheno
+from .client import EthenoClient, SelfPostingClient, RpcProxyClient, DATA, QUANTITY

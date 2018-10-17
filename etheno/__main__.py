@@ -3,9 +3,15 @@ from threading import Thread
 import time
 import sys
 
-from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, GanacheClient, ManticoreClient, RpcProxyClient, ETHENO
+from web3.auto import w3
+
+from .client import RpcProxyClient
+from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
+from .synchronization import AddressSynchronizingClient
+from .utils import find_open_port
 from . import Etheno
 from . import ganache
+from . import geth
 from . import manticoreutils
 from . import truffle
 
@@ -15,8 +21,9 @@ def main(argv = None):
     parser.add_argument('--run-publicly', action='store_true', default=False, help='Allow the web server to accept external connections')
     parser.add_argument('-p', '--port', type=int, default=GETH_DEFAULT_RPC_PORT, help='Port on which to run the JSON RPC webserver (default=%d)' % GETH_DEFAULT_RPC_PORT)
     parser.add_argument('-a', '--accounts', type=int, default=10, help='Number of accounts to create in Ganache (default=10)')
-    parser.add_argument('-b', '--balance', type=float, default=100.0, help='Default balance (in Ether) to seed to each Ganache account (default=100.0)')
-    parser.add_argument('-c', '--gas-price', type=int, default=20000000000, help='Default gas price for Ganache (default=20000000000)')
+    parser.add_argument('-b', '--balance', type=float, default=100.0, help='Default balance (in Ether) to seed to each account (default=100.0)')
+    parser.add_argument('-c', '--gas-price', type=int, default=20000000000, help='Default gas price (default=20000000000)')
+    parser.add_argument('-i', '--network-id', type=int, default=None, help='Specify a network ID (default is the network ID of the master client)')
     parser.add_argument('-m', '--manticore', action='store_true', default=False, help='Run all transactions through manticore')
     parser.add_argument('-r', '--manticore-script', type=argparse.FileType('rb'), default=None, help='Instead of running automated detectors and analyses, run this Manticore script')
     parser.add_argument('--manticore-max-depth', type=int, default=None, help='Maximum state depth for Manticore to explore')
@@ -26,6 +33,8 @@ def main(argv = None):
     parser.add_argument('-g', '--ganache', action='store_true', default=False, help='Run Ganache as a master JSON RPC client (cannot be used in conjunction with --master)')
     parser.add_argument('--ganache-args', type=str, default=None, help='Additional arguments to pass to Ganache')
     parser.add_argument('--ganache-port', type=int, default=None, help='Port on which to run Ganache (defaults to the closest available port to the port specified with --port plus one)')
+    parser.add_argument('-go', '--geth', action='store_true', default=False, help='Run Geth as a JSON RPC client')
+    parser.add_argument('--geth-port', type=int, default=None, help='Port on which to run Geth (defaults to the closest available port to the port specified with --port plus one)')
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
     parser.add_argument('client', type=str, nargs='*', help='One or more JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
     parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
@@ -39,27 +48,57 @@ def main(argv = None):
         print(VERSION_NAME)
         sys.exit(0)
 
+    accounts = [w3.eth.account.create() for i in range(args.accounts)]
+
     if args.ganache and args.master:
         parser.print_help()
         sys.stderr.write('\nError: You cannot specify both --ganache and --master at the same time!\n')
         sys.exit(1)        
     elif args.ganache:
         if args.ganache_port is None:
-            args.ganache_port = ganache.find_open_port(args.port + 1)
+            args.ganache_port = find_open_port(args.port + 1)
 
-        ganache_instance = ganache.Ganache(args = ['-a', str(args.accounts), '-g', str(args.gas_price), '-e', str(args.balance)], port=args.ganache_port)
+        if args.network_id is None:
+            args.network_id = 0x657468656E6F # 'etheno' in hex
 
-        ETHENO.master_client = GanacheClient(ganache_instance)
+        ganache_accounts = ["--account=%s,0x%x" % (acct.privateKey.hex(), int(args.balance * 1000000000000000000)) for acct in accounts]
+
+        ganache_instance = ganache.Ganache(args = ganache_accounts + ['-g', str(args.gas_price), '-i', str(args.network_id)], port=args.ganache_port)
+
+        ETHENO.master_client = ganache.GanacheClient(ganache_instance)
 
         ganache_instance.start()
     elif args.master:
-        ETHENO.master_client = RpcProxyClient(args.master)
+        ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.master))
     elif args.client:
-        ETHENO.master_client = RpcProxyClient(args.client[0])
+        ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.client[0]))
         args.client = args.client[1:]
+        
+    if args.network_id is None:
+        if ETHENO.master_client:
+            args.network_id = int(ETHENO.master_client.post({
+                'id': 1,
+                'jsonrpc': '2.0',
+                'method': 'net_version'
+            })['result'], 16)
+        else:
+            args.network_id = 0x657468656E6F # 'etheno' in hex
+
+    if args.geth:
+        if args.geth_port is None:
+            args.geth_port = find_open_port(args.port + 1)
+
+        genesis = geth.make_genesis(network_id = args.network_id, accounts = ((int(acct.address, 16), args.balance * 1000000000000000000) for acct in accounts))
+        geth_instance = geth.GethClient(genesis = genesis, port = args.geth_port)
+        for account in accounts:
+            geth_instance.import_account(account.privateKey.hex())
+        geth_instance.start(unlock_accounts = True)
+        ETHENO.add_client(geth_instance)
+        if ETHENO.master_client is None:
+            ETHENO.master_client = geth_instance
 
     for client in args.client:
-        ETHENO.add_client(RpcProxyClient(client))
+        ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))
 
     manticore_client = None
     if args.manticore:
@@ -77,8 +116,8 @@ def main(argv = None):
             print("Etheno Started! Running Truffle...")
             ret = truffle_controller.run(args.truffle_args)
             if ret != 0:
-                # TODO: Print a warning/error
-                pass
+                print("Error: Truffle exited with code %s" % ret)
+                sys.exit(ret)
 
             if manticore_client is not None:
                 if args.manticore_script is not None:

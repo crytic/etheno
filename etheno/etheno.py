@@ -3,17 +3,17 @@ VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
 
-import inspect
 import sha3
 from threading import Thread
+import time
 
 from flask import Flask, g, jsonify, request, abort
 from flask.views import MethodView
 
 from manticore.ethereum import ManticoreEVM
 
-from . import ganache
 from . import threadwrapper
+from .client import EthenoClient, SelfPostingClient, RpcProxyClient, DATA, QUANTITY, jsonrpc
 
 app = Flask(__name__)
 
@@ -25,13 +25,6 @@ PYETHAPP_DEFAULT_RPC_PORT = 4000
 def to_account_address(raw_address):
     addr = "%x" % raw_address
     return "0x%s%s" % ('0'*(40 - len(addr)), addr)
-
-def decode_hex(data):
-    if data is None:
-        return None
-    if data[:2] == '0x':
-        data = data[2:]
-    return bytes.fromhex(data)
 
 def encode_hex(data):
     if data is None:
@@ -56,50 +49,6 @@ def _etheno_shutdown():
     shutdown()
     return ''
 
-def jsonrpc(**types):
-    def decorator(function):
-        signature = inspect.getfullargspec(function).args
-        def wrapper(self, *args, **kwargs):
-            rpc_kwargs = dict(kwargs)
-            return_type = None
-            converted_args = []
-            for i, arg in enumerate(args):
-                if signature[i + 1] in types:
-                    converted_args.append(types[signature[i + 1]](arg))
-                else:
-                    converted_args.append(arg)
-                rpc_kwargs[signature[i + 1]] = arg
-            args = tuple(converted_args)
-            kwargs = dict(kwargs)
-            for arg_name, conversion in types.items():
-                if arg_name == 'RETURN':
-                    return_type = conversion
-                elif arg_name in kwargs:
-                    kwargs[arg_name] = conversion(kwargs[arg_name])              
-            return function(self, *args, **kwargs)
-        return wrapper
-    return decorator
-
-def QUANTITY(to_convert):
-    if to_convert is None:
-        return None
-    elif to_convert[:2] == '0x':
-        return int(to_convert[2:], 16)
-    else:
-        return int(to_convert)
-
-def DATA(to_convert):
-    return decode_hex(to_convert)
-
-class EthenoClient(object):
-    etheno = None
-
-    def create_account(self, balance, address):
-        pass
-
-    def shutdown(self):
-        pass
-
 class ManticoreClient(EthenoClient):
     def __init__(self, manticore=None):
         if manticore is None:
@@ -116,11 +65,17 @@ class ManticoreClient(EthenoClient):
             # we are creating a new contract
             if rpc_client_result is not None:
                 tx_hash = rpc_client_result['result']
-                receipt = self.etheno.master_client.post({
-                    'method' : 'eth_getTransactionReceipt',
-                    'params' : [tx_hash]
-                })
-                address = int(receipt['result']['contractAddress'], 16)
+                while True:
+                    receipt = self.etheno.master_client.post({
+                        'id' : "%s_receipt" % rpc_client_result['id'],
+                        'method' : 'eth_getTransactionReceipt',
+                        'params' : [tx_hash]
+                    })
+                    if 'result' in receipt and receipt['result']:
+                        address = int(receipt['result']['contractAddress'], 16)
+                        break
+                    # The transaction is still pending
+                    time.sleep(1.0)
             else:
                 address = None
             contract_address = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
@@ -176,32 +131,6 @@ class ManticoreClient(EthenoClient):
             
     def __str__(self): return 'manticore'
     __repr__ = __str__
-
-class SelfPostingClient(EthenoClient):
-    def __init__(self, client):
-        self.client = client
-    def wait_until_running(self):
-        pass
-    def post(self, data):
-        return self.client.post(data)
-    def __str__(self):
-        return str(self.client)
-    def __repr__(self):
-        return repr(self.client)
-
-class GanacheClient(SelfPostingClient):
-    def wait_until_running(self):
-        while ganache.is_port_free(self.client.port):
-            time.sleep(0.25)
-    def shutdown(self):
-        self.client.stop()
-
-class RpcProxyClient(SelfPostingClient):
-    def __init__(self, rpcurl):
-        super().__init__(ganache.RpcHttpProxy(rpcurl))
-    def wait_until_running(self):
-        while not ganache.webserver_is_up(self.client.urlstring):
-            time.sleep(1.0)
 
 class Etheno(object):
     def __init__(self, master_client=None):
