@@ -42,63 +42,60 @@ def _remap_params(params, mapping, method, remap_data = False):
             return mapping[decoded]
     return params
 
-def AddressSynchronizingClient(etheno_client):    
-    old_create_account = getattr(etheno_client, 'create_account')
-    mapping = {}
-    filter_mapping = {}
+class ChainSynchronizer(object):
+    def __init__(self, client):
+        if not isinstance(client, SelfPostingClient):
+            raise TypeError('TODO: Implement support for address synchronization on clients other than SelfPostingClients')
+        self.mapping = {}
+        self.filter_mapping = {}
+        self._old_post = getattr(client, 'post')
+        self._old_create_account = getattr(client, 'create_account')
+        self._client = client
 
-    def create_account(balance = 0, address = None):
+    def create_account(self, balance = 0, address = None):
         try:
             # First, see if the client can handle creating this address:
-            return old_create_account(balance = balance, address = address)
+            return self._old_create_account(balance = balance, address = address)
         except NotImplementedError:
             pass
-        new_address = old_create_account(balance = balance, address = None)
-        mapping[address] = new_address
+        new_address = self._old_create_account(balance = balance, address = None)
+        self.mapping[address] = new_address
         return new_address
 
-    setattr(etheno_client, 'create_account', create_account)
+    def post(self, data):
+        method = data['method']
+        uninstalling_filter = None
+        if 'params' in data:
+            data['params'] = _remap_params(data['params'], self.mapping, method, remap_data = True)
+            if ('filter' in method.lower() and 'get' in method.lower()) or method == 'eth_uninstallFilter':
+                # we are accessing a filter by its ID, so remap the ID
+                old_id = data['params'][0]
+                if old_id not in self.filter_mapping:
+                    print("Warning: %s called on unknown filter ID %s; ignoring..." % (method, old_id))
+                else:
+                    print("Mapping filter ID %s to %s for %s" % (old_id, self.filter_mapping[old_id], method))
+                    data['params'] = [self.filter_mapping[old_id]]
+                if method == 'eth_uninstallFilter':
+                    uninstalling_filter = old_id
+        ret = self._old_post(data)
+        if uninstalling_filter is not None:
+            if ret['result']:
+                # the uninstall succeeded, so we no longer need to keep the mapping:
+                del self.filter_mapping[uninstalling_filter]
+        elif 'filter' in method.lower() and 'new' in method.lower() and 'result' in ret:
+            # a new filter was just created, so record the mapping
+            self.filter_mapping[self._client.etheno.rpc_client_result['result']] = ret['result']
+        elif method == 'eth_getTransactionReceipt':
+            # TODO: update the mapping with the address if a new contract was created
+            pass
 
-    if isinstance(etheno_client, SelfPostingClient):
-        old_post = getattr(etheno_client, 'post')
+        return ret
 
-        def post(data):
-            method = data['method']
-            uninstalling_filter = None
-            if 'params' in data:
-                data['params'] = _remap_params(data['params'], mapping, method, remap_data = True)
-                if ('filter' in method.lower() and 'get' in method.lower()) or method == 'eth_uninstallFilter':
-                    # we are accessing a filter by its ID, so remap the ID
-                    old_id = data['params'][0]
-                    if old_id not in filter_mapping:
-                        print("Warning: %s called on unknown filter ID %s; ignoring..." % (method, old_id))
-                    else:
-                        print("Mapping filter ID %s to %s for %s" % (old_id, filter_mapping[old_id], method))
-                        data['params'] = [filter_mapping[old_id]]
-                    if method == 'eth_uninstallFilter':
-                        uninstalling_filter = old_id
-            ret = old_post(data)
-            if uninstalling_filter is not None:
-                if ret['result']:
-                    # the uninstall succeeded, so we no longer need to keep the mapping:
-                    del filter_mapping[uninstalling_filter]
-            elif 'filter' in method.lower() and 'new' in method.lower() and 'result' in ret:
-                # a new filter was just created, so record the mapping
-                filter_mapping[etheno_client.etheno.rpc_client_result['result']] = ret['result']
-            return ret
+def AddressSynchronizingClient(etheno_client):
+    synchronizer = ChainSynchronizer(etheno_client)
 
-        setattr(etheno_client, 'post', post)
-    else:
-        raise TypeError('TODO: Implement support for address synchronization on clients other than SelfPostingClients')
-        # old_handler = getattr(etheno_client, 'eth_sendTransaction', None)
-
-        # @jsonrpc(from_addr = QUANTITY, to = QUANTITY, gas = QUANTITY, gasPrice = QUANTITY, value = QUANTITY, data = DATA, nonce = QUANTITY, RETURN = DATA)
-        # def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None, rpc_client_result = None):
-        #     if to is None or to == 0:
-        #         # we are creating a new contract
-        #         if old_handler is None:
-                    
-        #     else:
+    setattr(etheno_client, 'create_account', ChainSynchronizer.create_account.__get__(synchronizer, ChainSynchronizer))
+    setattr(etheno_client, 'post', ChainSynchronizer.post.__get__(synchronizer, ChainSynchronizer))
      
     return etheno_client
         
