@@ -87,7 +87,7 @@ class ChainSynchronizer(object):
             self.filter_mapping[self._client.etheno.rpc_client_result['result']] = ret['result']
         elif method == 'eth_sendTransaction' or method == 'eth_sendRawTransaction':
             # record the transaction hash mapping
-            if 'result' in ret and ret['result']:
+            if ret and 'result' in ret and ret['result']:
                 old_decoded = _decode_value(self._client.etheno.rpc_client_result['result'])
                 new_decoded = _decode_value(ret['result'])
                 if old_decoded is not None and new_decoded is not None:
@@ -95,8 +95,14 @@ class ChainSynchronizer(object):
                 elif not (old_decoded is None and new_decoded is None):
                     print("Warning: call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result'], self._client))
         elif method == 'eth_getTransactionReceipt':
-            # TODO: update the mapping with the address if a new contract was created
-            pass
+            # update the mapping with the address if a new contract was created
+            if ret and 'result' in ret and ret['result'] and 'contractAddress' in ret['result'] and ret['result']['contractAddress']:
+                master_address = _decode_value(self._client.etheno.rpc_client_result['result']['contractAddress'])
+                our_address = _decode_value(ret['result']['contractAddress'])
+                if master_address is not None and our_address is not None:
+                    self.mapping[master_address] = our_address
+                elif not (master_address is None and our_address is None):
+                    print("Warning: call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result']['contractAddress'], ret['result']['contractAddress'], self._client))
 
         return ret
 
