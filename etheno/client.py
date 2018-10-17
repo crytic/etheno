@@ -2,7 +2,7 @@ import inspect
 import json
 from urllib.request import Request, urlopen
 
-from .utils import webserver_is_up
+from .utils import decode_hex, webserver_is_up
 
 def jsonrpc(**types):
     def decorator(function):
@@ -98,13 +98,6 @@ class RpcProxyClient(SelfPostingClient):
     def wait_until_running(self):
         while not webserver_is_up(self.client.urlstring):
             time.sleep(1.0)
-
-def decode_hex(data):
-    if data is None:
-        return None
-    if data[:2] == '0x':
-        data = data[2:]
-    return bytes.fromhex(data)
 
 def QUANTITY(to_convert):
     if to_convert is None:
