@@ -90,7 +90,7 @@ class GethClient(SelfPostingClient):
     def start(self, unlock_accounts = True):
         if self.geth:
             return
-        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir.name, '--mine', '--etherbase', self.etherbase.address]
+        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir.name, '--mine', '--etherbase', format_hex_address(self.etherbase.address)]
         if unlock_accounts:
             addresses = filter(lambda a : a != format_hex_address(self.etherbase.address), map(format_hex_address, self.genesis['alloc']))
             unlock_args = ['--unlock', ','.join(addresses), '--password', self.passwords.name]
