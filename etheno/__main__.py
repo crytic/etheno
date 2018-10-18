@@ -122,6 +122,9 @@ def main(argv = None):
                 print("Error: Truffle exited with code %s" % ret)
                 sys.exit(ret)
 
+            for plugin in ETHENO.plugins:
+                plugin.finalize()
+
             if manticore_client is not None:
                 if args.manticore_script is not None:
                     exec(args.manticore_script.read(), {'manticore' : manticore_client.manticore, 'manticoreutils' : manticoreutils})
