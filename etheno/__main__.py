@@ -63,7 +63,10 @@ def main(argv = None):
             if args.network_id is None:
                 args.network_id = genesis['config'].get('chainId', None)
             for addr, bal in genesis['alloc'].items():
-                accounts.append(Account(address = int(addr, 16), balance = int(bal['balance'])))
+                pkey = None
+                if 'privateKey' in bal:
+                    pkey = bal['privateKey']
+                accounts.append(Account(address = int(addr, 16), balance = int(bal['balance']), private_key = pkey))
     else:
         # We will generate it further below once we've resolved all of the parameters
         genesis = None
