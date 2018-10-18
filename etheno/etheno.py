@@ -87,7 +87,16 @@ class ManticoreClient(EthenoClient):
             print("")
         else:
             self.manticore.transaction(address = to, data = data, caller=from_addr, value = value)
+        # Just mimic the result from the master client
+        # We need to return something valid to appease the differential tester
+        return rpc_client_result
 
+    @jsonrpc(TX_HASH = QUANTITY)
+    def eth_getTransactionReceipt(self, tx_hash, rpc_client_result = None):
+        # Mimic the result from the master client
+        # to appease the differential tester
+        return rpc_client_result
+    
     def multi_tx_analysis(self, contract_address = None, tx_limit=None, tx_use_coverage=True, args=None):
         if contract_address is None:
             for contract_address in self.contracts:
@@ -132,6 +141,39 @@ class ManticoreClient(EthenoClient):
     def __str__(self): return 'manticore'
     __repr__ = __str__
 
+class EthenoPlugin():
+    etheno = None
+    
+    def before_post(self, post_data):
+        '''
+        A callback when Etheno receives a JSON RPC POST, but before it is processed.
+        :param post_data: The raw JSON RPC data
+        :return: the post_data to be used by Etheno (can be modified)
+        '''
+        pass
+
+    def after_post(self, post_data, client_results):
+        '''
+        A callback when Etheno receives a JSON RPC POST after it is processed by all clients.
+        :param post_data: The raw JSON RPC data
+        :param client_results: A lost of the results returned by each client
+        '''
+        pass
+
+    def finalize(self):
+        '''
+        Called when an analysis pass should be finalized (e.g., after a Truffle migration completes).
+        Subclasses implementing this function should support it to be called multiple times in a row.
+        '''
+        pass
+
+    def shutdown(self):
+        '''
+        Called before Etheno shuts down.
+        The default implementation calls `finalize()`.
+        '''
+        self.finalize()
+
 class Etheno(object):
     def __init__(self, master_client=None):
         self.accounts = []
@@ -142,6 +184,7 @@ class Etheno(object):
             self.master_client = master_client
         self.clients = []
         self.rpc_client_result = None
+        self.plugins = []
 
     @property
     def master_client(self):
@@ -166,6 +209,57 @@ class Etheno(object):
         for client in self.clients:
             self._create_accounts(client)
 
+    def post(self, data):
+        for plugin in self.plugins:
+            plugin.before_post(data)
+
+        method = data['method']
+        args = ()
+        kwargs = {}
+        if 'params' in data:
+            params = data['params']
+            if len(params) == 1 and isinstance(params[0], dict):
+                kwargs = dict(params[0])
+                # handle Python reserved words:
+                if 'from' in kwargs:
+                    kwargs['from_addr'] = kwargs['from']
+                    del kwargs['from']
+            else:
+                args = data['params']
+        if self.master_client is None:
+            ret = None
+        else:
+            ret = self.master_client.post(data)
+
+        self.rpc_client_result = ret
+
+        results = []
+
+        for client in self.clients:
+            if hasattr(client, method):
+                print("Enrobing JSON RPC call to %s.%s" % (client, method))
+                function = getattr(client, method)
+                if function is not None:
+                    kwargs['rpc_client_result'] = ret
+                    results.append(function(*args, **kwargs))
+            elif isinstance(client, SelfPostingClient):
+                results.append(client.post(data))
+            else:
+                results.append(None)
+
+        if ret is None:
+            return None
+
+        results = [ret] + results
+        for plugin in self.plugins:
+            plugin.after_post(data, results)
+
+        return ret
+            
+    def add_plugin(self, plugin):
+        plugin.etheno = self
+        self.plugins.append(plugin)
+
     def _create_accounts(self, client):
         for account in self.accounts:
             # TODO: Actually get the correct balance from the JSON RPC client instead of using hard-coded 100.0 ETH
@@ -177,8 +271,9 @@ class Etheno(object):
         self._create_accounts(client)
             
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
+        for plugin in self.plugins:
+            plugin.shutdown()
         # Send a web request to the server to shut down:
-        #self.manticore.finalize()
         if self.master_client:
             self.master_client.shutdown()
         for client in self.clients:
@@ -214,6 +309,7 @@ class EthenoView(MethodView):
     def post(self):
         data = request.get_json()
         was_list = False
+
         if isinstance(data, list):
             if len(data) == 1:
                 was_list = True
@@ -221,6 +317,7 @@ class EthenoView(MethodView):
             else:
                 print("Unexpected POST data: %s" % data)
                 abort(400)
+
         if 'jsonrpc' not in data or 'method' not in data:
             abort(400)
         try:
@@ -231,37 +328,14 @@ class EthenoView(MethodView):
             abort(426)
         elif jsonrpc_version > 2.0:
             print("Warning: Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
-        method = data['method']
-        args = ()
-        kwargs = {}
-        if 'params' in data:
-            params = data['params']
-            if len(params) == 1 and isinstance(params[0], dict):
-                kwargs = dict(params[0])
-                # handle Python reserved words:
-                if 'from' in kwargs:
-                    kwargs['from_addr'] = kwargs['from']
-                    del kwargs['from']
-            else:
-                args = data['params']
-        if ETHENO.master_client is None:
-            ret = None
-        else:
-            ret = ETHENO.master_client.post(data)
 
-        ETHENO.rpc_client_result = ret
+        ret = ETHENO.post(data)
 
-        for client in ETHENO.clients:
-            if hasattr(client, method):
-                print("Enrobing JSON RPC call to %s.%s" % (client, method))
-                function = getattr(client, method)
-                if function is not None:
-                    kwargs['rpc_client_result'] = ret
-                    function(*args, **kwargs)
-            elif isinstance(client, SelfPostingClient):
-                client.post(data)
         if ret is None:
             return None
-        elif was_list:
+
+        if was_list:
             ret = [ret]
-        return jsonify(ret)
+        ret = jsonify(ret)
+        
+        return ret

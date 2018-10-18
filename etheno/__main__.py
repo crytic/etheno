@@ -6,6 +6,7 @@ import sys
 from web3.auto import w3
 
 from .client import RpcProxyClient
+from .differentials import DifferentialTester
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
 from .synchronization import AddressSynchronizingClient
 from .utils import find_open_port
@@ -35,6 +36,7 @@ def main(argv = None):
     parser.add_argument('--ganache-port', type=int, default=None, help='Port on which to run Ganache (defaults to the closest available port to the port specified with --port plus one)')
     parser.add_argument('-go', '--geth', action='store_true', default=False, help='Run Geth as a JSON RPC client')
     parser.add_argument('--geth-port', type=int, default=None, help='Port on which to run Geth (defaults to the closest available port to the port specified with --port plus one)')
+    parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True, help='Do not run differential testing, which is run by default')
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
     parser.add_argument('client', type=str, nargs='*', help='One or more JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
     parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
@@ -93,9 +95,10 @@ def main(argv = None):
         for account in accounts:
             geth_instance.import_account(account.privateKey.hex())
         geth_instance.start(unlock_accounts = True)
-        ETHENO.add_client(geth_instance)
         if ETHENO.master_client is None:
             ETHENO.master_client = geth_instance
+        else:
+            ETHENO.add_client(geth_instance)
 
     for client in args.client:
         ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))
@@ -119,6 +122,9 @@ def main(argv = None):
                 print("Error: Truffle exited with code %s" % ret)
                 sys.exit(ret)
 
+            for plugin in ETHENO.plugins:
+                plugin.finalize()
+
             if manticore_client is not None:
                 if args.manticore_script is not None:
                     exec(args.manticore_script.read(), {'manticore' : manticore_client.manticore, 'manticoreutils' : manticoreutils})
@@ -132,6 +138,11 @@ def main(argv = None):
 
         thread = Thread(target=truffle_thread)
         thread.start()
+
+    if args.run_differential and (ETHENO.master_client is not None) and next(filter(lambda c : not isinstance(c, ManticoreClient), ETHENO.clients), False):
+        # There are at least two non-Manticore clients running
+        print("Initializing differential tests to compare clients %s" % ', '.join(map(str, [ETHENO.master_client] + ETHENO.clients)))
+        ETHENO.add_plugin(DifferentialTester())
 
     etheno = EthenoView()
     app.add_url_rule('/', view_func=etheno.as_view('etheno'))

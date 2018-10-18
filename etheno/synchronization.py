@@ -1,3 +1,5 @@
+import time
+
 from .client import EthenoClient, SelfPostingClient, jsonrpc, DATA, QUANTITY
 from .utils import decode_hex, format_hex_address
 
@@ -42,6 +44,12 @@ def _remap_params(params, mapping, method, remap_data = False):
             return mapping[decoded]
     return params
 
+def transaction_receipt_succeeded(data):
+    if not (data and 'result' in data and data['result'] and 'status' in data['result']):
+        return False
+    decoded = _decode_value(data['result']['status'])
+    return decoded is not None and decoded > 0
+
 class ChainSynchronizer(object):
     def __init__(self, client):
         if not isinstance(client, SelfPostingClient):
@@ -64,6 +72,13 @@ class ChainSynchronizer(object):
 
     def post(self, data):
         method = data['method']
+
+        if method == 'eth_getTransactionReceipt':
+            # first, make sure the master client's transaction succeeded; if not, we can just ignore this
+            if not transaction_receipt_succeeded(self._client.etheno.rpc_client_result):
+                # the master client's transaction receipt command failed, so we can skip calling this client's
+                return self._client.etheno.rpc_client_result
+        
         uninstalling_filter = None
         if 'params' in data:
             data['params'] = _remap_params(data['params'], self.mapping, method, remap_data = True)
@@ -95,8 +110,14 @@ class ChainSynchronizer(object):
                 elif not (old_decoded is None and new_decoded is None):
                     print("Warning: call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result'], self._client))
         elif method == 'eth_getTransactionReceipt':
+            # by this point we know that the master client has already successfully mined the transaction and returned a receipt
+            # so make sure that we block until this client has also mined the transaction and returned a receipt
+            while not transaction_receipt_succeeded(ret):
+                print("Waiting for %s to mine transaction %s..." % (self._client, data['params'][0]))
+                time.sleep(5.0)
+                ret = self._old_post(data)
             # update the mapping with the address if a new contract was created
-            if ret and 'result' in ret and ret['result'] and 'contractAddress' in ret['result'] and ret['result']['contractAddress']:
+            if 'contractAddress' in ret['result'] and ret['result']['contractAddress']:
                 master_address = _decode_value(self._client.etheno.rpc_client_result['result']['contractAddress'])
                 our_address = _decode_value(ret['result']['contractAddress'])
                 if master_address is not None and our_address is not None:
