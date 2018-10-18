@@ -91,6 +91,12 @@ class ManticoreClient(EthenoClient):
         # We need to return something valid to appease the differential tester
         return rpc_client_result
 
+    @jsonrpc(TX_HASH = QUANTITY)
+    def eth_getTransactionReceipt(self, tx_hash, rpc_client_result = None):
+        # Mimic the result from the master client
+        # to appease the differential tester
+        return rpc_client_result
+    
     def multi_tx_analysis(self, contract_address = None, tx_limit=None, tx_use_coverage=True, args=None):
         if contract_address is None:
             for contract_address in self.contracts:
