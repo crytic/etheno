@@ -3,11 +3,10 @@ from threading import Thread
 import time
 import sys
 
-from web3.auto import w3
-
 from .client import RpcProxyClient
 from .differentials import DifferentialTester
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
+from .genesis import make_accounts, make_genesis
 from .synchronization import AddressSynchronizingClient
 from .utils import find_open_port
 from . import Etheno
@@ -50,7 +49,7 @@ def main(argv = None):
         print(VERSION_NAME)
         sys.exit(0)
 
-    accounts = [w3.eth.account.create() for i in range(args.accounts)]
+    accounts = make_accounts(args.accounts)
 
     if args.ganache and args.master:
         parser.print_help()
@@ -90,7 +89,7 @@ def main(argv = None):
         if args.geth_port is None:
             args.geth_port = find_open_port(args.port + 1)
 
-        genesis = geth.make_genesis(network_id = args.network_id, accounts = ((int(acct.address, 16), args.balance * 1000000000000000000) for acct in accounts))
+        genesis = make_genesis(network_id = args.network_id, accounts = ((int(acct.address, 16), args.balance * 1000000000000000000) for acct in accounts))
         geth_instance = geth.GethClient(genesis = genesis, port = args.geth_port)
         for account in accounts:
             geth_instance.import_account(account.privateKey.hex())

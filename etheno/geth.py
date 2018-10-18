@@ -4,29 +4,10 @@ import os
 import subprocess
 import tempfile
 import time
-from web3.auto import w3
 
 from .client import SelfPostingClient, RpcHttpProxy
-
+from .genesis import make_accounts
 from .utils import format_hex_address, is_port_free
-
-def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 200000000000, accounts = None):
-    if accounts:
-        alloc = {format_hex_address(addr): {'balance': "%d" % bal} for addr, bal in accounts}
-    else:
-        alloc = {}
-    
-    return {
-        'config' : {
-            'chainId': network_id,
-            'homesteadBlock': 0,
-            'eip155Block': 0,
-            'eip158Block': 0
-        },
-        'difficulty': "%d" % difficulty,
-        'gasLimit': "%d" % gas_limit,
-        'alloc': alloc
-    }
 
 class make_password(object):
     def __init__(self, num_accounts = 1):
@@ -47,7 +28,7 @@ class GethClient(SelfPostingClient):
     def __init__(self, genesis, port=8546):
         super().__init__(RpcHttpProxy("http://localhost:%d/" % port))
         # Create a miner etherbase account:
-        self.etherbase = w3.eth.account.create()
+        self.etherbase = make_accounts(1)[0]
         self.port = port
         self.genesis = dict(genesis)
         # Add the etherbase account to genesis:
