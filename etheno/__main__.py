@@ -87,6 +87,9 @@ def main(argv = None):
         for account in accounts[len(genesis['alloc']):]:
             genesis['alloc'][format_hex_address(account.address)] = {'balance': "%d" % account.balance, 'privateKey': format_hex_address(account.private_key), 'comment': '`privateKey` and `comment` are ignored.  In a real chain, the private key should _not_ be stored!'}
 
+    if args.raw is None:
+        args.raw = []
+
     if args.ganache and args.master:
         parser.print_help()
         sys.stderr.write('\nError: You cannot specify both --ganache and --master at the same time!\n')
