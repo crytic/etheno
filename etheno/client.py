@@ -2,7 +2,7 @@ import inspect
 import json
 from urllib.request import Request, urlopen
 
-from .utils import decode_hex, webserver_is_up
+from .utils import decode_hex, format_hex_address, webserver_is_up
 
 def jsonrpc(**types):
     def decorator(function):
@@ -90,6 +90,19 @@ class SelfPostingClient(EthenoClient):
         pass
     def post(self, data):
         return self.client.post(data)
+    def get_gas_price(self):
+        return int(self.post({
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'net_version'
+        })['result'], 16)
+    def get_transaction_count(self, from_address):
+        return int(self.post({
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'eth_getTransactionCount',
+            'params': [format_hex_address(from_address), 'latest']
+        })['result'], 16)
     def __str__(self):
         return str(self.client)
     def __repr__(self):

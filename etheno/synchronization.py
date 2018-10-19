@@ -145,11 +145,7 @@ class RawTransactionSynchronizer(ChainSynchronizer):
         self.accounts = accounts
         self._private_keys = {}
         self._account_index = -1
-        self._chain_id = int(client.post({
-            'id': 1,
-            'jsonrpc': '2.0',
-            'method': 'net_version'
-        })['result'], 16)
+        self._chain_id = client.get_gas_price()
 
     def create_account(self, balance = 0, address = None):
         self._account_index += 1
@@ -182,12 +178,7 @@ class RawTransactionSynchronizer(ChainSynchronizer):
             # web3.eth.acount.signTransaction expects the `to` field to be a checksum address:
             if 'to' in params:
                 params['to'] = eth_utils.address.to_checksum_address(params['to'])
-            transaction_count = int(self._client.post({
-                'id': 1,
-                'jsonrpc': '2.0',
-                'method': 'eth_getTransactionCount',
-                'params': [from_str, 'latest']
-            })['result'], 16)
+            transaction_count = self._client.get_transaction_count(from_address)
             params['nonce'] = transaction_count
             signed_txn = w3.eth.account.signTransaction(params, private_key=self._private_keys[from_address])
             return super().post({
