@@ -9,7 +9,7 @@ from .differentials import DifferentialTester
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
 from .genesis import Account, make_accounts, make_genesis
 from .synchronization import AddressSynchronizingClient, RawTransactionClient
-from .utils import find_open_port, format_hex_address
+from .utils import decode_value, find_open_port, format_hex_address
 from . import Etheno
 from . import ganache
 from . import geth
@@ -68,7 +68,7 @@ def main(argv = None):
                 pkey = None
                 if 'privateKey' in bal:
                     pkey = bal['privateKey']
-                accounts.append(Account(address = int(addr, 16), balance = int(bal['balance']), private_key = pkey))
+                accounts.append(Account(address = int(addr, 16), balance = decode_value(bal['balance']), private_key = decode_value(pkey)))
     else:
         # We will generate it further below once we've resolved all of the parameters
         genesis = None

@@ -10,9 +10,19 @@ def int_to_bytes(n):
 def decode_hex(data):
     if data is None:
         return None
-    if data[:2] == '0x':
+    if data.startswith('0x'):
         data = data[2:]
     return bytes.fromhex(data)
+
+def decode_value(v):
+    if isinstance(v, int):
+        return v
+    elif v.startswith('0x') or (frozenset(['a', 'b', 'c', 'd', 'e', 'f']) & frozenset(v)):
+        # this is a hex string
+        return int(v, 16)
+    else:
+        # assume it is a regular int
+        return int(v)
 
 def format_hex_address(addr):
     if addr is None:
