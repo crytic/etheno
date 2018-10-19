@@ -60,6 +60,8 @@ def decode_binary_json(text):
     return text[:-1]
 
 class EchidnaPlugin(EthenoPlugin):
+    def __init__(self):
+        self._transaction = 0
     def run(self):
         if not self.etheno.accounts:
             print("Etheno does not know about any accounts, so Echidna has nothing to do!")
@@ -85,6 +87,8 @@ class EchidnaPlugin(EthenoPlugin):
         etheno.shutdown()
 
     def emit_transaction(self, txn):
+        self._transaction += 1
+        print("Echidna: Emitting Transaction %d" % self._transaction)
         self.etheno.post({
             'id': 1,
             'jsonrpc': '2.0',
@@ -93,7 +97,7 @@ class EchidnaPlugin(EthenoPlugin):
                 "from": format_hex_address(self.etheno.accounts[0]),
                 "to": "0x0",
                 "gas": "0x76c0",
-                "gasPrice": "0x9184e72a000",
+                "gasPrice": "0x%x" % self.etheno.master_client.get_gas_price(),
                 "value": "0x0",
                 "data": "0x%s" % txn.hex()
             }]
