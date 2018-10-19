@@ -67,7 +67,8 @@ class ChainSynchronizer(object):
         except NotImplementedError:
             pass
         new_address = self._old_create_account(balance = balance, address = None)
-        self.mapping[address] = new_address
+        if address is not None:
+            self.mapping[address] = new_address
         return new_address
 
     def post(self, data):
@@ -134,4 +135,3 @@ def AddressSynchronizingClient(etheno_client):
     setattr(etheno_client, 'post', ChainSynchronizer.post.__get__(synchronizer, ChainSynchronizer))
      
     return etheno_client
-        
