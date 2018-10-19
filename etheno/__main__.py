@@ -21,9 +21,9 @@ def main(argv = None):
     parser.add_argument('--debug', action='store_true', default=False, help='Enable debugging from within the web server')
     parser.add_argument('--run-publicly', action='store_true', default=False, help='Allow the web server to accept external connections')
     parser.add_argument('-p', '--port', type=int, default=GETH_DEFAULT_RPC_PORT, help='Port on which to run the JSON RPC webserver (default=%d)' % GETH_DEFAULT_RPC_PORT)
-    parser.add_argument('-a', '--accounts', type=int, default=10, help='Number of accounts to create in the client (default=10)')
+    parser.add_argument('-a', '--accounts', type=int, default=None, help='Number of accounts to create in the client (default=10)')
     parser.add_argument('-b', '--balance', type=float, default=100.0, help='Default balance (in Ether) to seed to each account (default=100.0)')
-    parser.add_argument('-c', '--gas-price', type=int, default=20000000000, help='Default gas price (default=20000000000)')
+    parser.add_argument('-c', '--gas-price', type=int, default=None, help='Default gas price (default=20000000000)')
     parser.add_argument('-i', '--network-id', type=int, default=None, help='Specify a network ID (default is the network ID of the master client)')
     parser.add_argument('-m', '--manticore', action='store_true', default=False, help='Run all transactions through manticore')
     parser.add_argument('-r', '--manticore-script', type=argparse.FileType('rb'), default=None, help='Instead of running automated detectors and analyses, run this Manticore script')
@@ -52,6 +52,13 @@ def main(argv = None):
         print(VERSION_NAME)
         sys.exit(0)
 
+    if args.genesis is None:
+        # Set defaults since no genesis was supplied
+        if args.accounts is None:
+            args.accounts = 10
+        if args.gas_price is None:
+            args.gas_price = 20000000000
+        
     accounts = []
 
     if args.genesis:
