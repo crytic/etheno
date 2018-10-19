@@ -69,7 +69,7 @@ class ChainSynchronizer(object):
         except NotImplementedError:
             pass
         new_address = self._old_create_account(balance = balance, address = None)
-        if address is not None:
+        if address is not None and address != new_address:
             self.mapping[address] = new_address
         return new_address
 
@@ -154,7 +154,7 @@ class RawTransactionSynchronizer(ChainSynchronizer):
         self._account_index += 1
         new_address = self.accounts[self._account_index].address
         self._private_keys[new_address] = int_to_bytes(self.accounts[self._account_index].private_key)
-        if address is not None:
+        if address is not None and address != new_address:
             self.mapping[address] = new_address
         return new_address
 
@@ -164,25 +164,36 @@ class RawTransactionSynchronizer(ChainSynchronizer):
         if method == 'eth_sendTransaction':
             # This client does not support sendTransaction because it does not have any of the requisite accounts.
             # So let's manually sign the transaction and send it to the client using eth_sendRawTransaction, instead.
-            from_address = int(data['from'], 16)
+            from_str = data['params'][0]['from']
+            from_address = int(from_str, 16)
+            if from_address in self.mapping:
+                from_address = self.mapping[from_address]
+                from_str = format_hex_address(from_address)
             if from_address not in self._private_keys:
-                raise Exception("Error: eth_sendTransaction sent from unknown address %s:\n%s" % (data['from'], data))
-            data = dict(data)                
-            data['chainId'] = self._chain_id
-            transaction_count = int(client.post({
+                raise Exception("Error: eth_sendTransaction sent from unknown address %s:\n%s" % (from_str, data))
+            data = dict(data)
+            params = data['params'][0]
+            params['chainId'] = self._chain_id
+            # Workaround for a bug in web3.eth.account:
+            # the signTransaction function checks to see if the 'from' field is present, and if so it validates that it
+            # corresponds to the address of the private key. However, web3.eth.account doesn't perform this check case
+            # insensitively, so it can erroneously fail. It turns out you don't even need to have the 'from' field
+            # present for it to work, so just remove it to prevent the issue:
+            del params['from']
+            transaction_count = int(self._client.post({
                 'id': 1,
                 'jsonrpc': '2.0',
                 'method': 'eth_getTransactionCount',
-                'params': [data['from'], 'latest']
+                'params': [from_str, 'latest']
             })['result'], 16)
-            data['nonce'] = transaction_count
-            signed_txn = w3.eth.account.signTransaction(data, private_key=self._private_keys[from_address])
-            print(signed_txn.raw_transaction)
+            params['nonce'] = transaction_count
+            signed_txn = w3.eth.account.signTransaction(params, private_key=self._private_keys[from_address])
+            print(signed_txn.rawTransaction.hex())
             return super().post({
                 'id': 1,
                 'jsonrpc': '2.0',
                 'method': 'eth_sendRawTransaction',
-                'params': [signed_txn.raw_transaction]
+                'params': ["0x%s" % signed_txn.rawTransaction.hex()]
             })
         else:
             return super().post(data)
