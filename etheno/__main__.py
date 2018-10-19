@@ -37,6 +37,7 @@ def main(argv = None):
     parser.add_argument('-go', '--geth', action='store_true', default=False, help='Run Geth as a JSON RPC client')
     parser.add_argument('--geth-port', type=int, default=None, help='Port on which to run Geth (defaults to the closest available port to the port specified with --port plus one)')
     parser.add_argument('-j', '--genesis', type=str, default=None, help='Path to a genesis.json file to use for initializing clients. Any genesis-related options like --network-id will override the values in this file. If --accounts is greater than zero, that many new accounts will be appended to the accounts in the genesis file.')
+    parser.add_argument('--save-genesis', type=str, default=None, help="Save a genesis.json file to reproduce the state of this run. Note that this genesis file will include all known private keys for the genesis accounts, so use this with caution.")
     parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True, help='Do not run differential testing, which is run by default')
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
     parser.add_argument('client', type=str, nargs='*', help='One or more JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
@@ -76,7 +77,7 @@ def main(argv = None):
     if genesis is not None:
         # add the new accounts to the genesis
         for account in accounts[len(genesis['alloc']):]:
-            genesis['alloc'][format_hex_address(account.address)] = {'balance': "%d" % account.balance}
+            genesis['alloc'][format_hex_address(account.address)] = {'balance': "%d" % account.balance, 'privateKey': format_hex_address(account.private_key), 'comment': '`privateKey` and `comment` are ignored.  In a real chain, the private key should _not_ be stored!'}
 
     if args.ganache and args.master:
         parser.print_help()
@@ -117,6 +118,11 @@ def main(argv = None):
     else:
         # Update the genesis with any overridden values
         genesis['config']['chainId'] = args.network_id
+
+    if args.save_genesis:
+        with open(args.save_genesis, 'wb') as f:
+            f.write(json.dumps(genesis).encode('utf-8'))
+            print("Saved genesis to %s" % args.save_genesis)
 
     if args.geth:
         if args.geth_port is None:

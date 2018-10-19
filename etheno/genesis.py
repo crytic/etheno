@@ -16,10 +16,10 @@ class Account(object):
 
 def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 200000000000, accounts = None, homestead_block = 0, eip155_block = 0, eip158_block = 0):
     if accounts:
-        alloc = {format_hex_address(acct.address): {'balance': "%d" % acct.balance} for acct in accounts}
+        alloc = {format_hex_address(acct.address): {'balance': "%d" % acct.balance, 'privateKey': format_hex_address(acct.private_key)} for acct in accounts}
     else:
         alloc = {}
-    
+
     return {
         'config' : {
             'chainId': network_id,

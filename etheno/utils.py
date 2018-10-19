@@ -10,6 +10,8 @@ def decode_hex(data):
     return bytes.fromhex(data)
 
 def format_hex_address(addr):
+    if addr is None:
+        return None
     if isinstance(addr, int):
         addr = "%x" % addr
     if addr.lower().startswith('0x'):
