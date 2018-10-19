@@ -3,7 +3,7 @@ import time
 from web3.auto import w3
 
 from .client import EthenoClient, SelfPostingClient, jsonrpc, DATA, QUANTITY
-from .utils import decode_hex, format_hex_address
+from .utils import decode_hex, format_hex_address, int_to_bytes
 
 def _decode_value(value):
     if isinstance(value, int):
@@ -153,7 +153,7 @@ class RawTransactionSynchronizer(ChainSynchronizer):
     def create_account(self, balance = 0, address = None):
         self._account_index += 1
         new_address = self.accounts[self._account_index].address
-        self._private_keys[new_address] = int.from_bytes(self.accounts[self._account_index].private_key, byteorder='big')
+        self._private_keys[new_address] = int_to_bytes(self.accounts[self._account_index].private_key)
         if address is not None:
             self.mapping[address] = new_address
         return new_address
@@ -187,8 +187,8 @@ class RawTransactionSynchronizer(ChainSynchronizer):
         else:
             return super().post(data)
 
-def RawTransactionClient(etheno_client):
-    synchronizer = RawTransactionSynchronizer(etheno_client)
+def RawTransactionClient(etheno_client, accounts):
+    synchronizer = RawTransactionSynchronizer(etheno_client, accounts)
 
     setattr(etheno_client, 'create_account', RawTransactionSynchronizer.create_account.__get__(synchronizer, RawTransactionSynchronizer))
     setattr(etheno_client, 'post', RawTransactionSynchronizer.post.__get__(synchronizer, RawTransactionSynchronizer))

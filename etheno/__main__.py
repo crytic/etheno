@@ -8,7 +8,7 @@ from .client import RpcProxyClient
 from .differentials import DifferentialTester
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
 from .genesis import Account, make_accounts, make_genesis
-from .synchronization import AddressSynchronizingClient
+from .synchronization import AddressSynchronizingClient, RawTransactionClient
 from .utils import find_open_port, format_hex_address
 from . import Etheno
 from . import ganache
@@ -40,8 +40,9 @@ def main(argv = None):
     parser.add_argument('--save-genesis', type=str, default=None, help="Save a genesis.json file to reproduce the state of this run. Note that this genesis file will include all known private keys for the genesis accounts, so use this with caution.")
     parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True, help='Do not run differential testing, which is run by default')
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
-    parser.add_argument('client', type=str, nargs='*', help='One or more JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
+    parser.add_argument('client', type=str, nargs='*', help='JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
     parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
+    parser.add_argument('--raw', type=str, nargs='*', help='JSON RPC client URLs to multiplex that do not have any local accounts; Etheno will automatically use auto-generated accounts with known private keys, pre-sign all transactions, and only use eth_sendRawTransaction')
 
     if argv is None:
         argv = sys.argv
@@ -102,6 +103,9 @@ def main(argv = None):
     elif args.client and not args.geth:
         ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.client[0]))
         args.client = args.client[1:]
+    elif args.raw and not args.geth:
+        ETHENO.master_client = RawTransactionClient(RpcProxyClient(args.raw[0], accounts))
+        args.raw = args.raw[1:]
         
     if args.network_id is None:
         if ETHENO.master_client:
@@ -139,6 +143,9 @@ def main(argv = None):
 
     for client in args.client:
         ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))
+
+    for client in args.raw:
+        ETHENO.add_client(RawTransactionClient(RpcProxyClient(client), accounts))
 
     manticore_client = None
     if args.manticore:

@@ -1,6 +1,11 @@
+import math
 import socket
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
+
+def int_to_bytes(n):
+    number_of_bytes = int(math.ceil(n.bit_length() / 8))
+    return n.to_bytes(number_of_bytes, byteorder='big')
 
 def decode_hex(data):
     if data is None:
