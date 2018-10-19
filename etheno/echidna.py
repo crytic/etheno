@@ -60,8 +60,9 @@ def decode_binary_json(text):
     return text[:-1]
 
 class EchidnaPlugin(EthenoPlugin):
-    def __init__(self):
+    def __init__(self, transaction_limit=None):
         self._transaction = 0
+        self.limit = transaction_limit
     def run(self):
         if not self.etheno.accounts:
             print("Etheno does not know about any accounts, so Echidna has nothing to do!")
@@ -70,7 +71,7 @@ class EchidnaPlugin(EthenoPlugin):
         with ConstantTemporaryFile(ECHIDNA_CONFIG, prefix='echidna', suffix='.yaml') as config:
             with ConstantTemporaryFile(ECHIDNA_CONTRACT, prefix='echidna', suffix='.sol') as sol:
                 echidna = subprocess.Popen(['/usr/bin/env', 'echidna-test', sol, '--config', config], stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
-                while True:
+                while self.limit is None or self._transaction < self.limit:
                     line = echidna.stdout.readline()
                     if line != b'':
                         txn = decode_binary_json(line)

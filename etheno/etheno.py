@@ -324,6 +324,9 @@ class Etheno(object):
 
         print("Etheno v%s" % VERSION)
 
+        for plugin in self.plugins:
+            plugin.run()
+
         _CONTROLLER.run()
         self.shutdown()
         thread.join()
