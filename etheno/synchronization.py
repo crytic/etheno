@@ -1,5 +1,6 @@
 import time
 
+import eth_utils
 from web3.auto import w3
 
 from .client import EthenoClient, SelfPostingClient, jsonrpc, DATA, QUANTITY
@@ -164,22 +165,23 @@ class RawTransactionSynchronizer(ChainSynchronizer):
         if method == 'eth_sendTransaction':
             # This client does not support sendTransaction because it does not have any of the requisite accounts.
             # So let's manually sign the transaction and send it to the client using eth_sendRawTransaction, instead.
-            from_str = data['params'][0]['from']
+            params = _remap_params(dict(data['params'][0]), self.mapping, method, remap_data = True)
+            from_str = params['from']
             from_address = int(from_str, 16)
-            if from_address in self.mapping:
-                from_address = self.mapping[from_address]
-                from_str = format_hex_address(from_address)
             if from_address not in self._private_keys:
                 raise Exception("Error: eth_sendTransaction sent from unknown address %s:\n%s" % (from_str, data))
-            data = dict(data)
-            params = data['params'][0]
-            params['chainId'] = self._chain_id
+            if 'chainId' in params:
+                # we don't need to set the chain_id
+                del params['chainId']
             # Workaround for a bug in web3.eth.account:
             # the signTransaction function checks to see if the 'from' field is present, and if so it validates that it
             # corresponds to the address of the private key. However, web3.eth.account doesn't perform this check case
-            # insensitively, so it can erroneously fail. It turns out you don't even need to have the 'from' field
-            # present for it to work, so just remove it to prevent the issue:
-            del params['from']
+            # insensitively, so it can erroneously fail. Therefore, set the 'from' field using the same value that
+            # this call validates against:
+            params['from'] = w3.eth.account.privateKeyToAccount(self._private_keys[from_address]).address
+            # web3.eth.acount.signTransaction expects the `to` field to be a checksum address:
+            if 'to' in params:
+                params['to'] = eth_utils.address.to_checksum_address(params['to'])
             transaction_count = int(self._client.post({
                 'id': 1,
                 'jsonrpc': '2.0',
@@ -188,12 +190,11 @@ class RawTransactionSynchronizer(ChainSynchronizer):
             })['result'], 16)
             params['nonce'] = transaction_count
             signed_txn = w3.eth.account.signTransaction(params, private_key=self._private_keys[from_address])
-            print(signed_txn.rawTransaction.hex())
             return super().post({
                 'id': 1,
                 'jsonrpc': '2.0',
                 'method': 'eth_sendRawTransaction',
-                'params': ["0x%s" % signed_txn.rawTransaction.hex()]
+                'params': [signed_txn.rawTransaction.hex()]
             })
         else:
             return super().post(data)
