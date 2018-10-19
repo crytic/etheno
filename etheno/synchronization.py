@@ -145,7 +145,7 @@ class RawTransactionSynchronizer(ChainSynchronizer):
         self.accounts = accounts
         self._private_keys = {}
         self._account_index = -1
-        self._chain_id = client.get_gas_price()
+        self._chain_id = client.get_net_version()
 
     def create_account(self, balance = 0, address = None):
         self._account_index += 1

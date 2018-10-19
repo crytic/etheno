@@ -94,6 +94,12 @@ class SelfPostingClient(EthenoClient):
         return int(self.post({
             'id': 1,
             'jsonrpc': '2.0',
+            'method': 'eth_gasPrice'
+        })['result'], 16)
+    def get_net_version(self):
+        return int(self.post({
+            'id': 1,
+            'jsonrpc': '2.0',
             'method': 'net_version'
         })['result'], 16)
     def get_transaction_count(self, from_address):
