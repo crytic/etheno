@@ -181,6 +181,10 @@ def main(argv = None):
         print("Initializing differential tests to compare clients %s" % ', '.join(map(str, [ETHENO.master_client] + ETHENO.clients)))
         ETHENO.add_plugin(DifferentialTester())
 
+    if ETHENO.master_client is None and not ETHENO.clients and not ETHENO.plugins:
+        print("No clients or plugins provided; exiting...")
+        return
+
     etheno = EthenoView()
     app.add_url_rule('/', view_func=etheno.as_view('etheno'))
 
