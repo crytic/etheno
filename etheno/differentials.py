@@ -32,6 +32,7 @@ class DifferentialTester(EthenoPlugin):
                     # make sure each client used the same amount of gas
                     master_gas = int(master_result['result']['gasUsed'], 16)
                     for client, client_data in zip(self.etheno.clients, client_results[1:]):
+                        gas_used = 0
                         try:
                             gas_used = int(client_data['result']['gasUsed'], 16)
                         except Exception:
