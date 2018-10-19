@@ -1,7 +1,26 @@
 import math
+import os
 import socket
+import tempfile
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
+
+class ConstantTemporaryFile(object):
+    def __init__(self, constant_content, **kwargs):
+        self.constant_content = constant_content
+        self._file = None
+        self._kwargs = dict(kwargs)
+        self._kwargs['mode'] = 'w+b'
+        self._kwargs['delete'] = False
+    def __enter__(self):
+        self._file = tempfile.NamedTemporaryFile(**self._kwargs)
+        self._file.write(self.constant_content)
+        self._file.close()
+        return self._file.name
+    def __exit__(self, type, value, traceback):
+        if self._file and os.path.exists(self._file.name):
+            os.remove(self._file.name)
+        self._file = None
 
 def int_to_bytes(n):
     number_of_bytes = int(math.ceil(n.bit_length() / 8))

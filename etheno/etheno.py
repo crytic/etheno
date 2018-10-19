@@ -143,6 +143,12 @@ class ManticoreClient(EthenoClient):
 
 class EthenoPlugin():
     etheno = None
+
+    def added(self):
+        '''
+        A callback when this plugin is added to an Etheno instance
+        '''
+        pass
     
     def before_post(self, post_data):
         '''
@@ -160,6 +166,12 @@ class EthenoPlugin():
         '''
         pass
 
+    def run(self):
+        '''
+        A callback when Etheno is running and all other clients and plugins are initialized
+        '''
+        pass
+    
     def finalize(self):
         '''
         Called when an analysis pass should be finalized (e.g., after a Truffle migration completes).
@@ -259,7 +271,17 @@ class Etheno(object):
     def add_plugin(self, plugin):
         plugin.etheno = self
         self.plugins.append(plugin)
+        plugin.added()
 
+    def remove_plugin(self, plugin):
+        '''
+        Removes a plugin, automatically calling plugin.shutdown() in the process
+        :param plugin: The plugin to remove
+        '''
+        self.plugins.remove(plugin)
+        plugin.shutdown()
+        plugin.etheno = None
+        
     def _create_accounts(self, client):
         for account in self.accounts:
             # TODO: Actually get the correct balance from the JSON RPC client instead of using hard-coded 100.0 ETH
@@ -280,9 +302,12 @@ class Etheno(object):
             client.shutdown()
         from urllib.request import urlopen
         import socket
+        import urllib
         try:
             urlopen("http://127.0.0.1:%d/shutdown" % port, timeout = 2)
         except socket.timeout:
+            pass
+        except urllib.error.URLError:
             pass
 
     def run(self, debug=True, run_publicly=False, port=GETH_DEFAULT_RPC_PORT):
