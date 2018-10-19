@@ -1,7 +1,10 @@
 import time
 
+import eth_utils
+from web3.auto import w3
+
 from .client import EthenoClient, SelfPostingClient, jsonrpc, DATA, QUANTITY
-from .utils import decode_hex, format_hex_address
+from .utils import decode_hex, format_hex_address, int_to_bytes
 
 def _decode_value(value):
     if isinstance(value, int):
@@ -67,7 +70,8 @@ class ChainSynchronizer(object):
         except NotImplementedError:
             pass
         new_address = self._old_create_account(balance = balance, address = None)
-        self.mapping[address] = new_address
+        if address is not None and address != new_address:
+            self.mapping[address] = new_address
         return new_address
 
     def post(self, data):
@@ -135,3 +139,70 @@ def AddressSynchronizingClient(etheno_client):
      
     return etheno_client
         
+class RawTransactionSynchronizer(ChainSynchronizer):
+    def __init__(self, client, accounts):
+        super().__init__(client)
+        self.accounts = accounts
+        self._private_keys = {}
+        self._account_index = -1
+        self._chain_id = int(client.post({
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'net_version'
+        })['result'], 16)
+
+    def create_account(self, balance = 0, address = None):
+        self._account_index += 1
+        new_address = self.accounts[self._account_index].address
+        self._private_keys[new_address] = int_to_bytes(self.accounts[self._account_index].private_key)
+        if address is not None and address != new_address:
+            self.mapping[address] = new_address
+        return new_address
+
+    def post(self, data):
+        method = data['method']
+
+        if method == 'eth_sendTransaction':
+            # This client does not support sendTransaction because it does not have any of the requisite accounts.
+            # So let's manually sign the transaction and send it to the client using eth_sendRawTransaction, instead.
+            params = _remap_params(dict(data['params'][0]), self.mapping, method, remap_data = True)
+            from_str = params['from']
+            from_address = int(from_str, 16)
+            if from_address not in self._private_keys:
+                raise Exception("Error: eth_sendTransaction sent from unknown address %s:\n%s" % (from_str, data))
+            if 'chainId' in params:
+                # we don't need to set the chain_id
+                del params['chainId']
+            # Workaround for a bug in web3.eth.account:
+            # the signTransaction function checks to see if the 'from' field is present, and if so it validates that it
+            # corresponds to the address of the private key. However, web3.eth.account doesn't perform this check case
+            # insensitively, so it can erroneously fail. Therefore, set the 'from' field using the same value that
+            # this call validates against:
+            params['from'] = w3.eth.account.privateKeyToAccount(self._private_keys[from_address]).address
+            # web3.eth.acount.signTransaction expects the `to` field to be a checksum address:
+            if 'to' in params:
+                params['to'] = eth_utils.address.to_checksum_address(params['to'])
+            transaction_count = int(self._client.post({
+                'id': 1,
+                'jsonrpc': '2.0',
+                'method': 'eth_getTransactionCount',
+                'params': [from_str, 'latest']
+            })['result'], 16)
+            params['nonce'] = transaction_count
+            signed_txn = w3.eth.account.signTransaction(params, private_key=self._private_keys[from_address])
+            return super().post({
+                'id': 1,
+                'jsonrpc': '2.0',
+                'method': 'eth_sendRawTransaction',
+                'params': [signed_txn.rawTransaction.hex()]
+            })
+        else:
+            return super().post(data)
+
+def RawTransactionClient(etheno_client, accounts):
+    synchronizer = RawTransactionSynchronizer(etheno_client, accounts)
+
+    setattr(etheno_client, 'create_account', RawTransactionSynchronizer.create_account.__get__(synchronizer, RawTransactionSynchronizer))
+    setattr(etheno_client, 'post', RawTransactionSynchronizer.post.__get__(synchronizer, RawTransactionSynchronizer))
+     
+    return etheno_client
