@@ -79,11 +79,6 @@ class SelfPostingClient(EthenoClient):
         if address is not None:
             raise NotImplementedError()
         if self._accounts is None:
-            print("ACCOUNTS: %s" % self.post({
-                'id': 1,
-                'jsonrpc': '2.0',
-                'method': 'eth_accounts'
-            })['result'])
             self._accounts = list(map(lambda a : int(a, 16), self.post({
                 'id': 1,
                 'jsonrpc': '2.0',
