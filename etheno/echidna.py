@@ -65,14 +65,15 @@ class EchidnaPlugin(EthenoPlugin):
     def __init__(self, transaction_limit=None):
         self._transaction = 0
         self.limit = transaction_limit
+        self.contract_address = None
     def run(self):
         if not self.etheno.accounts:
             print("Etheno does not know about any accounts, so Echidna has nothing to do!")
             self._shutdown()
             return
         # First, deploy the testing contract:
-        contract_address = self.etheno.deploy_contract(self.etheno.accounts[0], ECHIDNA_CONTRACT_BYTECODE)
-        print("Deployed Echidna test contract to %s" % format_hex_address(contract_address))
+        self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0], ECHIDNA_CONTRACT_BYTECODE), True)
+        print("Deployed Echidna test contract to %s" % self.contract_address)
         with ConstantTemporaryFile(ECHIDNA_CONFIG, prefix='echidna', suffix='.yaml') as config:
             with ConstantTemporaryFile(ECHIDNA_CONTRACT, prefix='echidna', suffix='.sol') as sol:
                 echidna = subprocess.Popen(['/usr/bin/env', 'echidna-test', sol, '--config', config], stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
@@ -101,8 +102,8 @@ class EchidnaPlugin(EthenoPlugin):
             'method': 'eth_sendTransaction',
             'params' : [{
                 "from": format_hex_address(self.etheno.accounts[0], True),
-                "to": "0x0",
-                "gas": "0x76c0",
+                "to": self.contract_address,
+                "gas": "0x99999",
                 "gasPrice": "0x%x" % self.etheno.master_client.get_gas_price(),
                 "value": "0x0",
                 "data": "0x%s" % txn.hex()
