@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import time
 
-from .client import SelfPostingClient, RpcHttpProxy
+from .client import JSONRPCError, RpcHttpProxy, SelfPostingClient
 from .genesis import make_accounts
 from .utils import format_hex_address, is_port_free
 
@@ -87,9 +87,21 @@ class GethClient(SelfPostingClient):
         else:
             return address
 
+    def post(self, data):
+        # geth takes a while to unlock all of the accounts, so check to see if that caused an error and just wait a bit
+        while True:
+            try:
+                return super().post(data)
+            except JSONRPCError as e:
+                if e.result['error']['code'] == -32000 or 'authentication needed' in e.result['error']['message']:
+                    print("Waiting for Geth to finish unlocking our accounts...")
+                    time.sleep(3.0)
+                else:
+                    raise e
+
     def start(self, unlock_accounts = True):
         if self.geth:
-            return
+            return        
         base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir.name, '--mine', '--etherbase', format_hex_address(self.etherbase.address)]
         if unlock_accounts:
             addresses = filter(lambda a : a != format_hex_address(self.etherbase.address), map(format_hex_address, self.genesis['alloc']))
@@ -121,10 +133,3 @@ class GethClient(SelfPostingClient):
     def wait_until_running(self):
         while is_port_free(self.port):
             time.sleep(0.25)
-        # ensure that we can actually send a command to the client:
-        while True:
-            try:
-                self.get_net_version()
-                break
-            except Exception:
-                time.sleep(1.0)
