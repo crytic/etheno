@@ -101,13 +101,14 @@ class ChainSynchronizer(object):
         elif method == 'eth_sendTransaction' or method == 'eth_sendRawTransaction':
             # record the transaction hash mapping
             if ret and 'result' in ret and ret['result']:
-                old_decoded = _decode_value(self._client.etheno.rpc_client_result['result'])
-                new_decoded = _decode_value(ret['result'])
-                if old_decoded is not None and new_decoded is not None:
-                    print("Mapping transaction hash %x to %x for %s" % (old_decoded, new_decoded, self._client))
-                    self.mapping[old_decoded] = new_decoded
-                elif not (old_decoded is None and new_decoded is None):
-                    print("Warning: call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result'], self._client))
+                if self._client.etheno.rpc_client_result and 'result' in self._client.etheno.rpc_client_result and self._client.etheno.rpc_client_result['result']:
+                    old_decoded = _decode_value(self._client.etheno.rpc_client_result['result'])
+                    new_decoded = _decode_value(ret['result'])
+                    if old_decoded is not None and new_decoded is not None:
+                        print("Mapping transaction hash %x to %x for %s" % (old_decoded, new_decoded, self._client))
+                        self.mapping[old_decoded] = new_decoded
+                    elif not (old_decoded is None and new_decoded is None):
+                        print("Warning: call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result'], self._client))
         elif method == 'eth_getTransactionReceipt':
             # by this point we know that the master client has already successfully mined the transaction and returned a receipt
             # so make sure that we block until this client has also mined the transaction and returned a receipt
@@ -159,8 +160,16 @@ class RawTransactionSynchronizer(ChainSynchronizer):
             params = _remap_params(dict(data['params'][0]), self.mapping, method, remap_data = True)
             from_str = params['from']
             from_address = int(from_str, 16)
-            if from_address not in self._private_keys:
-                raise Exception("Error: eth_sendTransaction sent from unknown address %s:\n%s" % (from_str, data))
+            if from_address in self._private_keys:
+                private_key = self._private_keys[from_address]
+            else:
+                # see if it is in self.accounts:
+                for account in self.accounts:
+                    if from_address == account.address:
+                        private_key = account.private_key
+                        break
+                else:
+                    raise Exception("Error: eth_sendTransaction sent from unknown address %s:\n%s" % (from_str, data))
             if 'chainId' in params:
                 # we don't need to set the chain_id
                 del params['chainId']
@@ -169,13 +178,13 @@ class RawTransactionSynchronizer(ChainSynchronizer):
             # corresponds to the address of the private key. However, web3.eth.account doesn't perform this check case
             # insensitively, so it can erroneously fail. Therefore, set the 'from' field using the same value that
             # this call validates against:
-            params['from'] = w3.eth.account.privateKeyToAccount(self._private_keys[from_address]).address
+            params['from'] = w3.eth.account.privateKeyToAccount(private_key).address
             # web3.eth.acount.signTransaction expects the `to` field to be a checksum address:
             if 'to' in params:
                 params['to'] = eth_utils.address.to_checksum_address(params['to'])
             transaction_count = self._client.get_transaction_count(from_address)
             params['nonce'] = transaction_count
-            signed_txn = w3.eth.account.signTransaction(params, private_key=self._private_keys[from_address])
+            signed_txn = w3.eth.account.signTransaction(params, private_key=private_key)
             return super().post({
                 'id': 1,
                 'jsonrpc': '2.0',

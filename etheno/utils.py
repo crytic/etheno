@@ -52,6 +52,9 @@ def format_hex_address(addr, add_0x = False):
         addr = addr[2:]
     if len(addr) < 40:
         addr = "%s%s" % ('0' * (40 - len(addr)), addr)
+    elif len(addr) > 40 and len(addr) < 64:
+        # this is likely something like a transaction hash, so round up to 32 bytes:
+        addr = "%s%s" % ('0' * (64 - len(addr)), addr)
     if add_0x:
         addr = "0x%s" % addr
     return addr
