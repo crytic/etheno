@@ -13,7 +13,7 @@ from flask.views import MethodView
 from manticore.ethereum import ManticoreEVM
 
 from . import threadwrapper
-from .client import EthenoClient, SelfPostingClient, RpcProxyClient, DATA, QUANTITY, transaction_receipt_succeeded, jsonrpc
+from .client import EthenoClient, JSONRPCError, RpcProxyClient, SelfPostingClient, DATA, QUANTITY, transaction_receipt_succeeded, jsonrpc
 from .utils import format_hex_address
 
 app = Flask(__name__)
@@ -248,28 +248,36 @@ class Etheno(object):
                 # for eth_getTransactionReceipt, make sure we block until all clients have mined the transaction
                 ret = self.master_client.wait_for_transaction(data['params'][0])
             else:
-                ret = self.master_client.post(data)
+                try:
+                    ret = self.master_client.post(data)
+                except JSONRPCError as e:
+                    print(e)
+                    ret = None
     
         self.rpc_client_result = ret
 
         results = []
 
         for client in self.clients:
-            if hasattr(client, method):
-                print("Enrobing JSON RPC call to %s.%s" % (client, method))
-                function = getattr(client, method)
-                if function is not None:
-                    kwargs['rpc_client_result'] = ret
-                    results.append(function(*args, **kwargs))
+            try:
+                if hasattr(client, method):
+                    print("Enrobing JSON RPC call to %s.%s" % (client, method))
+                    function = getattr(client, method)
+                    if function is not None:
+                        kwargs['rpc_client_result'] = ret
+                        results.append(function(*args, **kwargs))
+                    else:
+                        results.append(None)
+                elif isinstance(client, SelfPostingClient):
+                    if method == 'eth_getTransactionReceipt':
+                        # for eth_getTransactionReceipt, make sure we block until all clients have mined the transaction
+                        results.append(client.wait_for_transaction(data['params'][0]))
+                    else:
+                        results.append(client.post(data))
                 else:
                     results.append(None)
-            elif isinstance(client, SelfPostingClient):
-                if method == 'eth_getTransactionReceipt':
-                    # for eth_getTransactionReceipt, make sure we block until all clients have mined the transaction
-                    results.append(client.wait_for_transaction(data['params'][0]))
-                else:
-                    results.append(client.post(data))
-            else:
+            except JSONRPCError as e:
+                print(e)
                 results.append(None)
 
         if ret is None:
