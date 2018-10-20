@@ -93,7 +93,7 @@ class GethClient(SelfPostingClient):
             try:
                 return super().post(data)
             except JSONRPCError as e:
-                if e.result['error']['code'] == -32000 or 'authentication needed' in e.result['error']['message']:
+                if e.result['error']['code'] == -32000 and 'authentication needed' in e.result['error']['message']:
                     print("Waiting for Geth to finish unlocking our accounts...")
                     time.sleep(3.0)
                 else:
