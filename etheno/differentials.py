@@ -1,10 +1,33 @@
+from enum import Enum
+
 from .client import SelfPostingClient
 from .etheno import EthenoPlugin
+
+class DifferentialTest(object):
+    def __init__(self, test_name, success, message = ''):
+        self.test_name = test_name
+        self.message = message
+        self.success = success
+    def __str__(self):
+        return "[%s] %s\t%s" % (self.test_name, self.success, self.message)
+    __repr__ = __str__
+
+class TestResult(Enum):
+    FAILED = 0
+    PASSED = 1
 
 class DifferentialTester(EthenoPlugin):
     def __init__(self):
         self._unprocessed_transactions = set()
-    
+        self.tests = {}
+
+    def add_test_result(self, result):
+        if result.test_name not in self.tests:
+            self.tests[result.test_name] = {}
+        if result.success not in self.tests[result.test_name]:
+            self.tests[result.test_name][result.success] = []
+        self.tests[result.test_name][result.success].append(result)
+
     def after_post(self, data, client_results):
         method = data['method']
         if method == 'eth_sendTransaction' or method == 'eth_sendRawTransaction':
@@ -27,7 +50,11 @@ class DifferentialTester(EthenoPlugin):
                         except Exception:
                             pass
                         if not created:
-                            print("Error: the master client created a contract for transaction %s, but %s did not!" % (data['params'][0], client))
+                            test = DifferentialTest('CONTRACT_CREATION', TestResult.FAILED, "the master client created a contract for transaction %s, but %s did not" % (data['params'][0], client))
+                            self.add_test_result(test)
+                            print("Error: %s!" % test.message)
+                        else:
+                            self.add_test_result(DifferentialTest('CONTRACT_CREATION', TestResult.PASSED,  "client %s transaction %s" % (client, data['params'][0])))
                 if 'gasUsed' in master_result['result'] and master_result['result']['gasUsed']:
                     # make sure each client used the same amount of gas
                     master_gas = int(master_result['result']['gasUsed'], 16)
@@ -38,7 +65,11 @@ class DifferentialTester(EthenoPlugin):
                         except Exception:
                             pass
                         if gas_used != master_gas:
-                            print("Error: transaction %s used 0x%x gas in the master client but only 0x%x gas in %s!" % (data['params'][0], master_gas, gas_used, client))
+                            test = DifferentialTest('GAS_USAGE', TestResult.FAILED, "transaction %s used 0x%x gas in the master client but only 0x%x gas in %s!" % (data['params'][0], master_gas, gas_used, client))
+                            self.add_test_result(test)
+                            print("Error: %s" % test.message)
+                        else:
+                            self.add_test_result(DifferentialTest('GAS_USAGE', TestResult.PASSED, "client %s transaction %s used 0x%x gas" % (client, data['params'][0], gas_used)))
 
     def finalize(self):
         unprocessed = self._unprocessed_transactions
@@ -60,3 +91,14 @@ class DifferentialTester(EthenoPlugin):
                     break
                 # The transaction is still pending
                 time.sleep(3.0)
+
+    def shutdown(self):
+        if self.tests:
+            print("\nDifferential Test Summary:\n")
+            for test in self.tests:
+                print("    %s" % test)
+                total = sum(map(len, self.tests[test].values()))
+                for result in self.tests[test]:
+                    print("        %s\t%d / %d" % (result, len(self.tests[test][result]), total))
+                print('')
+        super().shutdown()

@@ -13,7 +13,7 @@ from flask.views import MethodView
 from manticore.ethereum import ManticoreEVM
 
 from . import threadwrapper
-from .client import EthenoClient, SelfPostingClient, RpcProxyClient, DATA, QUANTITY, jsonrpc
+from .client import EthenoClient, SelfPostingClient, RpcProxyClient, DATA, QUANTITY, transaction_receipt_succeeded, jsonrpc
 from .utils import format_hex_address
 
 app = Flask(__name__)
@@ -293,6 +293,19 @@ class Etheno(object):
         self.clients.append(client)
         self._create_accounts(client)
 
+    def wait_for_transaction(self, tx_hash):
+        while True:
+            receipt = self.post({
+                'id': 1,
+                'jsonrpc': 2.0,
+                'method': 'eth_getTransactionReceipt',
+                'params': [tx_hash]
+            })
+            if transaction_receipt_succeeded(receipt) is not None:
+                return receipt
+            print("Waiting for %s to mine transaction %s..." % (self.master_client, data['params'][0]))
+            time.sleep(5.0)
+
     def deploy_contract(self, from_address, bytecode, gas = 0x99999, gas_price = None, value = 0):
         if gas_price is None:
             gas_price = self.master_client.get_gas_price()
@@ -310,7 +323,7 @@ class Etheno(object):
                 "data": bytecode
             }]
         })['result']
-        receipt = self.master_client.wait_for_transaction(tx_hash)
+        receipt = self.wait_for_transaction(tx_hash)
         if 'result' in receipt and receipt['result'] and 'contractAddress' in receipt['result'] and receipt['result']['contractAddress']:
             return int(receipt['result']['contractAddress'], 16)
         else:
