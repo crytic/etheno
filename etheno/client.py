@@ -100,7 +100,11 @@ class SelfPostingClient(EthenoClient):
     def wait_until_running(self):
         pass
     def post(self, data):
-        return self.client.post(data)
+        ret = self.client.post(data)
+        if ret is not None and 'error' in ret:
+            # TODO: Figure out a better way to handle JSON RPC errors
+            raise Exception("JSON RPC Error in Client %s when processing transaction:\n%s\n%s" % (self, data, ret['error']))
+        return ret
     def get_gas_price(self):
         return int(self.post({
             'id': 1,
