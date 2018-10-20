@@ -117,7 +117,7 @@ def main(argv = None):
         ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.client[0]))
         args.client = args.client[1:]
     elif args.raw and not args.geth:
-        ETHENO.master_client = RawTransactionClient(RpcProxyClient(args.raw[0], accounts))
+        ETHENO.master_client = RawTransactionClient(RpcProxyClient(args.raw[0]), accounts)
         args.raw = args.raw[1:]
         
     if args.network_id is None:
