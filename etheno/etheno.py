@@ -227,6 +227,7 @@ class Etheno(object):
             plugin.before_post(data)
 
         method = data['method']
+        
         args = ()
         kwargs = {}
         if 'params' in data:
@@ -242,8 +243,12 @@ class Etheno(object):
         if self.master_client is None:
             ret = None
         else:
-            ret = self.master_client.post(data)
-
+            if method == 'eth_getTransactionReceipt':
+                # for eth_getTransactionReceipt, make sure we block until all clients have mined the transaction
+                ret = self.master_client.wait_for_transaction(data['params'][0])
+            else:
+                ret = self.master_client.post(data)
+    
         self.rpc_client_result = ret
 
         results = []
@@ -255,8 +260,14 @@ class Etheno(object):
                 if function is not None:
                     kwargs['rpc_client_result'] = ret
                     results.append(function(*args, **kwargs))
+                else:
+                    results.append(None)
             elif isinstance(client, SelfPostingClient):
-                results.append(client.post(data))
+                if method == 'eth_getTransactionReceipt':
+                    # for eth_getTransactionReceipt, make sure we block until all clients have mined the transaction
+                    results.append(client.wait_for_transaction(data['params'][0]))
+                else:
+                    results.append(client.post(data))
             else:
                 results.append(None)
 

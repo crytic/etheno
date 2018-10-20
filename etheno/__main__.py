@@ -152,7 +152,7 @@ def main(argv = None):
         if ETHENO.master_client is None:
             ETHENO.master_client = geth_instance
         else:
-            ETHENO.add_client(geth_instance)
+            ETHENO.add_client(AddressSynchronizingClient(geth_instance))
 
     for client in args.client:
         ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))

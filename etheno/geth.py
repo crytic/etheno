@@ -121,3 +121,10 @@ class GethClient(SelfPostingClient):
     def wait_until_running(self):
         while is_port_free(self.port):
             time.sleep(0.25)
+        # ensure that we can actually send a command to the client:
+        while True:
+            try:
+                self.get_net_version()
+                break
+            except Exception:
+                time.sleep(1.0)

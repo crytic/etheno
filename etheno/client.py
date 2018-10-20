@@ -138,7 +138,7 @@ class SelfPostingClient(EthenoClient):
             })
             if transaction_receipt_succeeded(receipt) is not None:
                 return receipt
-            print("Waiting for %s to mine transaction %s..." % (self.master_client, data['params'][0]))
+            print("Waiting for %s to mine transaction %s..." % (self, tx_hash))
             time.sleep(5.0)
 
     def __str__(self):
