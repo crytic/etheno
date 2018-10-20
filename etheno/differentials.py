@@ -20,6 +20,7 @@ class DifferentialTester(EthenoPlugin):
     def __init__(self):
         self._unprocessed_transactions = set()
         self.tests = {}
+        self._printed_summary = False
 
     def add_test_result(self, result):
         if result.test_name not in self.tests:
@@ -93,7 +94,8 @@ class DifferentialTester(EthenoPlugin):
                 time.sleep(3.0)
 
     def shutdown(self):
-        if self.tests:
+        if self.tests and not self._printed_summary:
+            self._printed_summary = True
             print("\nDifferential Test Summary:\n")
             for test in self.tests:
                 print("    %s" % test)

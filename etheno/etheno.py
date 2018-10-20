@@ -198,6 +198,7 @@ class Etheno(object):
         self.clients = []
         self.rpc_client_result = None
         self.plugins = []
+        self._shutting_down = False
 
     @property
     def master_client(self):
@@ -343,6 +344,9 @@ class Etheno(object):
             return None
 
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
+        if self._shutting_down:
+            return
+        self._shutting_down = True
         for plugin in self.plugins:
             plugin.shutdown()
         # Send a web request to the server to shut down:
