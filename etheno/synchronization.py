@@ -58,6 +58,8 @@ class ChainSynchronizer(object):
         self._client = client
 
     def create_account(self, balance = 0, address = None):
+        if self._client == self._client.etheno.master_client:
+            return self._old_create_account(data)
         try:
             # First, see if the client can handle creating this address:
             return self._old_create_account(balance = balance, address = address)
@@ -69,6 +71,9 @@ class ChainSynchronizer(object):
         return new_address
 
     def post(self, data):
+        if self._client == self._client.etheno.master_client:
+            return self._old_post(data)
+        
         method = data['method']
 
         if method == 'eth_getTransactionReceipt':
@@ -132,7 +137,7 @@ def AddressSynchronizingClient(etheno_client):
 
     setattr(etheno_client, 'create_account', ChainSynchronizer.create_account.__get__(synchronizer, ChainSynchronizer))
     setattr(etheno_client, 'post', ChainSynchronizer.post.__get__(synchronizer, ChainSynchronizer))
-     
+
     return etheno_client
         
 class RawTransactionSynchronizer(ChainSynchronizer):
