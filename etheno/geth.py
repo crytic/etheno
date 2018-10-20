@@ -44,8 +44,14 @@ class GethClient(SelfPostingClient):
         atexit.register(GethClient.shutdown.__get__(self, GethClient))
 
     def import_account(self, private_key):
-        with ConstantTemporaryFile(format_hex_address(private_key).encode('utf-8'), prefix='private', suffix='.key') as keyfile:
-            subprocess.check_call(['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.datadir.name, '--password', self.passwords.name, keyfile])
+        with ConstantTemporaryFile(format_hex_address(private_key).encode('utf-8') + bytes([ord('\n')]), prefix='private', suffix='.key') as keyfile:
+            while True:
+                try:
+                    subprocess.check_call(['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.datadir.name, '--password', self.passwords.name, keyfile])
+                    return
+                except subprocess.CalledProcessError:
+                    # This sometimes happens with geth, I have no idea why, so just try again
+                    pass
 
     @property
     def accounts(self):
