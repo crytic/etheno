@@ -7,22 +7,7 @@ import time
 
 from .client import JSONRPCError, RpcHttpProxy, SelfPostingClient
 from .genesis import make_accounts
-from .utils import format_hex_address, is_port_free
-
-class make_password(object):
-    def __init__(self, num_accounts = 1):
-        self._tmpfile = None
-        self._num_accounts = num_accounts
-    def __enter__(self):
-        self._tmpfile = tempfile.NamedTemporaryFile(delete=False)
-        for i in range(self._num_accounts):
-            self._tmpfile.write(b'etheno\n')
-        self._tmpfile.close()
-        return self._tmpfile.name
-    def __exit__(self, *args, **kwargs):
-        if self._tmpfile:
-            os.remove(self._tmpfile.name)
-            self._tmpfile = None
+from .utils import ConstantTemporaryFile, format_hex_address, is_port_free
 
 class GethClient(SelfPostingClient):
     def __init__(self, genesis, port=8546):
@@ -59,16 +44,8 @@ class GethClient(SelfPostingClient):
         atexit.register(GethClient.shutdown.__get__(self, GethClient))
 
     def import_account(self, private_key):
-        keyfile = tempfile.NamedTemporaryFile(prefix='private', suffix='.key', delete=False)
-        try:
-            private_key = format_hex_address(private_key)
-            keyfile.write(private_key.encode('utf-8'))
-            keyfile.close()
-            with make_password() as p:
-                subprocess.check_call(['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.datadir.name, '--password', self.passwords.name, keyfile.name])
-        finally:
-            os.remove(keyfile.name)
-            pass
+        with ConstantTemporaryFile(format_hex_address(private_key).encode('utf-8'), prefix='private', suffix='.key') as keyfile:
+            subprocess.check_call(['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.datadir.name, '--password', self.passwords.name, keyfile])
 
     @property
     def accounts(self):
