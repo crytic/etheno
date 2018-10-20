@@ -103,7 +103,7 @@ class EchidnaPlugin(EthenoPlugin):
             'params' : [{
                 "from": format_hex_address(self.etheno.accounts[0], True),
                 "to": self.contract_address,
-                "gas": "0x99999",
+                "gas": "0x9999",
                 "gasPrice": "0x%x" % self.etheno.master_client.get_gas_price(),
                 "value": "0x0",
                 "data": "0x%s" % txn.hex()
