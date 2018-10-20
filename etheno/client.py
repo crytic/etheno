@@ -153,7 +153,6 @@ class SelfPostingClient(EthenoClient):
             })
             if transaction_receipt_succeeded(receipt) is not None:
                 return receipt
-            print(receipt)
             print("Waiting for %s to mine transaction %s..." % (self, tx_hash))
             time.sleep(5.0)
 
