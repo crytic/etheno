@@ -52,8 +52,19 @@ class RpcHttpProxy(object):
         return "%s<%s>" % (self.__class__.__name__, self.urlstring)
     __repr__ = __str__
 
+class JSONRPCError(RuntimeError):
+    def __init__(self, client, data, result):
+        super().__init__("JSON RPC Error in Client %s when processing transaction:\n%s\n%s" % (client, data, result['error']))
+        self.client = client
+        self.json = data
+        self.result = result
+    
 def transaction_receipt_succeeded(data):
-    if not (data and 'result' in data and data['result'] and 'status' in data['result']):
+    if not (data and 'result' in data and data['result']):
+        return None
+    elif 'contractAddress' in data['result'] and data['result']['contractAddress']:
+        return True
+    elif 'status' not in data['result']:
         return None
     status = data['result']['status']
     if status is None:
@@ -103,7 +114,7 @@ class SelfPostingClient(EthenoClient):
         ret = self.client.post(data)
         if ret is not None and 'error' in ret:
             # TODO: Figure out a better way to handle JSON RPC errors
-            raise Exception("JSON RPC Error in Client %s when processing transaction:\n%s\n%s" % (self, data, ret['error']))
+            raise JSONRPCError(self, data, ret)
         return ret
     def get_gas_price(self):
         return int(self.post({
@@ -122,7 +133,7 @@ class SelfPostingClient(EthenoClient):
             'id': 1,
             'jsonrpc': '2.0',
             'method': 'eth_getTransactionCount',
-            'params': [format_hex_address(from_address), 'latest']
+            'params': [format_hex_address(from_address, True), 'latest']
         })['result'], 16)
 
     def wait_for_transaction(self, tx_hash):
@@ -136,19 +147,16 @@ class SelfPostingClient(EthenoClient):
         while True:
             receipt = self.post({
                 'id': 1,
-                'jsonrpc': 2.0,
+                'jsonrpc': '2.0',
                 'method': 'eth_getTransactionReceipt',
                 'params': [tx_hash]
             })
             if transaction_receipt_succeeded(receipt) is not None:
                 return receipt
+            print(receipt)
             print("Waiting for %s to mine transaction %s..." % (self, tx_hash))
             time.sleep(5.0)
 
-    def __str__(self):
-        return str(self.client)
-    def __repr__(self):
-        return repr(self.client)
     def __str__(self):
         return "%s[%s]" % (self.__class__.__name__, str(self.client))
     __repr__ = __str__
