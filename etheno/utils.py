@@ -43,7 +43,7 @@ def decode_value(v):
         # assume it is a regular int
         return int(v)
 
-def format_hex_address(addr):
+def format_hex_address(addr, add_0x = False):
     if addr is None:
         return None
     if isinstance(addr, int):
@@ -52,6 +52,8 @@ def format_hex_address(addr):
         addr = addr[2:]
     if len(addr) < 40:
         addr = "%s%s" % ('0' * (40 - len(addr)), addr)
+    if add_0x:
+        addr = "0x%s" % addr
     return addr
 
 def webserver_is_up(url):

@@ -22,7 +22,7 @@ def _remap_params(params, mapping, method, remap_data = False):
                 params[key] = _remap_params(value, mapping, "%s['%s']" % (method, key))
             elif decoded in mapping:
                 print("Converting %s parameter '%s' from %x to %x" % (method, key, decoded, mapping[decoded]))
-                params[key] = format_hex_address(mapping[decoded])
+                params[key] = format_hex_address(mapping[decoded], True)
             elif remap_data and key == 'data':
                 new_value = params['data']
                 for old, new in mapping.items():
@@ -39,7 +39,7 @@ def _remap_params(params, mapping, method, remap_data = False):
                 params[i] = _remap_params(p, mapping, "%s['%d']" % (method, i))
             elif decoded in mapping:
                 print("Converting %s parameter %d from %x to %x" % (method, i, decoded, mapping[decoded]))
-                params[i] = format_hex_address(mapping[decoded])
+                params[i] = format_hex_address(mapping[decoded], True)
     else:
         decoded = _decode_value(params)
         if decoded is not None and decoded in mapping:

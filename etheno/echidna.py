@@ -100,7 +100,7 @@ class EchidnaPlugin(EthenoPlugin):
             'jsonrpc': '2.0',
             'method': 'eth_sendTransaction',
             'params' : [{
-                "from": format_hex_address(self.etheno.accounts[0]),
+                "from": format_hex_address(self.etheno.accounts[0], True),
                 "to": "0x0",
                 "gas": "0x76c0",
                 "gasPrice": "0x%x" % self.etheno.master_client.get_gas_price(),

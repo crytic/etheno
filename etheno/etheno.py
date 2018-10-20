@@ -308,7 +308,7 @@ class Etheno(object):
         while True:
             receipt = self.post({
                 'id': 1,
-                'jsonrpc': 2.0,
+                'jsonrpc': '2.0',
                 'method': 'eth_getTransactionReceipt',
                 'params': [tx_hash]
             })
@@ -322,12 +322,14 @@ class Etheno(object):
             gas_price = self.master_client.get_gas_price()
         if isinstance(bytecode, bytes):
             bytecode = bytecode.decode()
+        if not bytecode.startswith('0x'):
+            bytecode = "0x%s" % bytecode
         tx_hash = self.post({
             'id': 1,
-            'jsonrpc': 2.0,
+            'jsonrpc': '2.0',
             'method': 'eth_sendTransaction',
             'params': [{ 
-                "from": format_hex_address(from_address),
+                "from": format_hex_address(from_address, True),
                 "gas": "0x%x" % gas,
                 "gasPrice": "0x%x" % gas_price,
                 "value": "0x0",
