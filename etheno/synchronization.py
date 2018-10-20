@@ -104,13 +104,14 @@ class ChainSynchronizer(object):
                 old_decoded = _decode_value(self._client.etheno.rpc_client_result['result'])
                 new_decoded = _decode_value(ret['result'])
                 if old_decoded is not None and new_decoded is not None:
+                    print("Mapping transaction hash %x to %x for %s" % (old_decoded, new_decoded, self._client))
                     self.mapping[old_decoded] = new_decoded
                 elif not (old_decoded is None and new_decoded is None):
                     print("Warning: call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result'], self._client))
         elif method == 'eth_getTransactionReceipt':
             # by this point we know that the master client has already successfully mined the transaction and returned a receipt
             # so make sure that we block until this client has also mined the transaction and returned a receipt
-            while not transaction_receipt_succeeded(ret):
+            while transaction_receipt_succeeded(ret) is None:
                 print("Waiting for %s to mine transaction %s..." % (self._client, data['params'][0]))
                 time.sleep(5.0)
                 ret = self._old_post(data)
