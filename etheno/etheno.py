@@ -14,7 +14,6 @@ from manticore.ethereum import ManticoreEVM
 
 from . import threadwrapper
 from .client import EthenoClient, SelfPostingClient, RpcProxyClient, DATA, QUANTITY, jsonrpc
-from .synchronization import transaction_receipt_succeeded
 from .utils import format_hex_address
 
 app = Flask(__name__)
@@ -311,21 +310,12 @@ class Etheno(object):
                 "data": bytecode
             }]
         })['result']
-        while True:
-            receipt = self.post({
-                'id': 1,
-                'jsonrpc': 2.0,
-                'method': 'eth_getTransactionReceipt',
-                'params': [tx_hash]
-            })
-            if transaction_receipt_succeeded(receipt):
-                if 'contractAddress' in receipt['result'] and receipt['result']['contractAddress']:
-                    return int(receipt['result']['contractAddress'], 16)
-                else:
-                    return None
-            print("Waiting for %s to mine transaction %s..." % (self.master_client, data['params'][0]))
-            time.sleep(5.0)
-        
+        receipt = self.master_client.wait_for_transaction(tx_hash)
+        if 'result' in receipt and receipt['result'] and 'contractAddress' in receipt['result'] and receipt['result']['contractAddress']:
+            return int(receipt['result']['contractAddress'], 16)
+        else:
+            return None
+
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
         for plugin in self.plugins:
             plugin.shutdown()

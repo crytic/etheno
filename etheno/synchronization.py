@@ -3,7 +3,7 @@ import time
 import eth_utils
 from web3.auto import w3
 
-from .client import EthenoClient, SelfPostingClient, jsonrpc, DATA, QUANTITY
+from .client import EthenoClient, SelfPostingClient, jsonrpc, DATA, QUANTITY, transaction_receipt_succeeded
 from .utils import decode_hex, format_hex_address, int_to_bytes
 
 def _decode_value(value):
@@ -46,12 +46,6 @@ def _remap_params(params, mapping, method, remap_data = False):
             print("Converting %s from %x to %x" % (method, decoded, mapping[decoded]))
             return mapping[decoded]
     return params
-
-def transaction_receipt_succeeded(data):
-    if not (data and 'result' in data and data['result'] and 'status' in data['result']):
-        return False
-    decoded = _decode_value(data['result']['status'])
-    return decoded is not None and decoded > 0
 
 class ChainSynchronizer(object):
     def __init__(self, client):

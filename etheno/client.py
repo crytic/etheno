@@ -51,6 +51,16 @@ class RpcHttpProxy(object):
         return "%s<%s>" % (self.__class__.__name__, self.urlstring)
     __repr__ = __str__
 
+def transaction_receipt_succeeded(data):
+    if not (data and 'result' in data and data['result'] and 'status' in data['result']):
+        return None
+    status = data['result']['status']
+    if status is None:
+        return None
+    elif not isinstance(status, int):
+        status = int(status, 16)
+    return status > 0
+    
 class EthenoClient(object):
     etheno = None
 
@@ -109,6 +119,27 @@ class SelfPostingClient(EthenoClient):
             'method': 'eth_getTransactionCount',
             'params': [format_hex_address(from_address), 'latest']
         })['result'], 16)
+
+    def wait_for_transaction(self, tx_hash):
+        '''
+        Blocks until the given transaction has been mined
+        :param tx_hash: the transaction hash for the transaction to monitor
+        :return: The transaction receipt
+        '''
+        if isinstance(tx_hash, int):
+            tx_hash = "0x%x" % tx_hash
+        while True:
+            receipt = self.post({
+                'id': 1,
+                'jsonrpc': 2.0,
+                'method': 'eth_getTransactionReceipt',
+                'params': [tx_hash]
+            })
+            if transaction_receipt_succeeded(receipt) is not None:
+                return receipt
+            print("Waiting for %s to mine transaction %s..." % (self.master_client, data['params'][0]))
+            time.sleep(5.0)
+
     def __str__(self):
         return str(self.client)
     def __repr__(self):
