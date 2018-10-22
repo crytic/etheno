@@ -92,7 +92,7 @@ def main(argv = None):
 
     if args.raw is None:
         args.raw = []
-            
+
     if args.ganache and args.master:
         parser.print_help()
         sys.stderr.write('\nError: You cannot specify both --ganache and --master at the same time!\n')
