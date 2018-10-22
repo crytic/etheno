@@ -175,9 +175,7 @@ class RawTransactionSynchronizer(ChainSynchronizer):
                         break
                 else:
                     raise Exception("Error: eth_sendTransaction sent from unknown address %s:\n%s" % (from_str, data))
-            if 'chainId' in params:
-                # we don't need to set the chain_id
-                del params['chainId']
+            params['chainId'] = self._client.get_net_version()
             # Workaround for a bug in web3.eth.account:
             # the signTransaction function checks to see if the 'from' field is present, and if so it validates that it
             # corresponds to the address of the private key. However, web3.eth.account doesn't perform this check case
