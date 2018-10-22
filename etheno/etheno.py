@@ -13,7 +13,8 @@ from flask.views import MethodView
 from manticore.ethereum import ManticoreEVM
 
 from . import threadwrapper
-from .client import EthenoClient, SelfPostingClient, RpcProxyClient, DATA, QUANTITY, jsonrpc
+from .client import EthenoClient, JSONRPCError, RpcProxyClient, SelfPostingClient, DATA, QUANTITY, transaction_receipt_succeeded, jsonrpc
+from .utils import format_hex_address
 
 app = Flask(__name__)
 
@@ -143,6 +144,12 @@ class ManticoreClient(EthenoClient):
 
 class EthenoPlugin():
     etheno = None
+
+    def added(self):
+        '''
+        A callback when this plugin is added to an Etheno instance
+        '''
+        pass
     
     def before_post(self, post_data):
         '''
@@ -160,6 +167,12 @@ class EthenoPlugin():
         '''
         pass
 
+    def run(self):
+        '''
+        A callback when Etheno is running and all other clients and plugins are initialized
+        '''
+        pass
+    
     def finalize(self):
         '''
         Called when an analysis pass should be finalized (e.g., after a Truffle migration completes).
@@ -185,6 +198,7 @@ class Etheno(object):
         self.clients = []
         self.rpc_client_result = None
         self.plugins = []
+        self._shutting_down = False
 
     @property
     def master_client(self):
@@ -214,6 +228,7 @@ class Etheno(object):
             plugin.before_post(data)
 
         method = data['method']
+        
         args = ()
         kwargs = {}
         if 'params' in data:
@@ -229,22 +244,40 @@ class Etheno(object):
         if self.master_client is None:
             ret = None
         else:
-            ret = self.master_client.post(data)
-
+            if method == 'eth_getTransactionReceipt':
+                # for eth_getTransactionReceipt, make sure we block until all clients have mined the transaction
+                ret = self.master_client.wait_for_transaction(data['params'][0])
+            else:
+                try:
+                    ret = self.master_client.post(data)
+                except JSONRPCError as e:
+                    print(e)
+                    ret = None
+    
         self.rpc_client_result = ret
 
         results = []
 
         for client in self.clients:
-            if hasattr(client, method):
-                print("Enrobing JSON RPC call to %s.%s" % (client, method))
-                function = getattr(client, method)
-                if function is not None:
-                    kwargs['rpc_client_result'] = ret
-                    results.append(function(*args, **kwargs))
-            elif isinstance(client, SelfPostingClient):
-                results.append(client.post(data))
-            else:
+            try:
+                if hasattr(client, method):
+                    print("Enrobing JSON RPC call to %s.%s" % (client, method))
+                    function = getattr(client, method)
+                    if function is not None:
+                        kwargs['rpc_client_result'] = ret
+                        results.append(function(*args, **kwargs))
+                    else:
+                        results.append(None)
+                elif isinstance(client, SelfPostingClient):
+                    if method == 'eth_getTransactionReceipt':
+                        # for eth_getTransactionReceipt, make sure we block until all clients have mined the transaction
+                        results.append(client.wait_for_transaction(data['params'][0]))
+                    else:
+                        results.append(client.post(data))
+                else:
+                    results.append(None)
+            except JSONRPCError as e:
+                print(e)
                 results.append(None)
 
         if ret is None:
@@ -259,7 +292,17 @@ class Etheno(object):
     def add_plugin(self, plugin):
         plugin.etheno = self
         self.plugins.append(plugin)
+        plugin.added()
 
+    def remove_plugin(self, plugin):
+        '''
+        Removes a plugin, automatically calling plugin.shutdown() in the process
+        :param plugin: The plugin to remove
+        '''
+        self.plugins.remove(plugin)
+        plugin.shutdown()
+        plugin.etheno = None
+        
     def _create_accounts(self, client):
         for account in self.accounts:
             # TODO: Actually get the correct balance from the JSON RPC client instead of using hard-coded 100.0 ETH
@@ -269,8 +312,49 @@ class Etheno(object):
         client.etheno = self
         self.clients.append(client)
         self._create_accounts(client)
-            
+
+    def wait_for_transaction(self, tx_hash):
+        while True:
+            receipt = self.post({
+                'id': 1,
+                'jsonrpc': '2.0',
+                'method': 'eth_getTransactionReceipt',
+                'params': [tx_hash]
+            })
+            if transaction_receipt_succeeded(receipt) is not None:
+                return receipt
+            print("Waiting for %s to mine transaction %s..." % (self.master_client, data['params'][0]))
+            time.sleep(5.0)
+
+    def deploy_contract(self, from_address, bytecode, gas = 0x99999, gas_price = None, value = 0):
+        if gas_price is None:
+            gas_price = self.master_client.get_gas_price()
+        if isinstance(bytecode, bytes):
+            bytecode = bytecode.decode()
+        if not bytecode.startswith('0x'):
+            bytecode = "0x%s" % bytecode
+        tx_hash = self.post({
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'eth_sendTransaction',
+            'params': [{ 
+                "from": format_hex_address(from_address, True),
+                "gas": "0x%x" % gas,
+                "gasPrice": "0x%x" % gas_price,
+                "value": "0x0",
+                "data": bytecode
+            }]
+        })['result']
+        receipt = self.wait_for_transaction(tx_hash)
+        if 'result' in receipt and receipt['result'] and 'contractAddress' in receipt['result'] and receipt['result']['contractAddress']:
+            return int(receipt['result']['contractAddress'], 16)
+        else:
+            return None
+
     def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
+        if self._shutting_down:
+            return
+        self._shutting_down = True
         for plugin in self.plugins:
             plugin.shutdown()
         # Send a web request to the server to shut down:
@@ -280,9 +364,12 @@ class Etheno(object):
             client.shutdown()
         from urllib.request import urlopen
         import socket
+        import urllib
         try:
             urlopen("http://127.0.0.1:%d/shutdown" % port, timeout = 2)
         except socket.timeout:
+            pass
+        except urllib.error.URLError:
             pass
 
     def run(self, debug=True, run_publicly=False, port=GETH_DEFAULT_RPC_PORT):
@@ -298,6 +385,9 @@ class Etheno(object):
         thread.start()
 
         print("Etheno v%s" % VERSION)
+
+        for plugin in self.plugins:
+            plugin.run()
 
         _CONTROLLER.run()
         self.shutdown()

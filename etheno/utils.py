@@ -1,7 +1,26 @@
 import math
+import os
 import socket
+import tempfile
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
+
+class ConstantTemporaryFile(object):
+    def __init__(self, constant_content, **kwargs):
+        self.constant_content = constant_content
+        self._file = None
+        self._kwargs = dict(kwargs)
+        self._kwargs['mode'] = 'w+b'
+        self._kwargs['delete'] = False
+    def __enter__(self):
+        self._file = tempfile.NamedTemporaryFile(**self._kwargs)
+        self._file.write(self.constant_content)
+        self._file.close()
+        return self._file.name
+    def __exit__(self, type, value, traceback):
+        if self._file and os.path.exists(self._file.name):
+            os.remove(self._file.name)
+        self._file = None
 
 def int_to_bytes(n):
     number_of_bytes = int(math.ceil(n.bit_length() / 8))
@@ -24,7 +43,7 @@ def decode_value(v):
         # assume it is a regular int
         return int(v)
 
-def format_hex_address(addr):
+def format_hex_address(addr, add_0x = False):
     if addr is None:
         return None
     if isinstance(addr, int):
@@ -33,6 +52,11 @@ def format_hex_address(addr):
         addr = addr[2:]
     if len(addr) < 40:
         addr = "%s%s" % ('0' * (40 - len(addr)), addr)
+    elif len(addr) > 40 and len(addr) < 64:
+        # this is likely something like a transaction hash, so round up to 32 bytes:
+        addr = "%s%s" % ('0' * (64 - len(addr)), addr)
+    if add_0x:
+        addr = "0x%s" % addr
     return addr
 
 def webserver_is_up(url):

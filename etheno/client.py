@@ -1,8 +1,9 @@
 import inspect
 import json
+import time
 from urllib.request import Request, urlopen
 
-from .utils import decode_hex, webserver_is_up
+from .utils import decode_hex, format_hex_address, webserver_is_up
 
 def jsonrpc(**types):
     def decorator(function):
@@ -51,6 +52,27 @@ class RpcHttpProxy(object):
         return "%s<%s>" % (self.__class__.__name__, self.urlstring)
     __repr__ = __str__
 
+class JSONRPCError(RuntimeError):
+    def __init__(self, client, data, result):
+        super().__init__("JSON RPC Error in Client %s when processing transaction:\n%s\n%s" % (client, data, result['error']))
+        self.client = client
+        self.json = data
+        self.result = result
+    
+def transaction_receipt_succeeded(data):
+    if not (data and 'result' in data and data['result']):
+        return None
+    elif 'contractAddress' in data['result'] and data['result']['contractAddress']:
+        return True
+    elif 'status' not in data['result']:
+        return None
+    status = data['result']['status']
+    if status is None:
+        return None
+    elif not isinstance(status, int):
+        status = int(status, 16)
+    return status > 0
+    
 class EthenoClient(object):
     etheno = None
 
@@ -89,11 +111,51 @@ class SelfPostingClient(EthenoClient):
     def wait_until_running(self):
         pass
     def post(self, data):
-        return self.client.post(data)
-    def __str__(self):
-        return str(self.client)
-    def __repr__(self):
-        return repr(self.client)
+        ret = self.client.post(data)
+        if ret is not None and 'error' in ret:
+            # TODO: Figure out a better way to handle JSON RPC errors
+            raise JSONRPCError(self, data, ret)
+        return ret
+    def get_gas_price(self):
+        return int(self.post({
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'eth_gasPrice'
+        })['result'], 16)
+    def get_net_version(self):
+        return int(self.post({
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'net_version'
+        })['result'], 16)
+    def get_transaction_count(self, from_address):
+        return int(self.post({
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'eth_getTransactionCount',
+            'params': [format_hex_address(from_address, True), 'latest']
+        })['result'], 16)
+
+    def wait_for_transaction(self, tx_hash):
+        '''
+        Blocks until the given transaction has been mined
+        :param tx_hash: the transaction hash for the transaction to monitor
+        :return: The transaction receipt
+        '''
+        if isinstance(tx_hash, int):
+            tx_hash = "0x%x" % tx_hash
+        while True:
+            receipt = self.post({
+                'id': 1,
+                'jsonrpc': '2.0',
+                'method': 'eth_getTransactionReceipt',
+                'params': [tx_hash]
+            })
+            if transaction_receipt_succeeded(receipt) is not None:
+                return receipt
+            print("Waiting for %s to mine transaction %s..." % (self, tx_hash))
+            time.sleep(5.0)
+
     def __str__(self):
         return "%s[%s]" % (self.__class__.__name__, str(self.client))
     __repr__ = __str__
