@@ -6,7 +6,7 @@ import sys
 
 from .client import RpcProxyClient
 from .differentials import DifferentialTester
-from .echidna import EchidnaPlugin
+from .echidna import echidna_exists, EchidnaPlugin, install_echidna
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
 from .genesis import Account, make_accounts, make_genesis
 from .synchronization import AddressSynchronizingClient, RawTransactionClient
@@ -202,6 +202,17 @@ def main(argv = None):
         ETHENO.add_plugin(DifferentialTester())
 
     if args.echidna:
+        if not echidna_exists():
+            while True:
+                yn = input("Echidna does not appear to be installed.\nWould you like to have Etheno attempt to install it now? [yN] ")
+                yn = yn[0:1].lower()
+                if yn == 'n' or yn == '':
+                    sys.exit(1)
+                elif yn == 'y':
+                    break
+            install_echidna()
+            if not echidna_exists():
+                print('Etheno failed to install Echidna. Please install it manually https://github.com/trailofbits/echidna')
         ETHENO.add_plugin(EchidnaPlugin(transaction_limit=args.fuzz_limit))
 
     had_plugins = len(ETHENO.plugins) > 0

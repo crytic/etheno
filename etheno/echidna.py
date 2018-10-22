@@ -1,4 +1,5 @@
 import subprocess
+import tempfile
 
 from .ascii_escapes import decode
 from .etheno import EthenoPlugin
