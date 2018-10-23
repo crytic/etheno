@@ -165,6 +165,7 @@ def main(argv = None):
 
         geth_instance = geth.GethClient(genesis = genesis, port = args.geth_port)
         for account in accounts:
+            # TODO: Make some sort of progress bar here
             geth_instance.import_account(account.private_key)
         geth_instance.start(unlock_accounts = True)
         if ETHENO.master_client is None:
@@ -181,6 +182,7 @@ def main(argv = None):
 
         parity_instance = parity.ParityClient(genesis = genesis, port = args.parity_port)
         for account in accounts:
+            # TODO: Make some sort of progress bar here
             parity_instance.import_account(account.private_key)
         parity_instance.start(unlock_accounts = True)
         if ETHENO.master_client is None:
