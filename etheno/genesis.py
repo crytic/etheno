@@ -32,6 +32,42 @@ def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 20000
         'alloc': alloc
     }
 
+def geth_to_parity(genesis):
+    '''Converts a Geth style genesis to Parity style'''
+    return {
+        'name': 'etheno',
+        'engine': {
+            'Ethash': {
+                'params': {
+                    'minimumDifficulty': "0x%s" % genesis['difficulty'],
+                    'difficultyBoundDivisor': '0x100000000',
+                    'homesteadTransition': 0,
+                    'eip150Transition': 0,
+                    'eip160Transition': 0,
+                    'eip161abcTransition': 0,
+                    'eip161dTransition': 0,
+                }
+            }
+        },
+        'genesis': {
+		"seal": {
+                    'ethereum': {
+                        'nonce': '0x0000000000000042',
+                        'mixHash': '0x0000000000000000000000000000000000000000000000000000000000000000'
+                    }
+		},
+		'difficulty': "0x%s" % genesis['difficulty'],
+		'gasLimit': "0x%s" % genesis['gasLimit']
+	},
+        'params': {
+            'networkID' : "0x%x" % genesis['config']['chainId'],
+            'maximumExtraDataSize': '0x20',
+            'minGasLimit': "0x%s" % genesis['gasLimit'],
+            'gasLimitBoundDivisor': '1'
+        },
+        'accounts': dict(genesis['alloc'])
+    }
+
 def make_accounts(num_accounts, default_balance = None):
     ret = []
     for i in range(num_accounts):

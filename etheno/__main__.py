@@ -15,6 +15,7 @@ from . import Etheno
 from . import ganache
 from . import geth
 from . import manticoreutils
+from . import parity
 from . import truffle
 
 def main(argv = None):
@@ -39,6 +40,8 @@ def main(argv = None):
     parser.add_argument('--ganache-port', type=int, default=None, help='Port on which to run Ganache (defaults to the closest available port to the port specified with --port plus one)')
     parser.add_argument('-go', '--geth', action='store_true', default=False, help='Run Geth as a JSON RPC client')
     parser.add_argument('--geth-port', type=int, default=None, help='Port on which to run Geth (defaults to the closest available port to the port specified with --port plus one)')
+    parser.add_argument('-pa', '--parity', action='store_true', default=False, help='Run Parity as a JSON RPC client')
+    parser.add_argument('--parity-port', type=int, default=None, help='Port on which to run Parity (defaults to the closest available port to the port specified with --port plus one)')
     parser.add_argument('-j', '--genesis', type=str, default=None, help='Path to a genesis.json file to use for initializing clients. Any genesis-related options like --network-id will override the values in this file. If --accounts is greater than zero, that many new accounts will be appended to the accounts in the genesis file.')
     parser.add_argument('--save-genesis', type=str, default=None, help="Save a genesis.json file to reproduce the state of this run. Note that this genesis file will include all known private keys for the genesis accounts, so use this with caution.")
     parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True, help='Do not run differential testing, which is run by default')
@@ -128,10 +131,10 @@ def main(argv = None):
         ganache_instance.start()
     elif args.master:
         ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.master))
-    elif args.client and not args.geth:
+    elif args.client and not args.geth and not args.parity:
         ETHENO.master_client = AddressSynchronizingClient(RpcProxyClient(args.client[0]))
         args.client = args.client[1:]
-    elif args.raw and not args.geth:
+    elif args.raw and not args.geth and not args.parity:
         ETHENO.master_client = RawTransactionClient(RpcProxyClient(args.raw[0]), accounts)
         args.raw = args.raw[1:]
         
@@ -168,6 +171,22 @@ def main(argv = None):
             ETHENO.master_client = geth_instance
         else:
             ETHENO.add_client(AddressSynchronizingClient(geth_instance))
+
+    if args.parity:
+        if args.parity_port is None:
+            if args.geth_port is not None:
+                args.parity_port = find_open_port(args.geth_port + 1)
+            else:
+                args.parity_port = find_open_port(args.port + 1)
+
+        parity_instance = parity.ParityClient(genesis = genesis, port = args.parity_port)
+        for account in accounts:
+            parity_instance.import_account(account.private_key)
+        parity_instance.start(unlock_accounts = True)
+        if ETHENO.master_client is None:
+            ETHENO.master_client = parity_instance
+        else:
+            ETHENO.add_client(AddressSynchronizingClient(parity_instance))        
 
     for client in args.client:
         ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))
