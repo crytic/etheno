@@ -20,13 +20,13 @@ ECHIDNA_CONTRACT_BYTECODE = b'608060405234801561001057600080fd5b506101c080610020
 ECHIDNA_CONFIG = b'''outputRawTxs: True\n'''
 
 def echidna_exists():
-    return subprocess.call(['/usr/bin/env', 'echidna', '--help'], stdout=subprocess.PIPE) == 0
+    return subprocess.call(['/usr/bin/env', 'echidna-test', '--help'], stdout=subprocess.DEVNULL) == 0
 
 def stack_exists():
-    return subprocess.call(['/usr/bin/env', 'stack', '--help'], stdout=subprocess.PIPE) == 0
+    return subprocess.call(['/usr/bin/env', 'stack', '--help'], stdout=subprocess.DEVNULL) == 0
 
 def git_exists():
-    return subprocess.call(['/usr/bin/env', 'git', '--version'], stdout=subprocess.PIPE) == 0
+    return subprocess.call(['/usr/bin/env', 'git', '--version'], stdout=subprocess.DEVNULL) == 0
 
 def install_echidna(allow_reinstall = False):
     if not allow_reinstall and echidna_exists():

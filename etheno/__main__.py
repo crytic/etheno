@@ -56,6 +56,21 @@ def main(argv = None):
         print(VERSION_NAME)
         sys.exit(0)
 
+    # First, see if we need to install Echidna:
+    if args.echidna:
+        if not echidna_exists():
+            while True:
+                yn = input("Echidna does not appear to be installed.\nWould you like to have Etheno attempt to install it now? [yN] ")
+                yn = yn[0:1].lower()
+                if yn == 'n' or yn == '':
+                    sys.exit(1)
+                elif yn == 'y':
+                    break
+            install_echidna()
+            if not echidna_exists():
+                print('Etheno failed to install Echidna. Please install it manually https://github.com/trailofbits/echidna')
+                sys.exit(1)
+        
     if args.genesis is None:
         # Set defaults since no genesis was supplied
         if args.accounts is None:
@@ -202,17 +217,6 @@ def main(argv = None):
         ETHENO.add_plugin(DifferentialTester())
 
     if args.echidna:
-        if not echidna_exists():
-            while True:
-                yn = input("Echidna does not appear to be installed.\nWould you like to have Etheno attempt to install it now? [yN] ")
-                yn = yn[0:1].lower()
-                if yn == 'n' or yn == '':
-                    sys.exit(1)
-                elif yn == 'y':
-                    break
-            install_echidna()
-            if not echidna_exists():
-                print('Etheno failed to install Echidna. Please install it manually https://github.com/trailofbits/echidna')
         ETHENO.add_plugin(EchidnaPlugin(transaction_limit=args.fuzz_limit))
 
     had_plugins = len(ETHENO.plugins) > 0
