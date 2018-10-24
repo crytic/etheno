@@ -94,11 +94,16 @@ class EthenoClient(object):
     def shutdown(self):
         pass
 
+    def wait_for_transaction(self, tx_hash):
+        return None
+
 class SelfPostingClient(EthenoClient):
     def __init__(self, client):
         self.client = client
         self._accounts = None
         self._created_account_index = -1
+        # maintain a set of failed transactions so we know not to block on eth_getTransactionReceipt
+        self._failed_transactions = set()
     def create_account(self, balance = 0, address = None):
         if address is not None:
             raise NotImplementedError()
@@ -110,11 +115,17 @@ class SelfPostingClient(EthenoClient):
             })['result']))
         self._created_account_index += 1
         return self._accounts[self._created_account_index]
+
     def wait_until_running(self):
         pass
+
     def post(self, data):
         ret = self.client.post(data)
         if ret is not None and 'error' in ret:
+            if 'method' in data and (data['method'] == 'eth_sendTransaction' or data['method'] == 'eth_sendRawTransaction'):
+                if self.etheno.master_client != self and self.etheno.rpc_client_result and not isinstance(self.etheno.rpc_client_result, JSONRPCError) and 'result' in self.etheno.rpc_client_result:
+                    print("%s: Failed transaction associated with master client transaction %s" % (self, self.etheno.rpc_client_result['result']))
+                    self._failed_transactions.add(self.etheno.rpc_client_result['result'].lower())
             # TODO: Figure out a better way to handle JSON RPC errors
             raise JSONRPCError(self, data, ret)
         return ret
@@ -162,6 +173,7 @@ class SelfPostingClient(EthenoClient):
         '''
         if isinstance(tx_hash, int):
             tx_hash = "0x%x" % tx_hash
+        tx_hash = tx_hash.lower()
         while True:
             receipt = self.post({
                 'id': 1,
@@ -169,7 +181,7 @@ class SelfPostingClient(EthenoClient):
                 'method': 'eth_getTransactionReceipt',
                 'params': [tx_hash]
             })
-            if transaction_receipt_succeeded(receipt) is not None:
+            if tx_hash in self._failed_transactions or transaction_receipt_succeeded(receipt) is not None:
                 return receipt
             print("Waiting for %s to mine transaction %s..." % (self, tx_hash))
             time.sleep(5.0)
