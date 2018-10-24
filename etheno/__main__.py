@@ -14,6 +14,7 @@ from .utils import decode_value, find_open_port, format_hex_address
 from . import Etheno
 from . import ganache
 from . import geth
+from . import logger
 from . import manticoreutils
 from . import truffle
 
@@ -42,6 +43,7 @@ def main(argv = None):
     parser.add_argument('-j', '--genesis', type=str, default=None, help='Path to a genesis.json file to use for initializing clients. Any genesis-related options like --network-id will override the values in this file. If --accounts is greater than zero, that many new accounts will be appended to the accounts in the genesis file.')
     parser.add_argument('--save-genesis', type=str, default=None, help="Save a genesis.json file to reproduce the state of this run. Note that this genesis file will include all known private keys for the genesis accounts, so use this with caution.")
     parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True, help='Do not run differential testing, which is run by default')
+    parser.add_argument('-l', '--log-level', type=str.upper, choices={'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'}, default='INFO', help='Set Etheno\'s log level (default=INFO)')
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
     parser.add_argument('client', type=str, nargs='*', help='JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
     parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
@@ -56,6 +58,8 @@ def main(argv = None):
         print(VERSION_NAME)
         sys.exit(0)
 
+    ETHENO.log_level = args.log_level
+        
     # First, see if we need to install Echidna:
     if args.echidna:
         if not echidna_exists():

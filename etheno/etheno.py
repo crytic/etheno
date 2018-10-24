@@ -12,6 +12,7 @@ from flask.views import MethodView
 
 from manticore.ethereum import ManticoreEVM
 
+from . import logger
 from . import threadwrapper
 from .client import EthenoClient, JSONRPCError, RpcProxyClient, SelfPostingClient, DATA, QUANTITY, transaction_receipt_succeeded, jsonrpc
 from .utils import format_hex_address
@@ -199,6 +200,15 @@ class Etheno(object):
         self.rpc_client_result = None
         self.plugins = []
         self._shutting_down = False
+        self.logger = logger.EthenoLogger('Etheno', logger.INFO)
+
+    @property
+    def log_level(self):
+        return self.logger.log_level
+
+    @log_level.setter
+    def log_level(self, level):
+        self.logger.log_level = level
 
     @property
     def master_client(self):
@@ -251,7 +261,7 @@ class Etheno(object):
                 try:
                     ret = self.master_client.post(data)
                 except JSONRPCError as e:
-                    print(e)
+                    self.logger.error(e)
                     ret = e
     
         self.rpc_client_result = ret
@@ -261,7 +271,7 @@ class Etheno(object):
         for client in self.clients:
             try:
                 if hasattr(client, method):
-                    print("Enrobing JSON RPC call to %s.%s" % (client, method))
+                    self.logger.info("Enrobing JSON RPC call to %s.%s" % (client, method))
                     function = getattr(client, method)
                     if function is not None:
                         kwargs['rpc_client_result'] = ret
@@ -277,7 +287,7 @@ class Etheno(object):
                 else:
                     results.append(None)
             except JSONRPCError as e:
-                print(e)
+                self.logger.error(e)
                 results.append(e)
 
         if ret is None:
@@ -371,7 +381,7 @@ class Etheno(object):
         thread = Thread(target = flask_thread)
         thread.start()
 
-        print("Etheno v%s" % VERSION)
+        self.logger.info("Etheno v%s" % VERSION)
 
         for plugin in self.plugins:
             plugin.run()
@@ -392,7 +402,7 @@ class EthenoView(MethodView):
                 was_list = True
                 data = data[0]
             else:
-                print("Unexpected POST data: %s" % data)
+                ETHENO.logger.error("Unexpected POST data: %s" % data)
                 abort(400)
 
         if 'jsonrpc' not in data or 'method' not in data:
@@ -404,7 +414,7 @@ class EthenoView(MethodView):
         if jsonrpc_version < 2.0:
             abort(426)
         elif jsonrpc_version > 2.0:
-            print("Warning: Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
+            ETHENO.logger.warning("Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
 
         ret = ETHENO.post(data)
 
