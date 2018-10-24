@@ -70,9 +70,9 @@ class ChainSynchronizer(object):
             self.mapping[address] = new_address
         return new_address
 
-    def post(self, data):
+    def post(self, data, *args, **kwargs):
         if self._client == self._client.etheno.master_client:
-            return self._old_post(data)
+            return self._old_post(data, *args, **kwargs)
         
         method = data['method']
 
@@ -84,7 +84,7 @@ class ChainSynchronizer(object):
             elif _decode_value(data['params'][0]) not in self.mapping:
                 # we don't know about this transaction receipt, which probably means that the transaction failed
                 # on this client. So return the receipt here, because below we will block on a result:
-                return self._old_post(data)
+                return self._old_post(data, *args, **kwargs)
         
         uninstalling_filter = None
         if 'params' in data:
@@ -99,7 +99,7 @@ class ChainSynchronizer(object):
                     data['params'] = [self.filter_mapping[old_id]]
                 if method == 'eth_uninstallFilter':
                     uninstalling_filter = old_id
-        ret = self._old_post(data)
+        ret = self._old_post(data, *args, **kwargs)
         if uninstalling_filter is not None:
             if ret['result']:
                 # the uninstall succeeded, so we no longer need to keep the mapping:
@@ -124,7 +124,7 @@ class ChainSynchronizer(object):
             while transaction_receipt_succeeded(ret) is None:
                 print("Waiting for %s to mine transaction %s..." % (self._client, data['params'][0]))
                 time.sleep(5.0)
-                ret = self._old_post(data)
+                ret = self._old_post(data, *args, **kwargs)
             # update the mapping with the address if a new contract was created
             if 'contractAddress' in ret['result'] and ret['result']['contractAddress']:
                 master_address = _decode_value(self._client.etheno.rpc_client_result['result']['contractAddress'])
@@ -160,7 +160,7 @@ class RawTransactionSynchronizer(ChainSynchronizer):
             self.mapping[address] = new_address
         return new_address
 
-    def post(self, data):
+    def post(self, data, *args, **kwargs):
         method = data['method']
 
         if method == 'eth_sendTransaction':
@@ -199,7 +199,7 @@ class RawTransactionSynchronizer(ChainSynchronizer):
                 'params': [signed_txn.rawTransaction.hex()]
             })
         else:
-            return super().post(data)
+            return super().post(data, *args, **kwargs)
 
 def RawTransactionClient(etheno_client, accounts):
     synchronizer = RawTransactionSynchronizer(etheno_client, accounts)
