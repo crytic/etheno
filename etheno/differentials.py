@@ -31,6 +31,28 @@ class DifferentialTester(EthenoPlugin):
 
     def after_post(self, data, client_results):
         method = data['method']
+
+        # First, see if any of the clients returned an error. If one did, they all should!
+        clients_with_errors = tuple(i for i, result in enumerate(client_results) if isinstance(result, JSONRPCError))
+        clients_without_errors = tuple(sorted(frozenset(range(len(client_results))) - frozenset(clients_with_errors)))
+
+        if clients_with_errors:
+            clients = [self.etheno.master_client] + self.etheno.clients
+            if clients_without_errors:
+                test = DifferentialTest('JSON_RPC_ERRORS', TestResult.FAILED, "%s executed transaction %s with no errors, but %s executed the same transaction with errors:\n%s" % (
+                    ', '.join(str(clients[client]) for client in clients_without_errors),
+                    data,
+                    ', '.join(str(clients[client]) for client in clients_with_errors),
+                    '\n'.join(str(client_results[client]) for client in clients_with_errors)
+                ))
+            else:
+                test = DifferentialTest('JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed transaction %s with errors" % data)
+            self.add_test_result(test)
+            print("Error: %s" % test.message)
+            return
+        else:
+            self.add_test_result(DifferentialTest('JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed transaction %s without error" % data))
+        
         master_result = client_results[0]
         if method == 'eth_sendTransaction' or method == 'eth_sendRawTransaction':
             if not isinstance(master_result, JSONRPCError) and 'result' in master_result and master_result['result']:
