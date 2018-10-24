@@ -121,7 +121,7 @@ class DifferentialTester(EthenoPlugin):
         if self.tests and not self._printed_summary:
             self._printed_summary = True
             print("\nDifferential Test Summary:\n")
-            for test in self.tests:
+            for test in sorted(self.tests):
                 print("    %s" % test)
                 total = sum(map(len, self.tests[test].values()))
                 for result in self.tests[test]:
