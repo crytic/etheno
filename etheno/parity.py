@@ -14,6 +14,10 @@ from .utils import ConstantTemporaryFile, find_open_port, format_hex_address, in
 
 def make_config(genesis_path, base_path, port, accounts, password_file, **kwargs):
     return """[parity]
+public_node = false
+no_download = false
+no_consensus = false
+no_persistent_txqueue = false
 
 chain = "{genesis_path}"
 base_path = "{base_path}"
@@ -21,9 +25,8 @@ db_path = "{base_path}/chains"
 keys_path = "{base_path}/keys"
 
 [account]
-unlock = [{accounts}]
+unlock = [{account_addresses}]
 password = ["{password_file}"]
-keys_iterations = 10240
 
 [network]
 port = {port}
@@ -56,14 +59,14 @@ author = "{miner}"
 engine_signer = "{miner}"
 force_sealing = true
 reseal_on_txs = "all"
-reseal_min_period = 4000
-reseal_max_period = 60000
-gas_floor_target = "4700000"
-gas_cap = "6283184"
-tx_queue_gas = "off"
-tx_gas_limit = "6283184"
-tx_time_limit = 500 #ms
-remove_solved = false
+#reseal_min_period = 4000
+#reseal_max_period = 60000
+#gas_floor_target = "4700000"
+#gas_cap = "6283184"
+#tx_queue_gas = "off"
+#tx_gas_limit = "6283184"
+#tx_time_limit = 500 #ms
+#remove_solved = false
 #notify_work = ["http://localhost:3001"]
 refuse_service_transactions = false
 
@@ -97,8 +100,8 @@ color = true
     rpc_port=port,
     log_path=kwargs.get('log_path', "%s/parity.log" % base_path),
     chainId=kwargs.get('chainId', 1),
-    miner=format_hex_address(tuple(accounts)[-1], True),
-    accounts=', '.join(map(lambda s : "\"0x%s\"" % s, map(format_hex_address, accounts))),
+    miner=format_hex_address(accounts[-1], True),
+    account_addresses=', '.join(map(lambda s : "\"0x%s\"" % s, map(format_hex_address, accounts))),
     password_file=password_file
     ).encode('utf-8')
 
@@ -118,15 +121,16 @@ class ParityClient(SelfPostingClient):
         
         self.passwords = tempfile.NamedTemporaryFile(prefix='parity', suffix='.passwd', delete=False)
         try:
-            for i in range(len(self.genesis['alloc'])):
-                self.passwords.write(b'etheno')
+            self.passwords.write(b'etheno')
         finally:
             self.passwords.close()
         self._tempfiles.append(self.passwords)
 
         self.genesis_file = tempfile.NamedTemporaryFile(prefix='etheno', suffix='.genesis', delete=False)
         try:
-            self.genesis_file.write(json.dumps(geth_to_parity(self.genesis)).encode('utf-8'))
+            parity_genesis = geth_to_parity(self.genesis)
+            parity_genesis['genesis']['author'] = format_hex_address(self.miner_account.address, True)
+            self.genesis_file.write(json.dumps(parity_genesis).encode('utf-8'))
         finally:
             self.genesis_file.close()
         self._tempfiles.append(self.genesis_file)
@@ -138,7 +142,7 @@ class ParityClient(SelfPostingClient):
                 base_path=self.datadir.name,
                 port=self.port,
                 chainId=self.genesis['config']['chainId'],
-                accounts=self.accounts,
+                accounts=tuple(self.accounts),
                 password_file=self.passwords.name
             ))
         finally:
