@@ -143,8 +143,23 @@ class ManticoreClient(EthenoClient):
     def __str__(self): return 'manticore'
     __repr__ = __str__
 
-class EthenoPlugin():
-    etheno = None
+class EthenoPlugin(object):
+    _etheno = None
+    logger = None
+
+    @property
+    def etheno(self):
+        return self._etheno
+
+    @etheno.setter
+    def etheno(self, instance):
+        if self._etheno is not None:
+            if instance is None:
+                self._etheno = None
+                return
+            raise ValueError('An Etheno plugin can only ever be associated with a single Etheno instance')
+        self._etheno = instance
+        self.logger = logger.EthenoLogger(self.__class__.__name__, parent=self._etheno.logger)
 
     def added(self):
         '''
