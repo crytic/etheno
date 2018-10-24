@@ -37,33 +37,49 @@ def geth_to_parity(genesis):
     return {
         'name': 'etheno',
         'engine': {
-            'Ethash': {
-                'params': {
-                    'minimumDifficulty': "0x%s" % genesis['difficulty'],
-                    'difficultyBoundDivisor': '0x100000000',
-                    'homesteadTransition': 0,
-                    'eip150Transition': 0,
-                    'eip160Transition': 0,
-                    'eip161abcTransition': 0,
-                    'eip161dTransition': 0,
-                }
-            }
+            'instantSeal': None,
+            # 'Ethash': {
+            #     'params': {
+            #         'minimumDifficulty': "0x%s" % genesis['difficulty'],
+            #         'difficultyBoundDivisor': '0x100000000',
+            #         'homesteadTransition': 0,
+            #         'eip150Transition': 0,
+            #         'eip160Transition': 0,
+            #         'eip161abcTransition': 0,
+            #         'eip161dTransition': 0,
+            #     }
+            # }
         },
         'genesis': {
-		"seal": {
-                    'ethereum': {
-                        'nonce': '0x0000000000000042',
-                        'mixHash': '0x0000000000000000000000000000000000000000000000000000000000000000'
-                    }
-		},
-		'difficulty': "0x%s" % genesis['difficulty'],
-		'gasLimit': "0x%s" % genesis['gasLimit']
+	    "seal": { "generic": "0x0"
+                      #'ethereum': {
+                      #    'nonce': '0x0000000000000042',
+                      #    'mixHash': '0x0000000000000000000000000000000000000000000000000000000000000000'
+                      #}
+	    },
+	    'difficulty': "0x%s" % genesis['difficulty'],
+	    'gasLimit': "0x%s" % genesis['gasLimit'],
+            'author': list(genesis['alloc'])[-1]
 	},
         'params': {
             'networkID' : "0x%x" % genesis['config']['chainId'],
             'maximumExtraDataSize': '0x20',
             'minGasLimit': "0x%s" % genesis['gasLimit'],
-            'gasLimitBoundDivisor': '1'
+            'gasLimitBoundDivisor': '1',
+            'eip150Transition': '0x0',
+            'eip160Transition': '0x0',
+            'eip161abcTransition': '0x0',
+            'eip161dTransition': '0x0',
+            'eip155Transition': '0x0',
+            'eip98Transition': '0x7fffffffffffff',
+            'eip86Transition': '0x7fffffffffffff',
+            'maxCodeSize': 24576,
+            'maxCodeSizeTransition': '0x0',
+            'eip140Transition': '0x0',
+            'eip211Transition': '0x0',
+            'eip214Transition': '0x0',
+            'eip658Transition': '0x0',
+            'wasmActivationTransition': '0x0'
         },
         'accounts': dict(genesis['alloc'])
     }
