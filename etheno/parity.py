@@ -119,7 +119,7 @@ class ParityClient(SelfPostingClient):
         self.passwords = tempfile.NamedTemporaryFile(prefix='parity', suffix='.passwd', delete=False)
         try:
             for i in range(len(self.genesis['alloc'])):
-                self.passwords.write(b'etheno\n')
+                self.passwords.write(b'etheno')
         finally:
             self.passwords.close()
         self._tempfiles.append(self.passwords)
@@ -163,7 +163,7 @@ class ParityClient(SelfPostingClient):
 
     def import_account(self, private_key):
         import eth_keyfile
-        keyfile = create_keyfile_json(int_to_bytes(private_key), 'etheno', kdf='scrypt')
+        keyfile = create_keyfile_json(int_to_bytes(private_key), b'etheno')
         keyfile_json = json.dumps(keyfile)
         keysdir = os.path.join(self.datadir.name, 'keys', 'etheno')
         os.makedirs(keysdir, exist_ok=True)
@@ -182,9 +182,19 @@ class ParityClient(SelfPostingClient):
     def start(self, unlock_accounts = True):
         if self.parity:
             return
-        base_args = ['/usr/bin/env', 'parity', '--config', self.config.name, '--fast-unlock']
+        base_args = ['/usr/bin/env', 'parity', '--config', self.config.name, '--fast-unlock', '--jsonrpc-apis=all']
         self.parity = subprocess.Popen(base_args)
         self.wait_until_running()
+        # unlock all of the accounts
+        for account in self.accounts:
+            addr = format_hex_address(account, True)
+            print("Unlocking Parity account %s..." % addr)
+            self.post({
+                'id': addr,
+                'jsonrpc': '2.0',
+                'method': 'personal_unlockAccount',
+                'params': [addr, 'etheno', None] # Unlock the account for one day
+            })
 
     def stop(self):
         if self.parity is not None:
@@ -194,8 +204,8 @@ class ParityClient(SelfPostingClient):
             parity.wait()
 
     def cleanup(self):
-        #if os.path.exists(self.datadir.name):
-        #    self.datadir.cleanup()
+        if os.path.exists(self.datadir.name):
+            self.datadir.cleanup()
         for tmpfile in self._tempfiles:
             if os.path.exists(tmpfile.name):
                 os.remove(tmpfile.name)
