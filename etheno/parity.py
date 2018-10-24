@@ -1,4 +1,5 @@
 import atexit
+import copy
 import json
 import os
 import subprocess
@@ -109,7 +110,7 @@ class ParityClient(SelfPostingClient):
     def __init__(self, genesis, port=8546):
         super().__init__(RpcHttpProxy("http://localhost:%d/" % port))
         self.miner_account = make_accounts(1)[0]
-        self.genesis = dict(genesis)
+        self.genesis = copy.deepcopy(genesis)
         # Add the etherbase account to genesis:
         self.genesis['alloc'][format_hex_address(self.miner_account.address)] = {'balance' : '0', 'privateKey' : format_hex_address(self.miner_account.private_key)}
         self.port = port

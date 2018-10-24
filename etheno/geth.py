@@ -1,4 +1,5 @@
 import atexit
+import copy
 import json
 import os
 import subprocess
@@ -15,7 +16,7 @@ class GethClient(SelfPostingClient):
         # Create a miner etherbase account:
         self.etherbase = make_accounts(1)[0]
         self.port = port
-        self.genesis = dict(genesis)
+        self.genesis = copy.deepcopy(genesis)
         # Add the etherbase account to genesis:
         self.genesis['alloc'][format_hex_address(self.etherbase.address)] = {'balance' : '0'}
         self.datadir = tempfile.TemporaryDirectory()
