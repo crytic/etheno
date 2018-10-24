@@ -116,18 +116,34 @@ class SelfPostingClient(EthenoClient):
             # TODO: Figure out a better way to handle JSON RPC errors
             raise JSONRPCError(self, data, ret)
         return ret
+
+    def estimate_gas(self, transaction):
+        '''
+        Estimates the gas cost for the given transaction or call
+        :param transaction: a dict containing the entire transaction as if it were to be sent to `post()`
+        :return: the gas cost in wei as an int
+        '''
+        return int(self.post({
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'eth_estimateGas',
+            'params': transaction['params']
+        })['result'], 16)
+
     def get_gas_price(self):
         return int(self.post({
             'id': 1,
             'jsonrpc': '2.0',
             'method': 'eth_gasPrice'
         })['result'], 16)
+
     def get_net_version(self):
         return int(self.post({
             'id': 1,
             'jsonrpc': '2.0',
             'method': 'net_version'
         })['result'], 16)
+
     def get_transaction_count(self, from_address):
         return int(self.post({
             'id': 1,
