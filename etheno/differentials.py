@@ -1,6 +1,6 @@
 from enum import Enum
 
-from .client import SelfPostingClient
+from .client import JSONRPCError, SelfPostingClient
 from .etheno import EthenoPlugin
 
 class DifferentialTest(object):
@@ -33,7 +33,7 @@ class DifferentialTester(EthenoPlugin):
         method = data['method']
         master_result = client_results[0]
         if method == 'eth_sendTransaction' or method == 'eth_sendRawTransaction':
-            if 'result' in master_result and master_result['result']:
+            if not isinstance(master_result, JSONRPCError) and 'result' in master_result and master_result['result']:
                 self._unprocessed_transactions.add(master_result['result'])
         elif method == 'eth_getTransactionReceipt':
             if master_result and 'result' in master_result and master_result['result']:

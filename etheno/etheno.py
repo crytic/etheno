@@ -252,7 +252,7 @@ class Etheno(object):
                     ret = self.master_client.post(data)
                 except JSONRPCError as e:
                     print(e)
-                    ret = None
+                    ret = e
     
         self.rpc_client_result = ret
 
