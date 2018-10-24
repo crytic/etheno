@@ -3,7 +3,7 @@ import time
 import eth_utils
 from web3.auto import w3
 
-from .client import EthenoClient, SelfPostingClient, jsonrpc, DATA, QUANTITY, transaction_receipt_succeeded
+from .client import EthenoClient, SelfPostingClient, jsonrpc, JSONRPCError, DATA, QUANTITY, transaction_receipt_succeeded
 from .utils import decode_hex, format_hex_address, int_to_bytes
 
 def _decode_value(value):
@@ -110,7 +110,7 @@ class ChainSynchronizer(object):
         elif method == 'eth_sendTransaction' or method == 'eth_sendRawTransaction':
             # record the transaction hash mapping
             if ret and 'result' in ret and ret['result']:
-                if self._client.etheno.rpc_client_result and 'result' in self._client.etheno.rpc_client_result and self._client.etheno.rpc_client_result['result']:
+                if self._client.etheno.rpc_client_result and not isinstance(self._client.etheno.rpc_client_result, JSONRPCError) and 'result' in self._client.etheno.rpc_client_result and self._client.etheno.rpc_client_result['result']:
                     old_decoded = _decode_value(self._client.etheno.rpc_client_result['result'])
                     new_decoded = _decode_value(ret['result'])
                     if old_decoded is not None and new_decoded is not None:
