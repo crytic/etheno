@@ -96,20 +96,23 @@ class EchidnaPlugin(EthenoPlugin):
 
     def emit_transaction(self, txn):
         self._transaction += 1
-        print("Echidna: Emitting Transaction %d" % self._transaction)
-        self.etheno.post({
+        transaction = {
             'id': 1,
             'jsonrpc': '2.0',
             'method': 'eth_sendTransaction',
             'params' : [{
-                "from": format_hex_address(self.etheno.accounts[0], True),
-                "to": self.contract_address,
-                "gas": "0x9999",
-                "gasPrice": "0x%x" % self.etheno.master_client.get_gas_price(),
-                "value": "0x0",
-                "data": "0x%s" % txn.hex()
+                'from': format_hex_address(self.etheno.accounts[0], True),
+                'to': self.contract_address,
+                'gasPrice': "0x%x" % self.etheno.master_client.get_gas_price(),
+                'value': '0x0',
+                'data': "0x%s" % txn.hex()
             }]
-        })
+        }
+        gas = "0x%x" % self.etheno.master_client.estimate_gas(transaction)
+        print("Echidna: Estimating gas cost for Transaction %d... %s" % (self._transaction, gas))
+        transaction['params'][0]['gas'] = gas
+        print("Echidna: Emitting Transaction %d" % self._transaction)
+        self.etheno.post(transaction)
 
 if __name__ == '__main__':
     install_echidna(allow_reinstall = True)

@@ -1,6 +1,6 @@
 from enum import Enum
 
-from .client import SelfPostingClient
+from .client import JSONRPCError, SelfPostingClient
 from .etheno import EthenoPlugin
 
 class DifferentialTest(object):
@@ -31,11 +31,33 @@ class DifferentialTester(EthenoPlugin):
 
     def after_post(self, data, client_results):
         method = data['method']
+
+        # First, see if any of the clients returned an error. If one did, they all should!
+        clients_with_errors = tuple(i for i, result in enumerate(client_results) if isinstance(result, JSONRPCError))
+        clients_without_errors = tuple(sorted(frozenset(range(len(client_results))) - frozenset(clients_with_errors)))
+
+        if clients_with_errors:
+            clients = [self.etheno.master_client] + self.etheno.clients
+            if clients_without_errors:
+                test = DifferentialTest('JSON_RPC_ERRORS', TestResult.FAILED, "%s executed transaction %s with no errors, but %s executed the same transaction with errors:\n%s" % (
+                    ', '.join(str(clients[client]) for client in clients_without_errors),
+                    data,
+                    ', '.join(str(clients[client]) for client in clients_with_errors),
+                    '\n'.join(str(client_results[client]) for client in clients_with_errors)
+                ))
+            else:
+                test = DifferentialTest('JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed transaction %s with errors" % data)
+            self.add_test_result(test)
+            print("Error: %s" % test.message)
+            return
+        else:
+            self.add_test_result(DifferentialTest('JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed transaction %s without error" % data))
+        
+        master_result = client_results[0]
         if method == 'eth_sendTransaction' or method == 'eth_sendRawTransaction':
-            if 'result' in data and data['result']:
-                self._unprocessed_transactions.add(data['result'])
+            if not isinstance(master_result, JSONRPCError) and 'result' in master_result and master_result['result']:
+                self._unprocessed_transactions.add(master_result['result'])
         elif method == 'eth_getTransactionReceipt':
-            master_result = client_results[0]
             if master_result and 'result' in master_result and master_result['result']:
                 # mark that we have processed the receipt for this transaction:
                 if data['params'][0] in self._unprocessed_transactions:
@@ -77,7 +99,7 @@ class DifferentialTester(EthenoPlugin):
         self._unprocessed_transactions = set()
         for tx_hash in unprocessed:
             print("Requesting transaction receipt for %s to check differentials..." % tx_hash)
-            if not isinstance(self.etheno.master_client, SelfPopstingClient):
+            if not isinstance(self.etheno.master_client, SelfPostingClient):
                 print("Warning: The DifferentialTester currently only supports master clients that extend from SelfPostingClient, but %s does not; skipping checking transaction(s) %s" % (self.etheno.master_client, ', '.join(unprocessed)))
                 return
             while True:
@@ -94,13 +116,14 @@ class DifferentialTester(EthenoPlugin):
                 time.sleep(3.0)
 
     def shutdown(self):
+        # super().shutdown() should automatically call self.finalize()
+        super().shutdown()
         if self.tests and not self._printed_summary:
             self._printed_summary = True
             print("\nDifferential Test Summary:\n")
-            for test in self.tests:
+            for test in sorted(self.tests):
                 print("    %s" % test)
                 total = sum(map(len, self.tests[test].values()))
                 for result in self.tests[test]:
                     print("        %s\t%d / %d" % (result, len(self.tests[test][result]), total))
                 print('')
-        super().shutdown()

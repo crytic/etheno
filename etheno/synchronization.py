@@ -81,6 +81,10 @@ class ChainSynchronizer(object):
             if not transaction_receipt_succeeded(self._client.etheno.rpc_client_result):
                 # the master client's transaction receipt command failed, so we can skip calling this client's
                 return self._client.etheno.rpc_client_result
+            elif _decode_value(data['params'][0]) not in self.mapping:
+                # we don't know about this transaction receipt, which probably means that the transaction failed
+                # on this client. So return the receipt here, because below we will block on a result:
+                return self._old_post(data)
         
         uninstalling_filter = None
         if 'params' in data:
