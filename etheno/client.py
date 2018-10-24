@@ -64,6 +64,8 @@ def transaction_receipt_succeeded(data):
         return None
     elif 'contractAddress' in data['result'] and data['result']['contractAddress']:
         return True
+    elif 'blockHash' in data['result'] and data['result']['blockHash']:
+        return True
     elif 'status' not in data['result']:
         return None
     status = data['result']['status']
