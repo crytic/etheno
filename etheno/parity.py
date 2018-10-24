@@ -166,7 +166,6 @@ class ParityClient(SelfPostingClient):
             return address
 
     def import_account(self, private_key):
-        import eth_keyfile
         keyfile = create_keyfile_json(int_to_bytes(private_key), b'etheno')
         keyfile_json = json.dumps(keyfile)
         keysdir = os.path.join(self.datadir.name, 'keys', 'etheno')
