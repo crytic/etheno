@@ -7,7 +7,7 @@ import time
 
 from web3.auto import w3
 
-from .client import RpcHttpProxy, SelfPostingClient
+from .client import JSONRPCError, RpcHttpProxy, SelfPostingClient
 from .genesis import geth_to_parity, make_accounts
 from .keyfile import create_keyfile_json
 from .utils import ConstantTemporaryFile, find_open_port, format_hex_address, int_to_bytes, is_port_free
@@ -178,23 +178,33 @@ class ParityClient(SelfPostingClient):
     def accounts(self):
         for addr, bal in self.genesis['alloc'].items():
             yield int(addr, 16)
-        
+
+    def unlock_account(self, account):
+        addr = format_hex_address(account, True)
+        print("Unlocking Parity account %s..." % addr)
+        return self.post({
+            'id': addr,
+            'jsonrpc': '2.0',
+            'method': 'personal_unlockAccount',
+            'params': [addr, 'etheno', None] # Unlock the account for one day
+        })        
+
+    def post(self, data, unlock_if_necessary=True):
+        try:
+            return super().post(data)
+        except JSONRPCError as e:
+            if unlock_if_necessary and 'data' in e.result['error'] and e.result['error']['data'].lower() == 'notunlocked':
+                self.unlock_account(int(data['params'][0]['from'], 16))
+                return self.post(data, unlock_if_necessary=False)
+            else:
+                raise e
+    
     def start(self, unlock_accounts = True):
         if self.parity:
             return
         base_args = ['/usr/bin/env', 'parity', '--config', self.config.name, '--fast-unlock', '--jsonrpc-apis=all']
         self.parity = subprocess.Popen(base_args)
         self.wait_until_running()
-        # unlock all of the accounts
-        for account in self.accounts:
-            addr = format_hex_address(account, True)
-            print("Unlocking Parity account %s..." % addr)
-            self.post({
-                'id': addr,
-                'jsonrpc': '2.0',
-                'method': 'personal_unlockAccount',
-                'params': [addr, 'etheno', None] # Unlock the account for one day
-            })
 
     def stop(self):
         if self.parity is not None:
