@@ -28,6 +28,7 @@ class EthenoLogger(object):
         if log_level is None:
             if parent is None:
                 raise ValueError('A logger must be provided a parent if `log_level` is None')
+            log_level = parent.log_level
         self._log_level = log_level
         self._logger = logging.getLogger(name)
         self._handler = logging.StreamHandler()
