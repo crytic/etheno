@@ -206,7 +206,7 @@ def main(argv = None):
 
             if manticore_client is not None:
                 if args.manticore_script is not None:
-                    exec(args.manticore_script.read(), {'manticore' : manticore_client.manticore, 'manticoreutils' : manticoreutils})
+                    exec(args.manticore_script.read(), {'manticore' : manticore_client.manticore, 'manticoreutils' : manticoreutils, 'logger' : manticore_client.logger})
                 else:
                     manticoreutils.register_all_detectors(manticore_client.manticore)
                     manticore_client.multi_tx_analysis()

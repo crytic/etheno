@@ -57,6 +57,7 @@ class ManticoreClient(EthenoClient):
             manticore = ManticoreEVM()
         self.manticore = threadwrapper.MainThreadWrapper(manticore, _CONTROLLER)
         self.contracts = []
+        self.short_name = 'Manticore'
 
     def create_account(self, balance, address):
         self.manticore.create_account(balance=balance, address=address)        
