@@ -50,6 +50,7 @@ class GanacheClient(SelfPostingClient):
     def __init__(self, ganache_instance):
         super().__init__(ganache_instance)
         ganache_instance._client = self
+        self.short_name = "Ganache@%d" % ganache_instance.port
     def wait_until_running(self):
         while is_port_free(self.client.port):
             time.sleep(0.25)

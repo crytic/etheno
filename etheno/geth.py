@@ -13,6 +13,7 @@ from .utils import ConstantTemporaryFile, format_hex_address, is_port_free
 class GethClient(SelfPostingClient):
     def __init__(self, genesis, port=8546):
         super().__init__(RpcHttpProxy("http://localhost:%d/" % port))
+        self.short_name = "Geth@%d" % port
         # Create a miner etherbase account:
         self.etherbase = make_accounts(1)[0]
         self.port = port

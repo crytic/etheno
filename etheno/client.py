@@ -79,6 +79,7 @@ def transaction_receipt_succeeded(data):
 class EthenoClient(object):
     _etheno = None
     logger = None
+    _short_name = None
 
     @property
     def etheno(self):
@@ -94,7 +95,7 @@ class EthenoClient(object):
                 return
             raise ValueError('An Etheno client can only ever be associated with a single Etheno instance')
         self._etheno = instance
-        self.logger = logger.EthenoLogger(str(self), parent=self._etheno.logger)
+        self.logger = logger.EthenoLogger(self.short_name, parent=self._etheno.logger)
 
     def create_account(self, balance = 0, address = None):
         '''
@@ -114,6 +115,17 @@ class EthenoClient(object):
 
     def wait_for_transaction(self, tx_hash):
         return None
+
+    @property
+    def short_name(self):
+        if self._short_name is None:
+            return str(self)
+        else:
+            return self._short_name
+
+    @short_name.setter
+    def short_name(self, name):
+        self._short_name = name
 
 class SelfPostingClient(EthenoClient):
     def __init__(self, client):
