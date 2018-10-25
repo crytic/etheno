@@ -12,6 +12,7 @@ from flask.views import MethodView
 
 from manticore.ethereum import ManticoreEVM
 
+from . import logger
 from . import threadwrapper
 from .client import EthenoClient, JSONRPCError, RpcProxyClient, SelfPostingClient, DATA, QUANTITY, transaction_receipt_succeeded, jsonrpc
 from .utils import format_hex_address
@@ -56,6 +57,7 @@ class ManticoreClient(EthenoClient):
             manticore = ManticoreEVM()
         self.manticore = threadwrapper.MainThreadWrapper(manticore, _CONTROLLER)
         self.contracts = []
+        self.short_name = 'Manticore'
 
     def create_account(self, balance, address):
         self.manticore.create_account(balance=balance, address=address)        
@@ -81,11 +83,8 @@ class ManticoreClient(EthenoClient):
                 address = None
             contract_address = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
             self.contracts.append(contract_address)
-            print("")
-            print("  Manticore contract created: %s" % encode_hex(contract_address.address))
-            print(map(lambda a : hex(a.address), self.manticore.accounts.values()))
-            #print("  Block number: %s" % self.manticore.world.block_number())
-            print("")
+            self.logger.info("\n  Manticore contract created: %s\n%s\n" % (encode_hex(contract_address.address), map(lambda a : hex(a.address), self.manticore.accounts.values())))
+            #self.logger.info("  Block number: %s" % self.manticore.world.block_number())
         else:
             self.manticore.transaction(address = to, data = data, caller=from_addr, value = value)
         # Just mimic the result from the master client
@@ -111,7 +110,7 @@ class ManticoreClient(EthenoClient):
         tx_no = 0
         while (current_coverage < 100 or not tx_use_coverage) and not self.manticore.is_shutdown():
             try:
-                print("Starting symbolic transaction: %d" % tx_no)
+                self.logger.info("Starting symbolic transaction: %d" % tx_no)
 
                 # run_symbolic_tx
                 symbolic_data = self.manticore.make_symbolic_buffer(320)
@@ -120,7 +119,7 @@ class ManticoreClient(EthenoClient):
                                  address=contract_address,
                                  data=symbolic_data,
                                  value=symbolic_value)
-                print("%d alive states, %d terminated states" % (self.manticore.count_running_states(), self.manticore.count_terminated_states()))
+                self.logger.info("%d alive states, %d terminated states" % (self.manticore.count_running_states(), self.manticore.count_terminated_states()))
             except NoAliveStates:
                 break
 
@@ -142,8 +141,23 @@ class ManticoreClient(EthenoClient):
     def __str__(self): return 'manticore'
     __repr__ = __str__
 
-class EthenoPlugin():
-    etheno = None
+class EthenoPlugin(object):
+    _etheno = None
+    logger = None
+
+    @property
+    def etheno(self):
+        return self._etheno
+
+    @etheno.setter
+    def etheno(self, instance):
+        if self._etheno is not None:
+            if instance is None:
+                self._etheno = None
+                return
+            raise ValueError('An Etheno plugin can only ever be associated with a single Etheno instance')
+        self._etheno = instance
+        self.logger = logger.EthenoLogger(self.__class__.__name__, parent=self._etheno.logger)
 
     def added(self):
         '''
@@ -199,6 +213,15 @@ class Etheno(object):
         self.rpc_client_result = None
         self.plugins = []
         self._shutting_down = False
+        self.logger = logger.EthenoLogger('Etheno', logger.INFO)
+
+    @property
+    def log_level(self):
+        return self.logger.log_level
+
+    @log_level.setter
+    def log_level(self, level):
+        self.logger.log_level = level
 
     @property
     def master_client(self):
@@ -251,7 +274,7 @@ class Etheno(object):
                 try:
                     ret = self.master_client.post(data)
                 except JSONRPCError as e:
-                    print(e)
+                    self.logger.error(e)
                     ret = e
     
         self.rpc_client_result = ret
@@ -261,7 +284,7 @@ class Etheno(object):
         for client in self.clients:
             try:
                 if hasattr(client, method):
-                    print("Enrobing JSON RPC call to %s.%s" % (client, method))
+                    self.logger.info("Enrobing JSON RPC call to %s.%s" % (client, method))
                     function = getattr(client, method)
                     if function is not None:
                         kwargs['rpc_client_result'] = ret
@@ -277,7 +300,7 @@ class Etheno(object):
                 else:
                     results.append(None)
             except JSONRPCError as e:
-                print(e)
+                self.logger.error(e)
                 results.append(e)
 
         if ret is None:
@@ -371,7 +394,7 @@ class Etheno(object):
         thread = Thread(target = flask_thread)
         thread.start()
 
-        print("Etheno v%s" % VERSION)
+        self.logger.info("Etheno v%s" % VERSION)
 
         for plugin in self.plugins:
             plugin.run()
@@ -392,7 +415,7 @@ class EthenoView(MethodView):
                 was_list = True
                 data = data[0]
             else:
-                print("Unexpected POST data: %s" % data)
+                ETHENO.logger.error("Unexpected POST data: %s" % data)
                 abort(400)
 
         if 'jsonrpc' not in data or 'method' not in data:
@@ -404,12 +427,15 @@ class EthenoView(MethodView):
         if jsonrpc_version < 2.0:
             abort(426)
         elif jsonrpc_version > 2.0:
-            print("Warning: Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
+            ETHENO.logger.warn("Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
 
         ret = ETHENO.post(data)
 
         if ret is None:
             return None
+
+        if isinstance(ret, JSONRPCError):
+            ret = ret.result
 
         if was_list:
             ret = [ret]

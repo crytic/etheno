@@ -48,7 +48,7 @@ class DifferentialTester(EthenoPlugin):
             else:
                 test = DifferentialTest('JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed transaction %s with errors" % data)
             self.add_test_result(test)
-            print("Error: %s" % test.message)
+            self.logger.error(test.message)
             return
         else:
             self.add_test_result(DifferentialTest('JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed transaction %s without error" % data))
@@ -75,7 +75,7 @@ class DifferentialTester(EthenoPlugin):
                         if not created:
                             test = DifferentialTest('CONTRACT_CREATION', TestResult.FAILED, "the master client created a contract for transaction %s, but %s did not" % (data['params'][0], client))
                             self.add_test_result(test)
-                            print("Error: %s!" % test.message)
+                            self.logger.error(test.message)
                         else:
                             self.add_test_result(DifferentialTest('CONTRACT_CREATION', TestResult.PASSED,  "client %s transaction %s" % (client, data['params'][0])))
                 if 'gasUsed' in master_result['result'] and master_result['result']['gasUsed']:
@@ -90,7 +90,7 @@ class DifferentialTester(EthenoPlugin):
                         if gas_used != master_gas:
                             test = DifferentialTest('GAS_USAGE', TestResult.FAILED, "transaction %s used 0x%x gas in the master client but only 0x%x gas in %s!" % (data['params'][0], master_gas, gas_used, client))
                             self.add_test_result(test)
-                            print("Error: %s" % test.message)
+                            self.logger.error(test.message)
                         else:
                             self.add_test_result(DifferentialTest('GAS_USAGE', TestResult.PASSED, "client %s transaction %s used 0x%x gas" % (client, data['params'][0], gas_used)))
 
@@ -98,9 +98,9 @@ class DifferentialTester(EthenoPlugin):
         unprocessed = self._unprocessed_transactions
         self._unprocessed_transactions = set()
         for tx_hash in unprocessed:
-            print("Requesting transaction receipt for %s to check differentials..." % tx_hash)
+            self.logger.info("Requesting transaction receipt for %s to check differentials..." % tx_hash)
             if not isinstance(self.etheno.master_client, SelfPostingClient):
-                print("Warning: The DifferentialTester currently only supports master clients that extend from SelfPostingClient, but %s does not; skipping checking transaction(s) %s" % (self.etheno.master_client, ', '.join(unprocessed)))
+                self.logger.warn("The DifferentialTester currently only supports master clients that extend from SelfPostingClient, but %s does not; skipping checking transaction(s) %s" % (self.etheno.master_client, ', '.join(unprocessed)))
                 return
             while True:
                 receipt = self.etheno.post({
@@ -120,10 +120,11 @@ class DifferentialTester(EthenoPlugin):
         super().shutdown()
         if self.tests and not self._printed_summary:
             self._printed_summary = True
-            print("\nDifferential Test Summary:\n")
+            ret = '\nDifferential Test Summary:\n\n'
             for test in sorted(self.tests):
-                print("    %s" % test)
+                ret += "    %s\n" % test
                 total = sum(map(len, self.tests[test].values()))
                 for result in self.tests[test]:
-                    print("        %s\t%d / %d" % (result, len(self.tests[test][result]), total))
-                print('')
+                    ret += "        %s\t%d / %d\n" % (result, len(self.tests[test][result]), total)
+                ret += '\n'
+            self.logger.info(ret)

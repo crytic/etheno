@@ -69,12 +69,12 @@ class EchidnaPlugin(EthenoPlugin):
         self.contract_address = None
     def run(self):
         if not self.etheno.accounts:
-            print("Etheno does not know about any accounts, so Echidna has nothing to do!")
+            self.logger.info("Etheno does not know about any accounts, so Echidna has nothing to do!")
             self._shutdown()
             return
         # First, deploy the testing contract:
         self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0], ECHIDNA_CONTRACT_BYTECODE), True)
-        print("Deployed Echidna test contract to %s" % self.contract_address)
+        self.logger.info("Deployed Echidna test contract to %s" % self.contract_address)
         with ConstantTemporaryFile(ECHIDNA_CONFIG, prefix='echidna', suffix='.yaml') as config:
             with ConstantTemporaryFile(ECHIDNA_CONTRACT, prefix='echidna', suffix='.sol') as sol:
                 echidna = subprocess.Popen(['/usr/bin/env', 'echidna-test', sol, '--config', config], stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
@@ -109,9 +109,9 @@ class EchidnaPlugin(EthenoPlugin):
             }]
         }
         gas = "0x%x" % self.etheno.master_client.estimate_gas(transaction)
-        print("Echidna: Estimating gas cost for Transaction %d... %s" % (self._transaction, gas))
+        self.logger.info("Estimating gas cost for Transaction %d... %s" % (self._transaction, gas))
         transaction['params'][0]['gas'] = gas
-        print("Echidna: Emitting Transaction %d" % self._transaction)
+        self.logger.info("Emitting Transaction %d" % self._transaction)
         self.etheno.post(transaction)
 
 if __name__ == '__main__':
