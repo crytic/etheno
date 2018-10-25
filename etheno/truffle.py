@@ -1,9 +1,12 @@
 from collections.abc import Sequence
-import subprocess
+import time
+
+from .logger import EthenoLogger, PtyLogger
 
 class Truffle(object):
-    def __init__(self):
+    def __init__(self, parent_logger=None, log_level=None):
         self._running = False
+        self.logger = EthenoLogger('Truffle', log_level=log_level, parent=parent_logger)
 
     def terminate(self):
         self._running = False
@@ -22,21 +25,36 @@ class Truffle(object):
         else:
             args = [args]
 
-        with subprocess.Popen(['/usr/bin/env', 'truffle'] + args) as p:
-            def terminate():
-                print("Terminating truffle %s..." % ''.join(args))
-                try:
-                    p.terminate()
-                except OSError:
-                    pass
-            while True:
-                try:
-                    return p.wait(1.0)
-                except subprocess.TimeoutExpired:
-                    if not self._running:
-                        terminate()
-                        return None
-                    continue
-                except KeyboardInterrupt:
-                    p.wait()
-                    raise
+        p = PtyLogger(self.logger, ['/usr/bin/env', 'truffle'] + args)
+
+        try:
+            while p.isalive():
+                if not self._running:
+                    self.logger.info("Etheno received a shutdown signal; terminating truffle %s" % ' '.join(args))
+                    break
+                time.sleep(1.0)
+        except KeyboardInterrupt as e:
+            self.logger.info("Caught keyboard interrupt; terminating truffle %s" % ' '.join(args))
+            raise e
+        finally:
+            p.close(force=True)
+        return p.wait()
+
+        # with subprocess.Popen(['/usr/bin/env', 'truffle'] + args) as p:
+        #     def terminate():
+        #         print("Terminating truffle %s..." % ''.join(args))
+        #         try:
+        #             p.terminate()
+        #         except OSError:
+        #             pass
+        #     while True:
+        #         try:
+        #             return p.wait(1.0)
+        #         except subprocess.TimeoutExpired:
+        #             if not self._running:
+        #                 terminate()
+        #                 return None
+        #             continue
+        #         except KeyboardInterrupt:
+        #             p.wait()
+        #             raise

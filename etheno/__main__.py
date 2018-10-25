@@ -190,15 +190,16 @@ def main(argv = None):
         manticore_client.manticore.verbosity(args.manticore_verbosity)
 
     if args.truffle:
-        truffle_controller = truffle.Truffle()
+        truffle_controller = truffle.Truffle(parent_logger=ETHENO.logger)
         def truffle_thread():
             if ETHENO.master_client:
                 ETHENO.master_client.wait_until_running()
-            print("Etheno Started! Running Truffle...")
+            ETHENO.logger.info("Etheno Started! Running Truffle...")
             ret = truffle_controller.run(args.truffle_args)
             if ret != 0:
-                print("Error: Truffle exited with code %s" % ret)
-                sys.exit(ret)
+                ETHENO.logger.error("Truffle exited with code %s" % ret)
+                ETHENO.shutdown()
+                # TODO: Propagate the error code elsewhere so Etheno doesn't exit with code 0
 
             for plugin in ETHENO.plugins:
                 plugin.finalize()
@@ -210,8 +211,11 @@ def main(argv = None):
                     manticoreutils.register_all_detectors(manticore_client.manticore)
                     manticore_client.multi_tx_analysis()
                     manticore_client.manticore.finalize()
-                print(manticore_client.manticore.global_findings)
-                print("Results are in %s" % manticore_client.manticore.workspace)
+                manticore_client.logger.info(manticore_client.manticore.global_findings)
+                manticore_client.logger.info("Results are in %s" % manticore_client.manticore.workspace)
+                ETHENO.shutdown()
+            elif not ETHENO.clients and not ETHENO.plugins:
+                ETHENO.logger.info("No clients or plugins running; exiting...")
                 ETHENO.shutdown()
 
         thread = Thread(target=truffle_thread)
@@ -219,7 +223,7 @@ def main(argv = None):
 
     if args.run_differential and (ETHENO.master_client is not None) and next(filter(lambda c : not isinstance(c, ManticoreClient), ETHENO.clients), False):
         # There are at least two non-Manticore clients running
-        print("Initializing differential tests to compare clients %s" % ', '.join(map(str, [ETHENO.master_client] + ETHENO.clients)))
+        ETHENO.logger.info("Initializing differential tests to compare clients %s" % ', '.join(map(str, [ETHENO.master_client] + ETHENO.clients)))
         ETHENO.add_plugin(DifferentialTester())
 
     if args.echidna:
@@ -229,7 +233,7 @@ def main(argv = None):
 
     if ETHENO.master_client is None and not ETHENO.clients and not ETHENO.plugins:
         if not had_plugins:
-            print("No clients or plugins provided; exiting...")
+            ETHENO.logger.info("No clients or plugins provided; exiting...")
         # else: this can also happen if there were plugins but they uninstalled themselves after running
         return
 
