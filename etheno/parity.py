@@ -214,7 +214,6 @@ class ParityClient(SelfPostingClient):
     def stop(self):
         if self.parity is not None:
             parity = self.parity
-            print(parity._buffers)
             self.parity = None
             parity.terminate()
             parity.wait()
