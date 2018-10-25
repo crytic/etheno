@@ -114,10 +114,10 @@ class ChainSynchronizer(object):
                     old_decoded = _decode_value(self._client.etheno.rpc_client_result['result'])
                     new_decoded = _decode_value(ret['result'])
                     if old_decoded is not None and new_decoded is not None:
-                        self._client.logger.info("Mapping transaction hash %x to %x for %s" % (old_decoded, new_decoded, self._client))
+                        self._client.logger.info("Mapping transaction hash %x to %x" % (old_decoded, new_decoded))
                         self.mapping[old_decoded] = new_decoded
                     elif not (old_decoded is None and new_decoded is None):
-                        self._client.logger.warn("Call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result'], self._client))
+                        self._client.logger.warn("Call to %s returned %s from the master client but %s from this client; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result']))
         elif method == 'eth_getTransactionReceipt':
             # by this point we know that the master client has already successfully mined the transaction and returned a receipt
             # so make sure that we block until this client has also mined the transaction and returned a receipt
@@ -132,7 +132,7 @@ class ChainSynchronizer(object):
                 if master_address is not None and our_address is not None:
                     self.mapping[master_address] = our_address
                 elif not (master_address is None and our_address is None):
-                    self._client.logger.warn("Call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result']['contractAddress'], ret['result']['contractAddress'], self._client))
+                    self._client.logger.warn("Call to %s returned %s from the master client but %s from this client; ignoring..." % (method, self._client.etheno.rpc_client_result['result']['contractAddress'], ret['result']['contractAddress']))
 
         return ret
 
