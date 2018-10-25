@@ -5,6 +5,7 @@ import subprocess
 import time
 
 from .client import RpcHttpProxy, SelfPostingClient
+from .logger import PtyLogger
 from .utils import is_port_free
 
 class Ganache(RpcHttpProxy):
@@ -16,10 +17,14 @@ class Ganache(RpcHttpProxy):
         else:
             self.args = ['/usr/bin/env', 'ganache-cli', '-d', '-p', str(port)] + args
         self.ganache = None
+        self._client = None
     def start(self):
         if self.ganache:
             return
-        self.ganache = subprocess.Popen(self.args)
+        if self._client:
+            self.ganache = PtyLogger(self._client.logger, self.args)
+        else:
+            self.ganache = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
         atexit.register(Ganache.stop.__get__(self, Ganache))
         # wait until Ganache has started listening:
         while is_port_free(self.port):
@@ -34,18 +39,18 @@ class Ganache(RpcHttpProxy):
             self.ganache = None
             ganache.terminate()
             ganache.wait()
+            if isinstance(ganache, PtyLogger):
+                ganache.close()
 
 if __name__ == "__main__":
     ganache = Ganache()
     ganache.start()
-    print(ganache.post({
-        'jsonrpc': '2.0',
-        'method': 'eth_accounts',
-        'params': [],
-        'id': 1
-    }))
 
 class GanacheClient(SelfPostingClient):
+    def __init__(self, ganache_instance):
+        super().__init__(ganache_instance)
+        ganache_instance._client = self
+        self.short_name = "Ganache@%d" % ganache_instance.port
     def wait_until_running(self):
         while is_port_free(self.client.port):
             time.sleep(0.25)

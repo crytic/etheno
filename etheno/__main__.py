@@ -14,6 +14,7 @@ from .utils import decode_value, find_open_port, format_hex_address
 from . import Etheno
 from . import ganache
 from . import geth
+from . import logger
 from . import manticoreutils
 from . import parity
 from . import truffle
@@ -45,6 +46,7 @@ def main(argv = None):
     parser.add_argument('-j', '--genesis', type=str, default=None, help='Path to a genesis.json file to use for initializing clients. Any genesis-related options like --network-id will override the values in this file. If --accounts is greater than zero, that many new accounts will be appended to the accounts in the genesis file.')
     parser.add_argument('--save-genesis', type=str, default=None, help="Save a genesis.json file to reproduce the state of this run. Note that this genesis file will include all known private keys for the genesis accounts, so use this with caution.")
     parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True, help='Do not run differential testing, which is run by default')
+    parser.add_argument('-l', '--log-level', type=str.upper, choices={'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'}, default='INFO', help='Set Etheno\'s log level (default=INFO)')
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
     parser.add_argument('client', type=str, nargs='*', help='JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
     parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
@@ -59,6 +61,8 @@ def main(argv = None):
         print(VERSION_NAME)
         sys.exit(0)
 
+    ETHENO.log_level = args.log_level
+        
     # First, see if we need to install Echidna:
     if args.echidna:
         if not echidna_exists():
@@ -71,7 +75,7 @@ def main(argv = None):
                     break
             install_echidna()
             if not echidna_exists():
-                print('Etheno failed to install Echidna. Please install it manually https://github.com/trailofbits/echidna')
+                ETHENO.logger.error('Etheno failed to install Echidna. Please install it manually https://github.com/trailofbits/echidna')
                 sys.exit(1)
         
     if args.genesis is None:
@@ -157,15 +161,17 @@ def main(argv = None):
     if args.save_genesis:
         with open(args.save_genesis, 'wb') as f:
             f.write(json.dumps(genesis).encode('utf-8'))
-            print("Saved genesis to %s" % args.save_genesis)
+            ETHENO.logger.info("Saved genesis to %s" % args.save_genesis)
 
     if args.geth:
         if args.geth_port is None:
             args.geth_port = find_open_port(args.port + 1)
 
         geth_instance = geth.GethClient(genesis = genesis, port = args.geth_port)
+        geth_instance.etheno = ETHENO
         for account in accounts:
             # TODO: Make some sort of progress bar here
+            geth_instance.logger.info("Unlocking Geth account %s" % format_hex_address(account.address, True))
             geth_instance.import_account(account.private_key)
         geth_instance.start(unlock_accounts = True)
         if ETHENO.master_client is None:
@@ -205,28 +211,32 @@ def main(argv = None):
         manticore_client.manticore.verbosity(args.manticore_verbosity)
 
     if args.truffle:
-        truffle_controller = truffle.Truffle()
+        truffle_controller = truffle.Truffle(parent_logger=ETHENO.logger)
         def truffle_thread():
             if ETHENO.master_client:
                 ETHENO.master_client.wait_until_running()
-            print("Etheno Started! Running Truffle...")
+            ETHENO.logger.info("Etheno Started! Running Truffle...")
             ret = truffle_controller.run(args.truffle_args)
             if ret != 0:
-                print("Error: Truffle exited with code %s" % ret)
-                sys.exit(ret)
+                ETHENO.logger.error("Truffle exited with code %s" % ret)
+                ETHENO.shutdown()
+                # TODO: Propagate the error code elsewhere so Etheno doesn't exit with code 0
 
             for plugin in ETHENO.plugins:
                 plugin.finalize()
 
             if manticore_client is not None:
                 if args.manticore_script is not None:
-                    exec(args.manticore_script.read(), {'manticore' : manticore_client.manticore, 'manticoreutils' : manticoreutils})
+                    exec(args.manticore_script.read(), {'manticore' : manticore_client.manticore, 'manticoreutils' : manticoreutils, 'logger' : manticore_client.logger})
                 else:
                     manticoreutils.register_all_detectors(manticore_client.manticore)
                     manticore_client.multi_tx_analysis()
                     manticore_client.manticore.finalize()
-                print(manticore_client.manticore.global_findings)
-                print("Results are in %s" % manticore_client.manticore.workspace)
+                manticore_client.logger.info(manticore_client.manticore.global_findings)
+                manticore_client.logger.info("Results are in %s" % manticore_client.manticore.workspace)
+                ETHENO.shutdown()
+            elif not ETHENO.clients and not ETHENO.plugins:
+                ETHENO.logger.info("No clients or plugins running; exiting...")
                 ETHENO.shutdown()
 
         thread = Thread(target=truffle_thread)
@@ -234,7 +244,7 @@ def main(argv = None):
 
     if args.run_differential and (ETHENO.master_client is not None) and next(filter(lambda c : not isinstance(c, ManticoreClient), ETHENO.clients), False):
         # There are at least two non-Manticore clients running
-        print("Initializing differential tests to compare clients %s" % ', '.join(map(str, [ETHENO.master_client] + ETHENO.clients)))
+        ETHENO.logger.info("Initializing differential tests to compare clients %s" % ', '.join(map(str, [ETHENO.master_client] + ETHENO.clients)))
         ETHENO.add_plugin(DifferentialTester())
 
     if args.echidna:
@@ -244,7 +254,7 @@ def main(argv = None):
 
     if ETHENO.master_client is None and not ETHENO.clients and not ETHENO.plugins:
         if not had_plugins:
-            print("No clients or plugins provided; exiting...")
+            ETHENO.logger.info("No clients or plugins provided; exiting...")
         # else: this can also happen if there were plugins but they uninstalled themselves after running
         return
 

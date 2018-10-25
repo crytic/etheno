@@ -14,14 +14,14 @@ def _decode_value(value):
     except Exception:
         return None
 
-def _remap_params(params, mapping, method, remap_data = False):
+def _remap_params(client, params, mapping, method, remap_data = False):
     if isinstance(params, dict):
         for key, value in params.items():
             decoded = _decode_value(value)
             if decoded is None:
-                params[key] = _remap_params(value, mapping, "%s['%s']" % (method, key))
+                params[key] = _remap_params(client, value, mapping, "%s['%s']" % (method, key))
             elif decoded in mapping:
-                print("Converting %s parameter '%s' from %x to %x" % (method, key, decoded, mapping[decoded]))
+                client.logger.debug("Converting %s parameter '%s' from %x to %x" % (method, key, decoded, mapping[decoded]))
                 params[key] = format_hex_address(mapping[decoded], True)
             elif remap_data and key == 'data':
                 new_value = params['data']
@@ -29,21 +29,21 @@ def _remap_params(params, mapping, method, remap_data = False):
                     prev = new_value
                     new_value = new_value.replace(format_hex_address(old), format_hex_address(new))
                     if prev != new_value:
-                        print("Converting %x in %s['data'] to %x" % (old, method, new))
+                        client.logger.debug("Converting %x in %s['data'] to %x" % (old, method, new))
                 if new_value != params['data']:
                     params['data'] = new_value
     elif isinstance(params, list) or isinstance(params, tuple):
         for i, p in enumerate(params):
             decoded = _decode_value(p)
             if decoded is None:
-                params[i] = _remap_params(p, mapping, "%s['%d']" % (method, i))
+                params[i] = _remap_params(client, p, mapping, "%s['%d']" % (method, i))
             elif decoded in mapping:
-                print("Converting %s parameter %d from %x to %x" % (method, i, decoded, mapping[decoded]))
+                client.logger.debug("Converting %s parameter %d from %x to %x" % (method, i, decoded, mapping[decoded]))
                 params[i] = format_hex_address(mapping[decoded], True)
     else:
         decoded = _decode_value(params)
         if decoded is not None and decoded in mapping:
-            print("Converting %s from %x to %x" % (method, decoded, mapping[decoded]))
+            client.logger.debug("Converting %s from %x to %x" % (method, decoded, mapping[decoded]))
             return mapping[decoded]
     return params
 
@@ -88,14 +88,14 @@ class ChainSynchronizer(object):
         
         uninstalling_filter = None
         if 'params' in data:
-            data['params'] = _remap_params(data['params'], self.mapping, method, remap_data = True)
+            data['params'] = _remap_params(self._client, data['params'], self.mapping, method, remap_data = True)
             if ('filter' in method.lower() and 'get' in method.lower()) or method == 'eth_uninstallFilter':
                 # we are accessing a filter by its ID, so remap the ID
                 old_id = data['params'][0]
                 if old_id not in self.filter_mapping:
-                    print("Warning: %s called on unknown filter ID %s; ignoring..." % (method, old_id))
+                    self._client.logger.warn("%s called on unknown filter ID %s; ignoring..." % (method, old_id))
                 else:
-                    print("Mapping filter ID %s to %s for %s" % (old_id, self.filter_mapping[old_id], method))
+                    self._client.logger.info("Mapping filter ID %s to %s for %s" % (old_id, self.filter_mapping[old_id], method))
                     data['params'] = [self.filter_mapping[old_id]]
                 if method == 'eth_uninstallFilter':
                     uninstalling_filter = old_id
@@ -114,15 +114,15 @@ class ChainSynchronizer(object):
                     old_decoded = _decode_value(self._client.etheno.rpc_client_result['result'])
                     new_decoded = _decode_value(ret['result'])
                     if old_decoded is not None and new_decoded is not None:
-                        print("Mapping transaction hash %x to %x for %s" % (old_decoded, new_decoded, self._client))
+                        self._client.logger.info("Mapping transaction hash %x to %x" % (old_decoded, new_decoded))
                         self.mapping[old_decoded] = new_decoded
                     elif not (old_decoded is None and new_decoded is None):
-                        print("Warning: call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result'], self._client))
+                        self._client.logger.warn("Call to %s returned %s from the master client but %s from this client; ignoring..." % (method, self._client.etheno.rpc_client_result['result'], ret['result']))
         elif method == 'eth_getTransactionReceipt':
             # by this point we know that the master client has already successfully mined the transaction and returned a receipt
             # so make sure that we block until this client has also mined the transaction and returned a receipt
             while transaction_receipt_succeeded(ret) is None:
-                print("Waiting for %s to mine transaction %s..." % (self._client, data['params'][0]))
+                self._client.logger.info("Waiting to mine transaction %s..." % data['params'][0])
                 time.sleep(5.0)
                 ret = self._old_post(data, *args, **kwargs)
             # update the mapping with the address if a new contract was created
@@ -132,7 +132,7 @@ class ChainSynchronizer(object):
                 if master_address is not None and our_address is not None:
                     self.mapping[master_address] = our_address
                 elif not (master_address is None and our_address is None):
-                    print("Warning: call to %s returned %s from the master client but %s from %s; ignoring..." % (method, self._client.etheno.rpc_client_result['result']['contractAddress'], ret['result']['contractAddress'], self._client))
+                    self._client.logger.warn("Call to %s returned %s from the master client but %s from this client; ignoring..." % (method, self._client.etheno.rpc_client_result['result']['contractAddress'], ret['result']['contractAddress']))
 
         return ret
 
@@ -166,7 +166,7 @@ class RawTransactionSynchronizer(ChainSynchronizer):
         if method == 'eth_sendTransaction':
             # This client does not support sendTransaction because it does not have any of the requisite accounts.
             # So let's manually sign the transaction and send it to the client using eth_sendRawTransaction, instead.
-            params = _remap_params(dict(data['params'][0]), self.mapping, method, remap_data = True)
+            params = _remap_params(self._client, dict(data['params'][0]), self.mapping, method, remap_data = True)
             from_str = params['from']
             from_address = int(from_str, 16)
             if from_address in self._private_keys:
