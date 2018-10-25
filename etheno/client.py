@@ -3,6 +3,7 @@ import json
 import time
 from urllib.request import Request, urlopen
 
+from . import logger
 from .utils import decode_hex, format_hex_address, webserver_is_up
 
 def jsonrpc(**types):
@@ -76,7 +77,22 @@ def transaction_receipt_succeeded(data):
     return status > 0
     
 class EthenoClient(object):
-    etheno = None
+    _etheno = None
+    logger = None
+
+    @property
+    def etheno(self):
+        return self._etheno
+
+    @etheno.setter
+    def etheno(self, instance):
+        if self._etheno is not None:
+            if instance is None:
+                self._etheno = None
+                return
+            raise ValueError('An Etheno client can only ever be associated with a single Etheno instance')
+        self._etheno = instance
+        self.logger = logger.EthenoLogger(str(self), parent=self._etheno.logger)
 
     def create_account(self, balance = 0, address = None):
         '''
