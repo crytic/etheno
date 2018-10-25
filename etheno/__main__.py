@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from threading import Thread
 import time
 import sys
@@ -10,7 +11,7 @@ from .echidna import echidna_exists, EchidnaPlugin, install_echidna
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
 from .genesis import Account, make_accounts, make_genesis
 from .synchronization import AddressSynchronizingClient, RawTransactionClient
-from .utils import decode_value, find_open_port, format_hex_address
+from .utils import clear_directory, decode_value, find_open_port, format_hex_address, ynprompt
 from . import Etheno
 from . import ganache
 from . import geth
@@ -67,17 +68,31 @@ def main(argv = None):
 
     if args.log_file:
         ETHENO.logger.save_to_file(args.log_file)
+
+    if args.log_dir:
+        if os.path.exists(args.log_dir):
+            if not ynprompt("Logging path `%s` already exists! Would you like to overwrite it? [yN] " % args.log_dir):
+                sys.exit(1)
+            elif os.path.isfile(args.log_dir):
+                os.remove(args.log_dir)
+            else:
+                # don't delete the directory, just its contents
+                # we can't use shutil.rmtree here, because that deletes the directory and also it doesn't work on symlinks
+                if not ynprompt("We are about to delete the contents of `%s`. Are you sure? [yN] " % args.log_dir):
+                    sys.exit(1)
+                abspath = os.path.abspath(args.log_dir)
+                if abspath == '' or abspath == '/' or abspath.endswith('://') or abspath.endswith(':\\\\'):
+                    print("Wait a sec, you want me to delete `%s`?!\nThat looks too dangerous.\nIf I were to do that, you'd file an angry GitHub issue complaining that I deleted your hard drive.\nYou're on your own deleting this directory!" % abspath)
+                    sys.exit(1)
+                clear_directory(args.log_dir)
+    
+        ETHENO.logger.save_to_directory(args.log_dir)
         
     # First, see if we need to install Echidna:
     if args.echidna:
         if not echidna_exists():
-            while True:
-                yn = input("Echidna does not appear to be installed.\nWould you like to have Etheno attempt to install it now? [yN] ")
-                yn = yn[0:1].lower()
-                if yn == 'n' or yn == '':
-                    sys.exit(1)
-                elif yn == 'y':
-                    break
+            if not ynprompt('Echidna does not appear to be installed.\nWould you like to have Etheno attempt to install it now? [yN] '):
+                sys.exit(1)
             install_echidna()
             if not echidna_exists():
                 ETHENO.logger.error('Etheno failed to install Echidna. Please install it manually https://github.com/trailofbits/echidna')
@@ -270,6 +285,11 @@ def main(argv = None):
     etheno_thread = ETHENO.run(debug = args.debug, run_publicly = args.run_publicly, port = args.port)
     if args.truffle:
         truffle_controller.terminate()
+
+    if args.log_file is not None:
+        print("Log file saved to: %s" % args.log_file)
+    if args.log_dir is not None:
+        print("Logs %ssaved to: %s" % (['','also '][args.log_file is not None], args.log_dir))
 
 if __name__ == '__main__':
     main()

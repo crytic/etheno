@@ -1,5 +1,6 @@
 import enum
 import logging
+import os
 import threading
 import time
 
@@ -94,6 +95,7 @@ class EthenoLogger(object):
             formatter = NonInfoFormatter(formatter)
         self._handler.setFormatter(formatter)
         self._logger.addHandler(self._handler)
+        self._directory = None
 
     def _add_child(self, child):
         self.children.append(child)
@@ -101,6 +103,8 @@ class EthenoLogger(object):
         while parent is not None:
             for handler in self._descendant_handlers:
                 child.addHandler(handler, include_descendants=True)
+            if parent._directory is not None:
+                child.save_to_directory(os.path.join(parent._directory, child.name))
             parent = parent.parent
 
     def addHandler(self, handler, include_descendants=True):
@@ -117,6 +121,13 @@ class EthenoLogger(object):
         handler = logging.FileHandler(path)
         handler.setFormatter(logging.Formatter('%(levelname)-8s [%(asctime)14s][%(name)s] %(message)s', datefmt='%m-%d|%H:%M:%S'))
         self.addHandler(handler, include_descendants=include_descendants)
+
+    def save_to_directory(self, path):
+        self._directory = path
+        os.makedirs(path, exist_ok=True)
+        self.save_to_file(os.path.join(path, "%s.log" % self.name), include_descendants=False)
+        for child in self.children:
+            child.save_to_directory(os.path.join(path, child.name))
 
     @property
     def log_level(self):
