@@ -2,7 +2,6 @@ import atexit
 import copy
 import json
 import os
-import subprocess
 import tempfile
 import time
 
@@ -11,6 +10,7 @@ from web3.auto import w3
 from .client import JSONRPCError, RpcHttpProxy, SelfPostingClient
 from .genesis import geth_to_parity, make_accounts
 from .keyfile import create_keyfile_json
+from .logger import PtyLogger
 from .utils import ConstantTemporaryFile, find_open_port, format_hex_address, int_to_bytes, is_port_free
 
 def make_config(genesis_path, base_path, port, accounts, password_file, **kwargs):
@@ -114,6 +114,7 @@ class ParityClient(SelfPostingClient):
         # Add the etherbase account to genesis:
         self.genesis['alloc'][format_hex_address(self.miner_account.address)] = {'balance' : '0', 'privateKey' : format_hex_address(self.miner_account.private_key)}
         self.port = port
+        self.short_name = "Parity@%d" % port
         self.parity = None
         self.datadir = tempfile.TemporaryDirectory()
         self._accounts = []
@@ -185,7 +186,7 @@ class ParityClient(SelfPostingClient):
 
     def unlock_account(self, account):
         addr = format_hex_address(account, True)
-        print("Unlocking Parity account %s..." % addr)
+        self.logger.info("Unlocking Parity account %s..." % addr)
         return self.post({
             'id': addr,
             'jsonrpc': '2.0',
@@ -207,7 +208,7 @@ class ParityClient(SelfPostingClient):
         if self.parity:
             return
         base_args = ['/usr/bin/env', 'parity', '--config', self.config.name, '--fast-unlock', '--jsonrpc-apis=all']
-        self.parity = subprocess.Popen(base_args)
+        self.parity = PtyLogger(self.logger, base_args)
         self.wait_until_running()
 
     def stop(self):
@@ -216,6 +217,7 @@ class ParityClient(SelfPostingClient):
             self.parity = None
             parity.terminate()
             parity.wait()
+            parity.close()
 
     def cleanup(self):
         if os.path.exists(self.datadir.name):

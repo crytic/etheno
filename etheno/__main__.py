@@ -167,13 +167,13 @@ def main(argv = None):
         if args.geth_port is None:
             args.geth_port = find_open_port(args.port + 1)
 
-        geth_instance = geth.GethClient(genesis = genesis, port = args.geth_port)
+        geth_instance = geth.GethClient(genesis=genesis, port=args.geth_port)
         geth_instance.etheno = ETHENO
         for account in accounts:
             # TODO: Make some sort of progress bar here
             geth_instance.logger.info("Unlocking Geth account %s" % format_hex_address(account.address, True))
             geth_instance.import_account(account.private_key)
-        geth_instance.start(unlock_accounts = True)
+        geth_instance.start(unlock_accounts=True)
         if ETHENO.master_client is None:
             ETHENO.master_client = geth_instance
         else:
@@ -186,11 +186,12 @@ def main(argv = None):
             else:
                 args.parity_port = find_open_port(args.port + 1)
 
-        parity_instance = parity.ParityClient(genesis = genesis, port = args.parity_port)
+        parity_instance = parity.ParityClient(genesis=genesis, port=args.parity_port)
+        geth_instance.etheno = ETHENO
         for account in accounts:
             # TODO: Make some sort of progress bar here
             parity_instance.import_account(account.private_key)
-        parity_instance.start(unlock_accounts = True)
+        parity_instance.start(unlock_accounts=True)
         if ETHENO.master_client is None:
             ETHENO.master_client = parity_instance
         else:
