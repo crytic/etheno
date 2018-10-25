@@ -165,7 +165,9 @@ def main(argv = None):
             args.geth_port = find_open_port(args.port + 1)
 
         geth_instance = geth.GethClient(genesis = genesis, port = args.geth_port)
+        geth_instance.etheno = ETHENO
         for account in accounts:
+            geth_instance.logger.info("Unlocking Geth account %s" % format_hex_address(account.address, True))
             geth_instance.import_account(account.private_key)
         geth_instance.start(unlock_accounts = True)
         if ETHENO.master_client is None:

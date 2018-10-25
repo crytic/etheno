@@ -90,6 +90,8 @@ class EthenoClient(object):
             if instance is None:
                 self._etheno = None
                 return
+            elif instance == self._etheno:
+                return
             raise ValueError('An Etheno client can only ever be associated with a single Etheno instance')
         self._etheno = instance
         self.logger = logger.EthenoLogger(str(self), parent=self._etheno.logger)

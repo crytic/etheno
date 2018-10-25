@@ -120,8 +120,10 @@ class StreamLogger(threading.Thread):
         self.logger = logger
         self.streams = streams
         self.start()
+    def is_done(self):
+        return False
     def run(self):
-        while True:
+        while not self.is_done():
             got_line = False
             for stream in self.streams:
                 line = stream.readline()
@@ -130,7 +132,14 @@ class StreamLogger(threading.Thread):
                     self.logger.info(line.decode().strip())
             if not got_line:
                 time.sleep(0.5)
-    
+
+class ProcessLogger(StreamLogger):
+    def __init__(self, logger, process):
+        self.process = process
+        super().__init__(logger, process.stdout, process.stderr)
+    def is_done(self):        
+        return self.process.poll() is not None
+
 if __name__ == '__main__':
     logger = EthenoLogger('Testing', DEBUG)
     logger.info('Info')

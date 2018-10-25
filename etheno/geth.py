@@ -7,6 +7,7 @@ import time
 
 from .client import JSONRPCError, RpcHttpProxy, SelfPostingClient
 from .genesis import make_accounts
+from .logger import ProcessLogger
 from .utils import ConstantTemporaryFile, format_hex_address, is_port_free
 
 class GethClient(SelfPostingClient):
@@ -33,10 +34,11 @@ class GethClient(SelfPostingClient):
             self.passwords.close()
 
         try:
-            subprocess.check_call(['/usr/bin/env', 'geth', 'init', self.genesis_file, '--datadir', self.datadir.name])
+            subprocess.check_call(['/usr/bin/env', 'geth', 'init', self.genesis_file, '--datadir', self.datadir.name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except Exception as e:
             self.cleanup()
             raise e
+
         self._created_address_index = -1
 
         self.geth = None
@@ -46,12 +48,10 @@ class GethClient(SelfPostingClient):
     def import_account(self, private_key):
         with ConstantTemporaryFile(format_hex_address(private_key).encode('utf-8') + bytes([ord('\n')]), prefix='private', suffix='.key') as keyfile:
             while True:
-                try:
-                    subprocess.check_call(['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.datadir.name, '--password', self.passwords.name, keyfile])
+                geth = subprocess.Popen(['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.datadir.name, '--password', self.passwords.name, keyfile], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                if geth.wait() == 0:
                     return
-                except subprocess.CalledProcessError:
-                    # This sometimes happens with geth, I have no idea why, so just try again
-                    pass
+                # This sometimes happens with geth, I have no idea why, so just try again
 
     @property
     def accounts(self):
@@ -77,7 +77,7 @@ class GethClient(SelfPostingClient):
                 return super().post(data)
             except JSONRPCError as e:
                 if e.result['error']['code'] == -32000 and 'authentication needed' in e.result['error']['message']:
-                    print("Waiting for Geth to finish unlocking our accounts...")
+                    self.logger.info("Waiting for Geth to finish unlocking our accounts...")
                     time.sleep(3.0)
                 else:
                     raise e
@@ -91,7 +91,8 @@ class GethClient(SelfPostingClient):
             unlock_args = ['--unlock', ','.join(addresses), '--password', self.passwords.name]
         else:
             unlock_args = []
-        self.geth = subprocess.Popen(base_args + unlock_args)
+        self.geth = subprocess.Popen(base_args + unlock_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        ProcessLogger(self.logger, self.geth)
         self.wait_until_running()
 
     def stop(self):
