@@ -5,7 +5,7 @@ import subprocess
 import time
 
 from .client import RpcHttpProxy, SelfPostingClient
-from .logger import StreamLogger
+from .logger import ProcessLogger
 from .utils import is_port_free
 
 class Ganache(RpcHttpProxy):
@@ -21,9 +21,9 @@ class Ganache(RpcHttpProxy):
     def start(self):
         if self.ganache:
             return
-        self.ganache = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        self.ganache = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
         if self._client:
-            StreamLogger(self._client.logger, self.ganache.stdout, self.ganache.stderr)
+            ProcessLogger(self._client.logger, self.ganache)
         atexit.register(Ganache.stop.__get__(self, Ganache))
         # wait until Ganache has started listening:
         while is_port_free(self.port):

@@ -124,14 +124,16 @@ class StreamLogger(threading.Thread):
         return False
     def run(self):
         while not self.is_done():
-            got_line = False
-            for stream in self.streams:
-                line = stream.readline()
-                if line:
-                    got_line = True
-                    self.logger.info(line.decode().strip())
-            if not got_line:
-                time.sleep(0.5)
+            while True:
+                got_line = False
+                for stream in self.streams:
+                    line = stream.readline()
+                    if line:
+                        got_line = True
+                        self.logger.info(line.decode().strip())
+                if not got_line:
+                    break
+            time.sleep(0.5)
 
 class ProcessLogger(StreamLogger):
     def __init__(self, logger, process):
