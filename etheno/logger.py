@@ -77,8 +77,6 @@ class EthenoLogger(object):
     def __init__(self, name, log_level=None, parent=None):
         self.parent = parent
         self.children = []
-        if parent is not None:
-            parent.children.append(self)
         if log_level is None:
             if parent is None:
                 raise ValueError('A logger must be provided a parent if `log_level` is None')
@@ -89,10 +87,36 @@ class EthenoLogger(object):
         if log_level is not None:
             self.log_level = log_level
         formatter = ColorFormatter('$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD][$RESET$WHITE%(name)s$BLUE$BOLD]$RESET %(message)s', datefmt='%m$BLUE-$WHITE%d$BLUE|$WHITE%H$BLUE:$WHITE%M$BLUE:$WHITE%S')
+        self._descendant_handlers = []
+        if parent is not None:
+            parent._add_child(self)
         if self.parent is None:
             formatter = NonInfoFormatter(formatter)
         self._handler.setFormatter(formatter)
         self._logger.addHandler(self._handler)
+
+    def _add_child(self, child):
+        self.children.append(child)
+        parent = self
+        while parent is not None:
+            for handler in self._descendant_handlers:
+                child.addHandler(handler, include_descendants=True)
+            parent = parent.parent
+
+    def addHandler(self, handler, include_descendants=True):
+        self._logger.addHandler(handler)
+        if include_descendants:
+            self._descendant_handlers.append(handler)
+            for child in self.children:
+                if isinstance(child, EthenoLogger):
+                    child.addHandler(handler, include_descendants=include_descendants)
+                else:
+                    child.addHandler(handler)
+
+    def save_to_file(self, path, include_descendants=True):
+        handler = logging.FileHandler(path)
+        handler.setFormatter(logging.Formatter('%(levelname)-8s [%(asctime)14s][%(name)s] %(message)s', datefmt='%m-%d|%H:%M:%S'))
+        self.addHandler(handler, include_descendants=include_descendants)
 
     @property
     def log_level(self):
