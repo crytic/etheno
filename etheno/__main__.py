@@ -72,7 +72,7 @@ def main(argv = None):
                     break
             install_echidna()
             if not echidna_exists():
-                print('Etheno failed to install Echidna. Please install it manually https://github.com/trailofbits/echidna')
+                ETHENO.logger.error('Etheno failed to install Echidna. Please install it manually https://github.com/trailofbits/echidna')
                 sys.exit(1)
         
     if args.genesis is None:
@@ -158,7 +158,7 @@ def main(argv = None):
     if args.save_genesis:
         with open(args.save_genesis, 'wb') as f:
             f.write(json.dumps(genesis).encode('utf-8'))
-            print("Saved genesis to %s" % args.save_genesis)
+            ETHENO.logger.info("Saved genesis to %s" % args.save_genesis)
 
     if args.geth:
         if args.geth_port is None:
