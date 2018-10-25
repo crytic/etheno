@@ -3,6 +3,8 @@ import logging
 import threading
 import time
 
+import ptyprocess
+
 CRITICAL = logging.CRITICAL
 ERROR    = logging.ERROR
 WARNING  = logging.WARNING
@@ -121,25 +123,29 @@ class StreamLogger(threading.Thread):
         self.streams = streams
         self._buffers = [b'' for i in range(len(streams))]
         self.start()
+        self._done = False
     def is_done(self):
-        return False
+        return self._done
     def run(self):
         while not self.is_done():
             while True:
                 got_byte = False
-                for i, stream in enumerate(self.streams):
-                    byte = stream.read(1)
-                    while byte is not None and len(byte):
-                        if isinstance(byte, str):
-                            byte = byte.encode('utf-8')
-                        if byte == b'\n':
-                            self.logger.info(self._buffers[i].decode())
-                            self._buffers[i] = b''
-                        else:
-                            self._buffers[i] += byte
-                        got_byte = True
+                try:
+                    for i, stream in enumerate(self.streams):
                         byte = stream.read(1)
-                if not got_byte:
+                        while byte is not None and len(byte):
+                            if isinstance(byte, str):
+                                byte = byte.encode('utf-8')
+                            if byte == b'\n':
+                                self.logger.info(self._buffers[i].decode())
+                                self._buffers[i] = b''
+                            else:
+                                self._buffers[i] += byte
+                            got_byte = True
+                            byte = stream.read(1)
+                except Exception:
+                    self._done = True
+                if not got_byte or self._done:
                     break
             time.sleep(0.5)
 
@@ -150,6 +156,15 @@ class ProcessLogger(StreamLogger):
     def is_done(self):
         return self.process.poll() is not None
 
+class PtyLogger(StreamLogger):
+    def __init__(self, logger, args):
+        self.process = ptyprocess.PtyProcessUnicode.spawn(args)
+        super().__init__(logger, self.process)
+    def is_done(self):
+        return not self.process.isalive()
+    def __getattr__(self, name):
+        return getattr(self.process, name)
+    
 if __name__ == '__main__':
     logger = EthenoLogger('Testing', DEBUG)
     logger.info('Info')

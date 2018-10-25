@@ -7,7 +7,7 @@ import time
 
 from .client import JSONRPCError, RpcHttpProxy, SelfPostingClient
 from .genesis import make_accounts
-from .logger import ProcessLogger
+from .logger import PtyLogger
 from .utils import ConstantTemporaryFile, format_hex_address, is_port_free
 
 class GethClient(SelfPostingClient):
@@ -91,8 +91,7 @@ class GethClient(SelfPostingClient):
             unlock_args = ['--unlock', ','.join(addresses), '--password', self.passwords.name]
         else:
             unlock_args = []
-        self.geth = subprocess.Popen(base_args + unlock_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True)
-        ProcessLogger(self.logger, self.geth)
+        self.geth = PtyLogger(self.logger, base_args + unlock_args)
         self.wait_until_running()
 
     def stop(self):
@@ -101,6 +100,7 @@ class GethClient(SelfPostingClient):
             self.geth = None
             geth.terminate()
             geth.wait()
+            geth.close()
 
     def cleanup(self):
         if os.path.exists(self.genesis_file):
