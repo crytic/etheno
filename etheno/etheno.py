@@ -429,7 +429,7 @@ class EthenoView(MethodView):
         if jsonrpc_version < 2.0:
             abort(426)
         elif jsonrpc_version > 2.0:
-            ETHENO.logger.warning("Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
+            ETHENO.logger.warn("Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
 
         ret = ETHENO.post(data)
 
