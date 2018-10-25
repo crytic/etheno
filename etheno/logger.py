@@ -76,8 +76,10 @@ class NonInfoFormatter(ComposableFormatter):
 
 class EthenoLogger(object):
     def __init__(self, name, log_level=None, parent=None):
+        self._directory = None
         self.parent = parent
         self.children = []
+        self._descendant_handlers = []
         if log_level is None:
             if parent is None:
                 raise ValueError('A logger must be provided a parent if `log_level` is None')
@@ -88,14 +90,12 @@ class EthenoLogger(object):
         if log_level is not None:
             self.log_level = log_level
         formatter = ColorFormatter('$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD][$RESET$WHITE%(name)s$BLUE$BOLD]$RESET %(message)s', datefmt='%m$BLUE-$WHITE%d$BLUE|$WHITE%H$BLUE:$WHITE%M$BLUE:$WHITE%S')
-        self._descendant_handlers = []
-        if parent is not None:
-            parent._add_child(self)
         if self.parent is None:
             formatter = NonInfoFormatter(formatter)
+        else:
+            parent._add_child(self)
         self._handler.setFormatter(formatter)
         self._logger.addHandler(self._handler)
-        self._directory = None
 
     @property
     def directory(self):
