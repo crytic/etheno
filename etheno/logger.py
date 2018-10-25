@@ -60,7 +60,10 @@ class ColorFormatter(ComposableFormatter):
     def format(self, *args, **kwargs):
         levelcolor = LEVEL_COLORS.get(args[0].levelno, LEVEL_COLORS[NOTSET])
         ret = self._parent_formatter.format(*args, **kwargs)
-        return ret.replace('$LEVELCOLOR', ANSI_COLOR % (30 + levelcolor.value))
+        ret = ret.replace('$LEVELCOLOR', ANSI_COLOR % (30 + levelcolor.value))
+        ret = ret.replace('\n', self.reformat('$RESET $BOLD$BLUE\\$RESET\n'), 1)
+        ret = ret.replace('\n', self.reformat('\n$RESET$BOLD$BLUE> $RESET'))
+        return ret
 
 class NonInfoFormatter(ComposableFormatter):
     _vanilla_formatter = logging.Formatter()
