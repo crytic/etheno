@@ -87,6 +87,9 @@ def main(argv = None):
                 clear_directory(args.log_dir)
     
         ETHENO.logger.save_to_directory(args.log_dir)
+        if not args.log_file:
+            # Also create a unified log in the log dir:
+            ETHENO.logger.save_to_file(os.path.join(args.log_dir, 'Complete.log'))
         
     # First, see if we need to install Echidna:
     if args.echidna:
