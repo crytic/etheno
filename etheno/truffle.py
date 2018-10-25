@@ -39,22 +39,3 @@ class Truffle(object):
         finally:
             p.close(force=True)
         return p.wait()
-
-        # with subprocess.Popen(['/usr/bin/env', 'truffle'] + args) as p:
-        #     def terminate():
-        #         print("Terminating truffle %s..." % ''.join(args))
-        #         try:
-        #             p.terminate()
-        #         except OSError:
-        #             pass
-        #     while True:
-        #         try:
-        #             return p.wait(1.0)
-        #         except subprocess.TimeoutExpired:
-        #             if not self._running:
-        #                 terminate()
-        #                 return None
-        #             continue
-        #         except KeyboardInterrupt:
-        #             p.wait()
-        #             raise
