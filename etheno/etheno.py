@@ -82,11 +82,8 @@ class ManticoreClient(EthenoClient):
                 address = None
             contract_address = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
             self.contracts.append(contract_address)
-            print("")
-            print("  Manticore contract created: %s" % encode_hex(contract_address.address))
-            print(map(lambda a : hex(a.address), self.manticore.accounts.values()))
-            #print("  Block number: %s" % self.manticore.world.block_number())
-            print("")
+            self.logger.info("\n  Manticore contract created: %s\n%s\n" % (encode_hex(contract_address.address), map(lambda a : hex(a.address), self.manticore.accounts.values())))
+            #self.logger.info("  Block number: %s" % self.manticore.world.block_number())
         else:
             self.manticore.transaction(address = to, data = data, caller=from_addr, value = value)
         # Just mimic the result from the master client
@@ -112,7 +109,7 @@ class ManticoreClient(EthenoClient):
         tx_no = 0
         while (current_coverage < 100 or not tx_use_coverage) and not self.manticore.is_shutdown():
             try:
-                print("Starting symbolic transaction: %d" % tx_no)
+                self.logger.info("Starting symbolic transaction: %d" % tx_no)
 
                 # run_symbolic_tx
                 symbolic_data = self.manticore.make_symbolic_buffer(320)
@@ -121,7 +118,7 @@ class ManticoreClient(EthenoClient):
                                  address=contract_address,
                                  data=symbolic_data,
                                  value=symbolic_value)
-                print("%d alive states, %d terminated states" % (self.manticore.count_running_states(), self.manticore.count_terminated_states()))
+                self.logger.info("%d alive states, %d terminated states" % (self.manticore.count_running_states(), self.manticore.count_terminated_states()))
             except NoAliveStates:
                 break
 
