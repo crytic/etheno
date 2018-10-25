@@ -38,12 +38,6 @@ class Ganache(RpcHttpProxy):
 if __name__ == "__main__":
     ganache = Ganache()
     ganache.start()
-    print(ganache.post({
-        'jsonrpc': '2.0',
-        'method': 'eth_accounts',
-        'params': [],
-        'id': 1
-    }))
 
 class GanacheClient(SelfPostingClient):
     def wait_until_running(self):
