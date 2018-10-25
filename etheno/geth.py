@@ -91,7 +91,7 @@ class GethClient(SelfPostingClient):
             unlock_args = ['--unlock', ','.join(addresses), '--password', self.passwords.name]
         else:
             unlock_args = []
-        self.geth = subprocess.Popen(base_args + unlock_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+        self.geth = subprocess.Popen(base_args + unlock_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=0, universal_newlines=True)
         ProcessLogger(self.logger, self.geth)
         self.wait_until_running()
 

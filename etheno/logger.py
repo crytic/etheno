@@ -119,27 +119,35 @@ class StreamLogger(threading.Thread):
         super().__init__(daemon=True)
         self.logger = logger
         self.streams = streams
+        self._buffers = [b'' for i in range(len(streams))]
         self.start()
     def is_done(self):
         return False
     def run(self):
         while not self.is_done():
             while True:
-                got_line = False
-                for stream in self.streams:
-                    line = stream.readline()
-                    if line:
-                        got_line = True
-                        self.logger.info(line.decode().strip())
-                if not got_line:
+                got_byte = False
+                for i, stream in enumerate(self.streams):
+                    byte = stream.read(1)
+                    while byte is not None and len(byte):
+                        if isinstance(byte, str):
+                            byte = byte.encode('utf-8')
+                        if byte == b'\n':
+                            self.logger.info(self._buffers[i].decode())
+                            self._buffers[i] = b''
+                        else:
+                            self._buffers[i] += byte
+                        got_byte = True
+                        byte = stream.read(1)
+                if not got_byte:
                     break
             time.sleep(0.5)
 
 class ProcessLogger(StreamLogger):
     def __init__(self, logger, process):
         self.process = process
-        super().__init__(logger, process.stdout, process.stderr)
-    def is_done(self):        
+        super().__init__(logger, open(process.stdout.fileno(), buffering=1), open(process.stderr.fileno(), buffering=1))
+    def is_done(self):
         return self.process.poll() is not None
 
 if __name__ == '__main__':
