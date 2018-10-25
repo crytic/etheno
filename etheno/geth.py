@@ -117,5 +117,9 @@ class GethClient(SelfPostingClient):
         self.cleanup()
 
     def wait_until_running(self):
+        slept = 0.0
         while is_port_free(self.port):
             time.sleep(0.25)
+            slept += 0.25
+            if slept % 5 == 0:
+                self.logger.info("Waiting for the process to start...")

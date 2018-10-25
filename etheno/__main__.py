@@ -187,7 +187,7 @@ def main(argv = None):
                 args.parity_port = find_open_port(args.port + 1)
 
         parity_instance = parity.ParityClient(genesis=genesis, port=args.parity_port)
-        geth_instance.etheno = ETHENO
+        parity_instance.etheno = ETHENO
         for account in accounts:
             # TODO: Make some sort of progress bar here
             parity_instance.import_account(account.private_key)

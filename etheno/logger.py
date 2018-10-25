@@ -120,10 +120,13 @@ class EthenoLogger(object):
         return getattr(self._logger, name)
 
 class StreamLogger(threading.Thread):
-    def __init__(self, logger, *streams):
+    def __init__(self, logger, *streams, newline_char=b'\n'):
         super().__init__(daemon=True)
         self.logger = logger
         self.streams = streams
+        if isinstance(newline_char, str):
+            newline_char = newline_char.encode('utf-8')
+        self._newline_char = newline_char
         self._buffers = [b'' for i in range(len(streams))]
         self.start()
         self._done = False
@@ -139,7 +142,7 @@ class StreamLogger(threading.Thread):
                         while byte is not None and len(byte):
                             if isinstance(byte, str):
                                 byte = byte.encode('utf-8')
-                            if byte == b'\n':
+                            if byte == self._newline_char:
                                 self.logger.info(self._buffers[i].decode())
                                 self._buffers[i] = b''
                             else:
@@ -160,9 +163,9 @@ class ProcessLogger(StreamLogger):
         return self.process.poll() is not None
 
 class PtyLogger(StreamLogger):
-    def __init__(self, logger, args):
+    def __init__(self, logger, args, **kwargs):
         self.process = ptyprocess.PtyProcessUnicode.spawn(args)
-        super().__init__(logger, self.process)
+        super().__init__(logger, self.process, **kwargs)
     def is_done(self):
         return not self.process.isalive()
     def __getattr__(self, name):
