@@ -1,5 +1,7 @@
 import enum
 import logging
+import threading
+import time
 
 CRITICAL = logging.CRITICAL
 ERROR    = logging.ERROR
@@ -112,6 +114,23 @@ class EthenoLogger(object):
     def __getattr__(self, name):
         return getattr(self._logger, name)
 
+class StreamLogger(threading.Thread):
+    def __init__(self, logger, *streams):
+        super().__init__(daemon=True)
+        self.logger = logger
+        self.streams = streams
+        self.start()
+    def run(self):
+        while True:
+            got_line = False
+            for stream in self.streams:
+                line = stream.readline()
+                if line:
+                    got_line = True
+                    self.logger.info(line.decode().strip())
+            if not got_line:
+                time.sleep(0.5)
+    
 if __name__ == '__main__':
     logger = EthenoLogger('Testing', DEBUG)
     logger.info('Info')
