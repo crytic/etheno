@@ -34,7 +34,7 @@ class EthenoLogger(object):
         self._handler = logging.StreamHandler()
         if log_level is not None:
             self.log_level = log_level
-        formatter = logging.Formatter('%(asctime)23s[%(levelname)-8s][%(name)s] %(message)s')
+        formatter = logging.Formatter('%(levelname)-8s [%(asctime)14s][%(name)s] %(message)s', datefmt='%m-%d|%H:%M:%S')
         if self.parent is None:
             formatter = NonInfoFormatter(formatter)
         self._handler.setFormatter(formatter)
