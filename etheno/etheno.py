@@ -433,6 +433,9 @@ class EthenoView(MethodView):
         if ret is None:
             return None
 
+        if isinstance(ret, JSONRPCError):
+            ret = ret.result
+
         if was_list:
             ret = [ret]
         ret = jsonify(ret)
