@@ -97,6 +97,10 @@ class EthenoLogger(object):
         self._logger.addHandler(self._handler)
         self._directory = None
 
+    @property
+    def directory(self):
+        return self._directory
+
     def _add_child(self, child):
         self.children.append(child)
         parent = self

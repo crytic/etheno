@@ -97,6 +97,14 @@ class EthenoClient(object):
         self._etheno = instance
         self.logger = logger.EthenoLogger(self.short_name, parent=self._etheno.logger)
 
+    @property
+    def log_directory(self):
+        '''Returns a log directory that this client can use to save additional files, or None if one is not available'''
+        if self.logger is None:
+            return None
+        else:
+            return self.logger.directory
+
     def create_account(self, balance = 0, address = None):
         '''
         A request for the client to create a new account.
