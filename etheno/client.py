@@ -154,7 +154,7 @@ class SelfPostingClient(EthenoClient):
         if ret is not None and 'error' in ret:
             if 'method' in data and (data['method'] == 'eth_sendTransaction' or data['method'] == 'eth_sendRawTransaction'):
                 if self.etheno.master_client != self and self.etheno.rpc_client_result and not isinstance(self.etheno.rpc_client_result, JSONRPCError) and 'result' in self.etheno.rpc_client_result:
-                    print("%s: Failed transaction associated with master client transaction %s" % (self, self.etheno.rpc_client_result['result']))
+                    self.logger.error("%s: Failed transaction associated with master client transaction %s" % (self, self.etheno.rpc_client_result['result']))
                     self._failed_transactions.add(self.etheno.rpc_client_result['result'].lower())
             # TODO: Figure out a better way to handle JSON RPC errors
             raise JSONRPCError(self, data, ret)
@@ -213,7 +213,7 @@ class SelfPostingClient(EthenoClient):
             })
             if tx_hash in self._failed_transactions or transaction_receipt_succeeded(receipt) is not None:
                 return receipt
-            print("Waiting for %s to mine transaction %s..." % (self, tx_hash))
+            self.logger.info("Waiting to mine transaction %s..." % tx_hash)
             time.sleep(5.0)
 
     def __str__(self):
