@@ -290,9 +290,9 @@ def main(argv = None):
         truffle_controller.terminate()
 
     if args.log_file is not None:
-        print("Log file saved to: %s" % args.log_file)
+        print("Log file saved to: %s" % os.path.realpath(args.log_file))
     if args.log_dir is not None:
-        print("Logs %ssaved to: %s" % (['','also '][args.log_file is not None], args.log_dir))
+        print("Logs %ssaved to: %s" % (['','also '][args.log_file is not None], os.path.realpath(args.log_dir)))
 
 if __name__ == '__main__':
     main()
