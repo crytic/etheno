@@ -115,10 +115,11 @@ class EthenoLogger(object):
             # first, check any files that handlers have created:
             for h in self._handlers:
                 if isinstance(h, logging.FileHandler):
-                    log_path = h.stream.name
-                    if os.path.exists(log_path) and os.stat(log_path).st_size == 0:
-                        h.close()
-                        os.remove(log_path)
+                    if h.stream is not None:
+                        log_path = h.stream.name
+                        if os.path.exists(log_path) and os.stat(log_path).st_size == 0:
+                            h.close()
+                            os.remove(log_path)
             # next, check if the output directory can be cleaned up
             if self.directory:
                 for dirpath, dirnames, filenames in os.walk(self.directory, topdown=False):
@@ -161,10 +162,13 @@ class EthenoLogger(object):
                 else:
                     child.addHandler(handler)
 
-    def save_to_file(self, path, include_descendants=True):
+    def save_to_file(self, path, include_descendants=True, log_level=None):
+        if log_level is None:
+            log_level = self.log_level
         handler = logging.FileHandler(path)
+        handler.setLevel(log_level)
         handler.setFormatter(logging.Formatter(ColorFormatter.remove_color(self.DEFAULT_FORMAT.replace('$NAME', self._name_format())), datefmt='%m-%d|%H:%M:%S'))
-        self.addHandler(handler, include_descendants=include_descendants)
+        self.addHandler(handler, include_descendants=include_descendants, set_log_level=False)
 
     def save_to_directory(self, path):
         if self.directory == path:
@@ -174,7 +178,7 @@ class EthenoLogger(object):
             raise ValueError("Logger %s's save directory is already set to %s" % (self.name, path))
         self._directory = path
         os.makedirs(path, exist_ok=True)
-        self.save_to_file(os.path.join(path, "%s.log" % self.name), include_descendants=False)
+        self.save_to_file(os.path.join(path, "%s.log" % self.name), include_descendants=False, log_level=DEBUG)
         for child in self.children:
             child.save_to_directory(os.path.join(path, child.name))
 
