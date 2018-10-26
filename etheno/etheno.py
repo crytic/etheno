@@ -3,6 +3,7 @@ VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
 
+import logging
 import sha3
 from threading import Thread
 import time
@@ -11,6 +12,7 @@ from flask import Flask, g, jsonify, request, abort
 from flask.views import MethodView
 
 from manticore.ethereum import ManticoreEVM
+import manticore
 
 from . import logger
 from . import threadwrapper
@@ -83,6 +85,14 @@ class ManticoreClient(EthenoClient):
     def create_account(self, balance, address):            
         self._accounts_to_create.append((balance, address))
         self._finalize_manticore()
+
+    def reassign_manticore_loggers(self):
+        # Manticore uses a global to track its loggers:
+        for name in manticore.utils.log.all_loggers:
+            manticore_logger = logging.getLogger(name)
+            for handler in list(manticore_logger.handlers):
+                manticore_logger.removeHandler(handler)
+            logger.EthenoLogger(name, parent=self.logger)
 
     @jsonrpc(from_addr = QUANTITY, to = QUANTITY, gas = QUANTITY, gasPrice = QUANTITY, value = QUANTITY, data = DATA, nonce = QUANTITY, RETURN = DATA)
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None, rpc_client_result = None):
