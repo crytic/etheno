@@ -176,7 +176,7 @@ class EthenoLogger(object):
             return
         elif self.directory is not None:
             raise ValueError("Logger %s's save directory is already set to %s" % (self.name, path))
-        self._directory = path
+        self._directory = os.path.realpath(path)
         os.makedirs(path, exist_ok=True)
         self.save_to_file(os.path.join(path, "%s.log" % self.name), include_descendants=False, log_level=DEBUG)
         for child in self.children:
