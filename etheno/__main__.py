@@ -251,7 +251,7 @@ def main(argv = None):
 
             if manticore_client is not None:
                 if args.manticore_script is not None:
-                    exec(args.manticore_script.read(), {'manticore' : manticore_client.manticore, 'manticoreutils' : manticoreutils, 'logger' : manticore_client.logger})
+                    exec(args.manticore_script.read(), {'manticore' : manticore_client.manticore, 'manticoreutils' : manticoreutils, 'logger' : logger.EthenoLogger(os.path.basename(args.manticore_script.name), parent=manticore_client.logger)})
                 else:
                     manticoreutils.register_all_detectors(manticore_client.manticore)
                     manticore_client.multi_tx_analysis()
