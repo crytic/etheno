@@ -51,8 +51,16 @@ class ColorFormatter(ComposableFormatter):
     def reformat(self, fmt):
         for color in CGAColors:
             fmt = fmt.replace("$%s" % color.name, ANSI_COLOR % (30 + color.value))
-        fmt = fmt.replace("$RESET", ANSI_RESET)
-        fmt = fmt.replace("$BOLD", ANSI_BOLD)
+        fmt = fmt.replace('$RESET', ANSI_RESET)
+        fmt = fmt.replace('$BOLD', ANSI_BOLD)
+        return fmt
+    @staticmethod
+    def remove_color(fmt):
+        for color in CGAColors:
+            fmt = fmt.replace("$%s" % color.name, '')
+        fmt = fmt.replace('$RESET', '')
+        fmt = fmt.replace('$BOLD', '')
+        fmt = fmt.replace('$LEVELCOLOR', '')
         return fmt
     def new_formatter(self, fmt, *args, **kwargs):
         if 'datefmt' in kwargs:
@@ -75,6 +83,8 @@ class NonInfoFormatter(ComposableFormatter):
             return self._parent_formatter.format(*args, **kwargs)
 
 class EthenoLogger(object):
+    DEFAULT_FORMAT='$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD]$NAME$RESET %(message)s'
+    
     def __init__(self, name, log_level=None, parent=None):
         self._directory = None
         self.parent = parent
@@ -89,7 +99,7 @@ class EthenoLogger(object):
         self._handler = logging.StreamHandler()
         if log_level is not None:
             self.log_level = log_level
-        formatter = ColorFormatter('$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD][$RESET$WHITE%(name)s$BLUE$BOLD]$RESET %(message)s', datefmt='%m$BLUE-$WHITE%d$BLUE|$WHITE%H$BLUE:$WHITE%M$BLUE:$WHITE%S')
+        formatter = ColorFormatter(self.DEFAULT_FORMAT.replace('$NAME', self._name_format()), datefmt='%m$BLUE-$WHITE%d$BLUE|$WHITE%H$BLUE:$WHITE%M$BLUE:$WHITE%S')
         if self.parent is None:
             formatter = NonInfoFormatter(formatter)
         else:
@@ -111,6 +121,13 @@ class EthenoLogger(object):
                 child.save_to_directory(os.path.join(parent._directory, child.name))
             parent = parent.parent
 
+    def _name_format(self):
+        if self.parent is not None and self.parent.parent is not None:
+            ret = self.parent._name_format()
+        else:
+            ret = ''
+        return ret + "[$RESET$WHITE%s$BLUE$BOLD]" % self._logger.name
+
     def addHandler(self, handler, include_descendants=True):
         self._logger.addHandler(handler)
         if include_descendants:
@@ -123,7 +140,7 @@ class EthenoLogger(object):
 
     def save_to_file(self, path, include_descendants=True):
         handler = logging.FileHandler(path)
-        handler.setFormatter(logging.Formatter('%(levelname)-8s [%(asctime)14s][%(name)s] %(message)s', datefmt='%m-%d|%H:%M:%S'))
+        handler.setFormatter(logging.Formatter(ColorFormatter.remove_color(self.DEFAULT_FORMAT.replace('$NAME', self._name_format())), datefmt='%m-%d|%H:%M:%S'))
         self.addHandler(handler, include_descendants=include_descendants)
 
     def save_to_directory(self, path):
