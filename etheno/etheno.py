@@ -81,6 +81,7 @@ class ManticoreClient(EthenoClient):
         for balance, address in self._accounts_to_create:
             self._manticore.create_account(balance=balance, address=address)
         self._accounts_to_create = []
+        self.logger.cleanup_empty = True
 
     def create_account(self, balance, address):            
         self._accounts_to_create.append((balance, address))
@@ -92,7 +93,7 @@ class ManticoreClient(EthenoClient):
             manticore_logger = logging.getLogger(name)
             for handler in list(manticore_logger.handlers):
                 manticore_logger.removeHandler(handler)
-            logger.EthenoLogger(name, parent=self.logger)
+            logger.EthenoLogger(name, parent=self.logger, cleanup_empty=True)
 
     @jsonrpc(from_addr = QUANTITY, to = QUANTITY, gas = QUANTITY, gasPrice = QUANTITY, value = QUANTITY, data = DATA, nonce = QUANTITY, RETURN = DATA)
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None, rpc_client_result = None):
@@ -390,7 +391,7 @@ class Etheno(object):
         else:
             return None
 
-    def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
+    def shutdown(self, port=GETH_DEFAULT_RPC_PORT):
         if self._shutting_down:
             return
         self._shutting_down = True
@@ -401,6 +402,7 @@ class Etheno(object):
             self.master_client.shutdown()
         for client in self.clients:
             client.shutdown()
+        self.logger.close()
         from urllib.request import urlopen
         import socket
         import urllib

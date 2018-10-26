@@ -85,9 +85,10 @@ class NonInfoFormatter(ComposableFormatter):
 class EthenoLogger(object):
     DEFAULT_FORMAT='$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD]$NAME$RESET %(message)s'
     
-    def __init__(self, name, log_level=None, parent=None):
+    def __init__(self, name, log_level=None, parent=None, cleanup_empty=False):
         self._directory = None
         self.parent = parent
+        self.cleanup_empty = cleanup_empty
         self.children = []
         self._descendant_handlers = []
         if log_level is None:
@@ -96,7 +97,7 @@ class EthenoLogger(object):
             log_level = parent.log_level
         self._log_level = log_level
         self._logger = logging.getLogger(name)
-        self._handler = logging.StreamHandler()
+        self._handlers = [logging.StreamHandler()]
         if log_level is not None:
             self.log_level = log_level
         formatter = ColorFormatter(self.DEFAULT_FORMAT.replace('$NAME', self._name_format()), datefmt='%m$BLUE-$WHITE%d$BLUE|$WHITE%H$BLUE:$WHITE%M$BLUE:$WHITE%S')
@@ -104,14 +105,33 @@ class EthenoLogger(object):
             formatter = NonInfoFormatter(formatter)
         else:
             parent._add_child(self)
-        self._handler.setFormatter(formatter)
-        self._logger.addHandler(self._handler)
+        self._handlers[0].setFormatter(formatter)
+        self._logger.addHandler(self._handlers[0])
+        
+    def close(self):
+        for child in self.children:
+            child.close()
+        if self.cleanup_empty:
+            # first, check any files that handlers have created:
+            for h in self._handlers:
+                if isinstance(h, logging.FileHandler):
+                    log_path = h.stream.name
+                    if os.path.exists(log_path) and os.stat(log_path).st_size == 0:
+                        h.close()
+                        os.remove(log_path)
+            # next, check if the output directory can be cleaned up
+            if self.directory:
+                for dirpath, dirnames, filenames in os.walk(self.directory, topdown=False):
+                    if len(dirnames) == 0 and len(filenames) == 0 and dirpath != self.directory:
+                        os.rmdir(dirpath)
 
     @property
     def directory(self):
         return self._directory
 
     def _add_child(self, child):
+        if child in self.children:
+            raise ValueError("Cannot double-add child logger %s to logger %s" % (child.name, self.name))
         self.children.append(child)
         parent = self
         while parent is not None:
@@ -128,13 +148,16 @@ class EthenoLogger(object):
             ret = ''
         return ret + "[$RESET$WHITE%s$BLUE$BOLD]" % self._logger.name
 
-    def addHandler(self, handler, include_descendants=True):
+    def addHandler(self, handler, include_descendants=True, set_log_level=True):
+        if set_log_level:
+            handler.setLevel(self.log_level)
         self._logger.addHandler(handler)
+        self._handlers.append(handler)
         if include_descendants:
             self._descendant_handlers.append(handler)
             for child in self.children:
                 if isinstance(child, EthenoLogger):
-                    child.addHandler(handler, include_descendants=include_descendants)
+                    child.addHandler(handler, include_descendants=include_descendants, set_log_level=set_log_level)
                 else:
                     child.addHandler(handler)
 
@@ -170,7 +193,8 @@ class EthenoLogger(object):
             raise ValueError("Invalid log level: %d" % level)
         self._log_level = level
         self._logger.setLevel(level)
-        self._handler.setLevel(level)        
+        for handler in self._handlers:
+            handler.setLevel(level)        
 
     def __getattr__(self, name):
         return getattr(self._logger, name)
