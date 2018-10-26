@@ -77,3 +77,30 @@ def find_open_port(starting_port=1025):
         if is_port_free(port):
             return port
     return -1
+
+def clear_directory(path):
+    '''
+    Deletes the contents of a directory, but not the directory itself. 
+    This is safe to use on symlinked directories.
+    Symlinks will be deleted, but the files and directories they point to will not be deleted.
+    If `path` itself is a symlink, the symlink will be deleted.
+    '''
+    if os.path.islink(path):
+        os.unlink(path)
+        return
+
+    for dirpath, dirnames, filenames in os.walk(path, topdown=False):
+        for dirname in dirnames:
+            subdir = os.path.join(dirpath, dirname)
+            os.rmdir(subdir)
+        for filename in filenames:
+            os.remove(os.path.join(dirpath, filename))
+
+def ynprompt(prompt):
+    while True:
+        yn = input(prompt)
+        yn = yn[0:1].lower()
+        if yn == 'n' or yn == '':
+            return False
+        elif yn == 'y':
+            return True

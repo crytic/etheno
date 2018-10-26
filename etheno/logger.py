@@ -1,5 +1,6 @@
 import enum
 import logging
+import os
 import threading
 import time
 
@@ -50,8 +51,16 @@ class ColorFormatter(ComposableFormatter):
     def reformat(self, fmt):
         for color in CGAColors:
             fmt = fmt.replace("$%s" % color.name, ANSI_COLOR % (30 + color.value))
-        fmt = fmt.replace("$RESET", ANSI_RESET)
-        fmt = fmt.replace("$BOLD", ANSI_BOLD)
+        fmt = fmt.replace('$RESET', ANSI_RESET)
+        fmt = fmt.replace('$BOLD', ANSI_BOLD)
+        return fmt
+    @staticmethod
+    def remove_color(fmt):
+        for color in CGAColors:
+            fmt = fmt.replace("$%s" % color.name, '')
+        fmt = fmt.replace('$RESET', '')
+        fmt = fmt.replace('$BOLD', '')
+        fmt = fmt.replace('$LEVELCOLOR', '')
         return fmt
     def new_formatter(self, fmt, *args, **kwargs):
         if 'datefmt' in kwargs:
@@ -74,25 +83,104 @@ class NonInfoFormatter(ComposableFormatter):
             return self._parent_formatter.format(*args, **kwargs)
 
 class EthenoLogger(object):
-    def __init__(self, name, log_level=None, parent=None):
+    DEFAULT_FORMAT='$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD]$NAME$RESET %(message)s'
+    
+    def __init__(self, name, log_level=None, parent=None, cleanup_empty=False):
+        self._directory = None
         self.parent = parent
+        self.cleanup_empty = cleanup_empty
         self.children = []
-        if parent is not None:
-            parent.children.append(self)
+        self._descendant_handlers = []
         if log_level is None:
             if parent is None:
                 raise ValueError('A logger must be provided a parent if `log_level` is None')
             log_level = parent.log_level
         self._log_level = log_level
         self._logger = logging.getLogger(name)
-        self._handler = logging.StreamHandler()
+        self._handlers = [logging.StreamHandler()]
         if log_level is not None:
             self.log_level = log_level
-        formatter = ColorFormatter('$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD][$RESET$WHITE%(name)s$BLUE$BOLD]$RESET %(message)s', datefmt='%m$BLUE-$WHITE%d$BLUE|$WHITE%H$BLUE:$WHITE%M$BLUE:$WHITE%S')
+        formatter = ColorFormatter(self.DEFAULT_FORMAT.replace('$NAME', self._name_format()), datefmt='%m$BLUE-$WHITE%d$BLUE|$WHITE%H$BLUE:$WHITE%M$BLUE:$WHITE%S')
         if self.parent is None:
             formatter = NonInfoFormatter(formatter)
-        self._handler.setFormatter(formatter)
-        self._logger.addHandler(self._handler)
+        else:
+            parent._add_child(self)
+        self._handlers[0].setFormatter(formatter)
+        self._logger.addHandler(self._handlers[0])
+        
+    def close(self):
+        for child in self.children:
+            child.close()
+        if self.cleanup_empty:
+            # first, check any files that handlers have created:
+            for h in self._handlers:
+                if isinstance(h, logging.FileHandler):
+                    if h.stream is not None:
+                        log_path = h.stream.name
+                        if os.path.exists(log_path) and os.stat(log_path).st_size == 0:
+                            h.close()
+                            os.remove(log_path)
+            # next, check if the output directory can be cleaned up
+            if self.directory:
+                for dirpath, dirnames, filenames in os.walk(self.directory, topdown=False):
+                    if len(dirnames) == 0 and len(filenames) == 0 and dirpath != self.directory:
+                        os.rmdir(dirpath)
+
+    @property
+    def directory(self):
+        return self._directory
+
+    def _add_child(self, child):
+        if child in self.children:
+            raise ValueError("Cannot double-add child logger %s to logger %s" % (child.name, self.name))
+        self.children.append(child)
+        if self.directory is not None:
+            child.save_to_directory(os.path.join(self.directory, child.name))
+        parent = self
+        while parent is not None:
+            for handler in self._descendant_handlers:
+                child.addHandler(handler, include_descendants=True)
+            parent = parent.parent
+
+    def _name_format(self):
+        if self.parent is not None and self.parent.parent is not None:
+            ret = self.parent._name_format()
+        else:
+            ret = ''
+        return ret + "[$RESET$WHITE%s$BLUE$BOLD]" % self._logger.name
+
+    def addHandler(self, handler, include_descendants=True, set_log_level=True):
+        if set_log_level:
+            handler.setLevel(self.log_level)
+        self._logger.addHandler(handler)
+        self._handlers.append(handler)
+        if include_descendants:
+            self._descendant_handlers.append(handler)
+            for child in self.children:
+                if isinstance(child, EthenoLogger):
+                    child.addHandler(handler, include_descendants=include_descendants, set_log_level=set_log_level)
+                else:
+                    child.addHandler(handler)
+
+    def save_to_file(self, path, include_descendants=True, log_level=None):
+        if log_level is None:
+            log_level = self.log_level
+        handler = logging.FileHandler(path)
+        handler.setLevel(log_level)
+        handler.setFormatter(logging.Formatter(ColorFormatter.remove_color(self.DEFAULT_FORMAT.replace('$NAME', self._name_format())), datefmt='%m-%d|%H:%M:%S'))
+        self.addHandler(handler, include_descendants=include_descendants, set_log_level=False)
+
+    def save_to_directory(self, path):
+        if self.directory == path:
+            # we are already set to save to this directory
+            return
+        elif self.directory is not None:
+            raise ValueError("Logger %s's save directory is already set to %s" % (self.name, path))
+        self._directory = os.path.realpath(path)
+        os.makedirs(path, exist_ok=True)
+        self.save_to_file(os.path.join(path, "%s.log" % self.name), include_descendants=False, log_level=DEBUG)
+        for child in self.children:
+            child.save_to_directory(os.path.join(path, child.name))
 
     @property
     def log_level(self):
@@ -114,7 +202,8 @@ class EthenoLogger(object):
             raise ValueError("Invalid log level: %d" % level)
         self._log_level = level
         self._logger.setLevel(level)
-        self._handler.setLevel(level)        
+        for handler in self._handlers:
+            handler.setLevel(level)        
 
     def __getattr__(self, name):
         return getattr(self._logger, name)

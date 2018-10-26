@@ -96,6 +96,19 @@ class EthenoClient(object):
             raise ValueError('An Etheno client can only ever be associated with a single Etheno instance')
         self._etheno = instance
         self.logger = logger.EthenoLogger(self.short_name, parent=self._etheno.logger)
+        self.etheno_set()
+
+    @property
+    def log_directory(self):
+        '''Returns a log directory that this client can use to save additional files, or None if one is not available'''
+        if self.logger is None:
+            return None
+        else:
+            return self.logger.directory
+
+    def etheno_set(self):
+        '''A callback for once the etheno instance and logger for this client is set'''
+        pass
 
     def create_account(self, balance = 0, address = None):
         '''

@@ -3,6 +3,7 @@ VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
 
+import logging
 import sha3
 from threading import Thread
 import time
@@ -11,6 +12,7 @@ from flask import Flask, g, jsonify, request, abort
 from flask.views import MethodView
 
 from manticore.ethereum import ManticoreEVM
+import manticore
 
 from . import logger
 from . import threadwrapper
@@ -53,14 +55,45 @@ def _etheno_shutdown():
 
 class ManticoreClient(EthenoClient):
     def __init__(self, manticore=None):
-        if manticore is None:
-            manticore = ManticoreEVM()
-        self.manticore = threadwrapper.MainThreadWrapper(manticore, _CONTROLLER)
+        self._assigned_manticore = manticore
+        self._manticore = None
         self.contracts = []
         self.short_name = 'Manticore'
+        self._accounts_to_create = []
 
-    def create_account(self, balance, address):
-        self.manticore.create_account(balance=balance, address=address)        
+    @property
+    def manticore(self):
+        if self._manticore is None:
+            if self._assigned_manticore is None:
+                # we do lazy evaluation of ManticoreClient.manticore so self.log_directory will be assigned already
+                if self.log_directory is None:
+                    workspace = None
+                else:
+                    workspace = self.log_directory
+                self._assigned_manticore = ManticoreEVM(workspace_url=workspace)
+            self._manticore = threadwrapper.MainThreadWrapper(self._assigned_manticore, _CONTROLLER)
+            self._finalize_manticore()
+        return self._manticore
+
+    def _finalize_manticore(self):
+        if not self._manticore:
+            return
+        for balance, address in self._accounts_to_create:
+            self._manticore.create_account(balance=balance, address=address)
+        self._accounts_to_create = []
+        self.logger.cleanup_empty = True
+
+    def create_account(self, balance, address):            
+        self._accounts_to_create.append((balance, address))
+        self._finalize_manticore()
+
+    def reassign_manticore_loggers(self):
+        # Manticore uses a global to track its loggers:
+        for name in manticore.utils.log.all_loggers:
+            manticore_logger = logging.getLogger(name)
+            for handler in list(manticore_logger.handlers):
+                manticore_logger.removeHandler(handler)
+            logger.EthenoLogger(name, parent=self.logger, cleanup_empty=True)
 
     @jsonrpc(from_addr = QUANTITY, to = QUANTITY, gas = QUANTITY, gasPrice = QUANTITY, value = QUANTITY, data = DATA, nonce = QUANTITY, RETURN = DATA)
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None, rpc_client_result = None):
@@ -137,9 +170,6 @@ class ManticoreClient(EthenoClient):
                     break
 
             tx_no += 1
-            
-    def __str__(self): return 'manticore'
-    __repr__ = __str__
 
 class EthenoPlugin(object):
     _etheno = None
@@ -361,7 +391,7 @@ class Etheno(object):
         else:
             return None
 
-    def shutdown(self, port = GETH_DEFAULT_RPC_PORT):
+    def shutdown(self, port=GETH_DEFAULT_RPC_PORT):
         if self._shutting_down:
             return
         self._shutting_down = True
@@ -372,6 +402,7 @@ class Etheno(object):
             self.master_client.shutdown()
         for client in self.clients:
             client.shutdown()
+        self.logger.close()
         from urllib.request import urlopen
         import socket
         import urllib
