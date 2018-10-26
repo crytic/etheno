@@ -133,12 +133,12 @@ class EthenoLogger(object):
         if child in self.children:
             raise ValueError("Cannot double-add child logger %s to logger %s" % (child.name, self.name))
         self.children.append(child)
+        if self.directory is not None:
+            child.save_to_directory(os.path.join(self.directory, child.name))
         parent = self
         while parent is not None:
             for handler in self._descendant_handlers:
                 child.addHandler(handler, include_descendants=True)
-            if parent._directory is not None:
-                child.save_to_directory(os.path.join(parent._directory, child.name))
             parent = parent.parent
 
     def _name_format(self):
@@ -167,6 +167,11 @@ class EthenoLogger(object):
         self.addHandler(handler, include_descendants=include_descendants)
 
     def save_to_directory(self, path):
+        if self.directory == path:
+            # we are already set to save to this directory
+            return
+        elif self.directory is not None:
+            raise ValueError("Logger %s's save directory is already set to %s" % (self.name, path))
         self._directory = path
         os.makedirs(path, exist_ok=True)
         self.save_to_file(os.path.join(path, "%s.log" % self.name), include_descendants=False)
