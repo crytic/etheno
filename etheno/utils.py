@@ -88,15 +88,13 @@ def clear_directory(path):
     if os.path.islink(path):
         os.unlink(path)
         return
-    for dirpath, dirnames, filenames in os.walk(path):
+
+    for dirpath, dirnames, filenames in os.walk(path, topdown=False):
         for dirname in dirnames:
-            dirpath = os.path.join(path, dirname)
-            if os.path.exists(dirpath):
-                clear_directory(dirpath)
-            if os.path.exists(dirpath):
-                os.rmdir(dirpath)
+            subdir = os.path.join(dirpath, dirname)
+            os.rmdir(subdir)
         for filename in filenames:
-            os.remove(os.path.join(path, filename))
+            os.remove(os.path.join(dirpath, filename))
 
 def ynprompt(prompt):
     while True:
