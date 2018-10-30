@@ -39,14 +39,14 @@ class DifferentialTester(EthenoPlugin):
         if clients_with_errors:
             clients = [self.etheno.master_client] + self.etheno.clients
             if clients_without_errors:
-                test = DifferentialTest('JSON_RPC_ERRORS', TestResult.FAILED, "%s executed transaction %s with no errors, but %s executed the same transaction with errors:\n%s" % (
+                test = DifferentialTest('JSON_RPC_ERRORS', TestResult.FAILED, "%s executed JSON RPC call %s with no errors, but %s executed the same transaction with errors:\n%s" % (
                     ', '.join(str(clients[client]) for client in clients_without_errors),
                     data,
                     ', '.join(str(clients[client]) for client in clients_with_errors),
                     '\n'.join(str(client_results[client]) for client in clients_with_errors)
                 ))
             else:
-                test = DifferentialTest('JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed transaction %s with errors" % data)
+                test = DifferentialTest('JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed JSON RPC call %s with errors" % data)
             self.add_test_result(test)
             self.logger.error(test.message)
             return
