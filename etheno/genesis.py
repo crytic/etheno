@@ -14,7 +14,7 @@ class Account(object):
     def private_key(self):
         return self._private_key
 
-def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 200000000000, accounts = None, homestead_block = 0, eip155_block = 0, eip158_block = 0, constantinople_block = None):
+def make_genesis(network_id=0x657468656E6F, difficulty=20, gas_limit=200000000000, accounts=None, byzantium_block=0, dao_fork_block=0, homestead_block=0, eip150_block=0, eip155_block=0, eip158_block=0, constantinople_block=None):
     if accounts:
         alloc = {format_hex_address(acct.address): {'balance': "%d" % acct.balance, 'privateKey': format_hex_address(acct.private_key)} for acct in accounts}
     else:
@@ -23,7 +23,10 @@ def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 20000
     ret = {
         'config' : {
             'chainId': network_id,
+            'byzantiumBlock': byzantium_block,
+            'daoForkBlock': dao_fork_block,
             'homesteadBlock': homestead_block,
+            'eip150Block': eip150_block,
             'eip155Block': eip155_block,
             'eip158Block': eip158_block
         },
@@ -71,11 +74,11 @@ def geth_to_parity(genesis):
             'maximumExtraDataSize': '0x20',
             'minGasLimit': "0x%s" % genesis['gasLimit'],
             'gasLimitBoundDivisor': '1',
-            'eip150Transition': '0x0',
+            'eip150Transition': "0x%x" % genesis['config']['eip150Block'],
             'eip160Transition': '0x0',
             'eip161abcTransition': '0x0',
             'eip161dTransition': '0x0',
-            'eip155Transition': '0x0',
+            'eip155Transition': "0x%x" % genesis['config']['eip155Block'],
             'eip98Transition': '0x7fffffffffffff',
             'eip86Transition': '0x7fffffffffffff',
             'maxCodeSize': 24576,
@@ -90,7 +93,7 @@ def geth_to_parity(genesis):
     }
 
     if 'constantinopleBlock' in genesis['config']:
-        block = genesis['config']['constantinopleBlock']
+        block = "0x%x" % genesis['config']['constantinopleBlock']
         ret['params']['eip145Transition'] = block
         ret['params']['eip1014Transition'] = block
         ret['params']['eip1052Transition'] = block
