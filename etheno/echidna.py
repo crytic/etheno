@@ -2,6 +2,7 @@ import subprocess
 import tempfile
 
 from .ascii_escapes import decode
+from .client import JSONRPCError
 from .etheno import EthenoPlugin
 from .utils import ConstantTemporaryFile, format_hex_address
 
@@ -115,11 +116,14 @@ class EchidnaPlugin(EthenoPlugin):
                 'data': "0x%s" % txn.hex()
             }]
         }
-        gas = "0x%x" % self.etheno.master_client.estimate_gas(transaction)
-        self.logger.info("Estimating gas cost for Transaction %d... %s" % (self._transaction, gas))
-        transaction['params'][0]['gas'] = gas
-        self.logger.info("Emitting Transaction %d" % self._transaction)
-        self.etheno.post(transaction)
+        try:
+            gas = "0x%x" % self.etheno.master_client.estimate_gas(transaction)
+            self.logger.info("Estimating gas cost for Transaction %d... %s" % (self._transaction, gas))
+            transaction['params'][0]['gas'] = gas
+            self.logger.info("Emitting Transaction %d" % self._transaction)
+            self.etheno.post(transaction)
+        except JSONRPCError as e:
+            self.logger.error(str(e))
 
 if __name__ == '__main__':
     install_echidna(allow_reinstall = True)
