@@ -14,13 +14,13 @@ class Account(object):
     def private_key(self):
         return self._private_key
 
-def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 200000000000, accounts = None, homestead_block = 0, eip155_block = 0, eip158_block = 0):
+def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 200000000000, accounts = None, homestead_block = 0, eip155_block = 0, eip158_block = 0, constantinople_block = None):
     if accounts:
         alloc = {format_hex_address(acct.address): {'balance': "%d" % acct.balance, 'privateKey': format_hex_address(acct.private_key)} for acct in accounts}
     else:
         alloc = {}
 
-    return {
+    ret = {
         'config' : {
             'chainId': network_id,
             'homesteadBlock': homestead_block,
@@ -32,9 +32,14 @@ def make_genesis(network_id = 0x657468656E6F, difficulty = 20, gas_limit = 20000
         'alloc': alloc
     }
 
+    if constantinople_block is not None:
+        ret['config']['constantinopleBlock'] = constantinople_block
+
+    return ret
+
 def geth_to_parity(genesis):
     '''Converts a Geth style genesis to Parity style'''
-    return {
+    ret = {
         'name': 'etheno',
         'engine': {
             'instantSeal': None,
@@ -83,6 +88,14 @@ def geth_to_parity(genesis):
         },
         'accounts': dict(genesis['alloc'])
     }
+
+    if 'constantinopleBlock' in genesis['config']:
+        block = genesis['config']['constantinopleBlock']
+        ret['params']['eip145Transition'] = block
+        ret['params']['eip1014Transition'] = block
+        ret['params']['eip1052Transition'] = block
+
+    return ret
 
 def make_accounts(num_accounts, default_balance = None):
     ret = []
