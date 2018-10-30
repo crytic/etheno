@@ -51,7 +51,7 @@ class GethClient(JSONRPCClient):
                     raise e
 
     def get_start_command(self, unlock_accounts=True):
-        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir, '--mine', '--etherbase', format_hex_address(self.miner_account.address)]
+        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir, '--mine', '--etherbase', format_hex_address(self.miner_account.address), '--minerthreads=1']
         if unlock_accounts:
             addresses = filter(lambda a : a != format_hex_address(self.miner_account.address), map(format_hex_address, self.genesis['alloc']))
             unlock_args = ['--unlock', ','.join(addresses), '--password', self.passwords]
