@@ -158,7 +158,13 @@ class JSONRPCClient(SelfPostingClient):
         if self.log_directory:
             self.add_to_run_script(start_args)
             self.save_logs()
+        self.initialized()
+        self.instance.start()
         self.wait_until_running()
+
+    def initialized(self):
+        '''Called once the client is completely intialized but before it is started'''
+        pass
 
     def stop(self):
         if self.instance is not None:

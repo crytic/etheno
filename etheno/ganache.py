@@ -23,6 +23,7 @@ class Ganache(RpcHttpProxy):
             return
         if self._client:
             self.ganache = PtyLogger(self._client.logger, self.args)
+            self.ganache.start()
         else:
             self.ganache = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
         atexit.register(Ganache.stop.__get__(self, Ganache))
