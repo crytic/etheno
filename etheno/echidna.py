@@ -105,7 +105,7 @@ class EchidnaPlugin(EthenoPlugin):
         etheno = self.etheno
         self.etheno.remove_plugin(self)
         etheno.shutdown()
-
+        
     def emit_transaction(self, txn):
         self._transaction += 1
         transaction = {
@@ -120,14 +120,15 @@ class EchidnaPlugin(EthenoPlugin):
                 'data': "0x%s" % txn.hex()
             }]
         }
-        try:
-            gas = "0x%x" % self.etheno.master_client.estimate_gas(transaction)
-            self.logger.info("Estimating gas cost for Transaction %d... %s" % (self._transaction, gas))
-            transaction['params'][0]['gas'] = gas
-            self.logger.info("Emitting Transaction %d" % self._transaction)
-            self.etheno.post(transaction)
-        except JSONRPCError as e:
-            self.logger.error(str(e))
+        gas = self.etheno.estimate_gas(transaction)
+        if gas is None:
+            self.logger.warning(f"All clients were unable to estimate the gas cost for transaction {self._transaction}. This typically means that Echidna emitted a transaction that is too large.")
+            return
+        gas = "0x%x" % gas
+        self.logger.info(f"Estimated gas cost for Transaction {self._transaction}: {gas}")
+        transaction['params'][0]['gas'] = gas
+        self.logger.info("Emitting Transaction %d" % self._transaction)
+        self.etheno.post(transaction)
 
 if __name__ == '__main__':
     install_echidna(allow_reinstall = True)

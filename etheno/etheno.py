@@ -276,6 +276,20 @@ class Etheno(object):
         for client in self.clients:
             self._create_accounts(client)
 
+    def estimate_gas(self, transaction):
+        '''
+        Estimates the gas cost of a transaction.
+        Iterates through all clients until it finds a client that is capable of estimating the gas cost without error.
+        If all clients return an error, this function will return None.
+        '''
+        clients = [self.master_client] + self.clients
+        for client in clients:
+            try:
+                return self.master_client.estimate_gas(transaction)
+            except JSONRPCError:
+                continue
+        return None
+            
     def post(self, data):
         for plugin in self.plugins:
             plugin.before_post(data)
