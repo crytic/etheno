@@ -45,6 +45,8 @@ def main(argv = None):
     parser.add_argument('--parity-port', type=int, default=None, help='Port on which to run Parity (defaults to the closest available port to the port specified with --port plus one)')
     parser.add_argument('-j', '--genesis', type=str, default=None, help='Path to a genesis.json file to use for initializing clients. Any genesis-related options like --network-id will override the values in this file. If --accounts is greater than zero, that many new accounts will be appended to the accounts in the genesis file.')
     parser.add_argument('--save-genesis', type=str, default=None, help="Save a genesis.json file to reproduce the state of this run. Note that this genesis file will include all known private keys for the genesis accounts, so use this with caution.")
+    parser.add_argument('--constantinople-block', type=int, default=None, help='The block in which to enable Constantinople EIPs (default=do not enable Constantinople)')
+    parser.add_argument('--constantinople', action='store_true', default=False, help='Enables Constantinople EIPs; equivalent to `--constantinople-block 0`')
     parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True, help='Do not run differential testing, which is run by default')
     parser.add_argument('-l', '--log-level', type=str.upper, choices={'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'}, default='INFO', help='Set Etheno\'s log level (default=INFO)')
     parser.add_argument('--log-file', type=str, default=None, help='Path to save all log output to a single file')
@@ -62,6 +64,9 @@ def main(argv = None):
     if args.version:
         print(VERSION_NAME)
         sys.exit(0)
+
+    if args.constantinople and args.constantinople_block is None:
+        args.constantinople_block = 0
 
     ETHENO.log_level = args.log_level
 
@@ -118,6 +123,9 @@ def main(argv = None):
                 genesis['alloc'] = {}
             if args.network_id is None:
                 args.network_id = genesis['config'].get('chainId', None)
+            if args.constantinople_block is None:
+                args.constantinople_block = genesis['config'].get('constantinopleBlock', None)
+                args.constantinople = args.constantinople_block is not None
             for addr, bal in genesis['alloc'].items():
                 pkey = None
                 if 'privateKey' in bal:
@@ -175,7 +183,7 @@ def main(argv = None):
             args.network_id = 0x657468656E6F # 'etheno' in hex
 
     if genesis is None:
-        genesis = make_genesis(network_id = args.network_id, accounts = accounts)
+        genesis = make_genesis(network_id=args.network_id, accounts=accounts, constantinople_block=args.constantinople_block)
     else:
         # Update the genesis with any overridden values
         genesis['config']['chainId'] = args.network_id
