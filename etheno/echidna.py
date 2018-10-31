@@ -9,11 +9,15 @@ from .utils import ConstantTemporaryFile, format_hex_address
 ECHIDNA_CONTRACT = b'''pragma solidity ^0.4.24;
 contract C {
   mapping(int => int) public s;
+  int public stored = 1337;
   function save(int key, int value) public {
     s[key] = value;
   }
   function remove(int key) public {
     delete s[key];
+  }
+  function setStored(int value) public {
+    stored = value;
   }
   function f(uint, int, int[]) public { }
   function g(bool, int, address[]) public { }
