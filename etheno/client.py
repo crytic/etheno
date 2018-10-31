@@ -1,3 +1,4 @@
+import http
 import inspect
 import json
 import time
@@ -236,6 +237,16 @@ class SelfPostingClient(EthenoClient):
 class RpcProxyClient(SelfPostingClient):
     def __init__(self, rpcurl):
         super().__init__(RpcHttpProxy(rpcurl))
+
+    def post(self, data):
+        while True:
+            try:
+                return super().post(data)
+            except http.client.RemoteDisconnected as e:
+                self.logger.warning(str(e))
+                time.sleep(1.0)
+                self.logger.info(f"Retrying JSON RPC call to {self.client.urlstring}")
+
     def wait_until_running(self):
         while not webserver_is_up(self.client.urlstring):
             time.sleep(1.0)
