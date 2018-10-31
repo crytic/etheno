@@ -3,14 +3,46 @@ import os
 import subprocess
 import time
 
+from . import logger
 from .client import JSONRPCError
 from .jsonrpcclient import JSONRPCClient
 from .utils import ConstantTemporaryFile, format_hex_address
+
+def ltrim_ansi(text):
+    if text.startswith(logger.ANSI_RESET):
+        return ltrim_ansi(text[len(logger.ANSI_RESET):])
+    elif text.startswith(logger.ANSI_BOLD):
+        return ltrim_ansi(text[len(logger.ANSI_BOLD):])
+    for color in logger.CGAColors:
+        ansi = logger.ANSI_COLOR % (30 + color.value)
+        if text.startswith(ansi):
+            return ltrim_ansi(text[len(ansi):])
+    for color in logger.CGAColors:
+        ansi = f"\033[{30 + color.value}m"
+        if text.startswith(ansi):
+            return ltrim_ansi(text[len(ansi):])
+    return text
 
 class GethClient(JSONRPCClient):
     def __init__(self, genesis, port=8546):
         super().__init__('Geth', genesis, port)
         atexit.register(GethClient.shutdown.__get__(self, GethClient))
+    def initialized(self):
+        def log(logger, message):
+            msg = ltrim_ansi(message)
+            if msg.startswith('ERROR'):
+                logger.error(msg[5:].lstrip())
+            elif msg.startswith('WARNING'):
+                logger.warning(msg[7:].lstrip())
+            elif msg.startswith('WARN'):
+                logger.warning(msg[4:].lstrip())
+            elif msg.startswith('DEBUG'):
+                logger.debug(msg[5:].lstrip())
+            elif msg.startswith('INFO'):
+                logger.info(msg[4:].lstrip())
+            else:
+                logger.info(message)
+        self.instance.log = log
 
     def etheno_set(self):
         super().etheno_set()
@@ -51,7 +83,17 @@ class GethClient(JSONRPCClient):
                     raise e
 
     def get_start_command(self, unlock_accounts=True):
-        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir, '--mine', '--etherbase', format_hex_address(self.miner_account.address)]
+        if self.logger.log_level == logger.CRITICAL:
+            verbosity = 0
+        elif self.logger.log_level == logger.ERROR:
+            verbosity = 1
+        elif self.logger.log_level == logger.WARNING:
+            verbosity = 2
+        elif self.logger.log_level == logger.DEBUG:
+            verbosity = 3
+        else:
+            verbosity = 4
+        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir, '--mine', '--etherbase', format_hex_address(self.miner_account.address), f"--verbosity={verbosity}", '--minerthreads=1']
         if unlock_accounts:
             addresses = filter(lambda a : a != format_hex_address(self.miner_account.address), map(format_hex_address, self.genesis['alloc']))
             unlock_args = ['--unlock', ','.join(addresses), '--password', self.passwords]

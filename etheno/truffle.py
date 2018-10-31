@@ -26,6 +26,7 @@ class Truffle(object):
             args = [args]
 
         p = PtyLogger(self.logger, ['/usr/bin/env', 'truffle'] + args)
+        p.start()
 
         try:
             while p.isalive():

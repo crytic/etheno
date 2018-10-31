@@ -217,8 +217,8 @@ class StreamLogger(threading.Thread):
             newline_char = newline_char.encode('utf-8')
         self._newline_char = newline_char
         self._buffers = [b'' for i in range(len(streams))]
-        self.start()
         self._done = False
+        self.log = lambda logger, message : logger.info(message)
     def is_done(self):
         return self._done
     def run(self):
@@ -232,7 +232,7 @@ class StreamLogger(threading.Thread):
                             if isinstance(byte, str):
                                 byte = byte.encode('utf-8')
                             if byte == self._newline_char:
-                                self.logger.info(self._buffers[i].decode())
+                                self.log(self.logger, self._buffers[i].decode())
                                 self._buffers[i] = b''
                             else:
                                 self._buffers[i] += byte
