@@ -55,7 +55,7 @@ def main(argv = None):
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
     parser.add_argument('client', type=str, nargs='*', help='JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
     parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
-    parser.add_argument('--raw', type=str, nargs='*', help='JSON RPC client URLs to multiplex that do not have any local accounts; Etheno will automatically use auto-generated accounts with known private keys, pre-sign all transactions, and only use eth_sendRawTransaction')
+    parser.add_argument('--raw', type=str, nargs='*', action='append', help='JSON RPC client URLs to multiplex that do not have any local accounts; Etheno will automatically use auto-generated accounts with known private keys, pre-sign all transactions, and only use eth_sendRawTransaction')
 
     if argv is None:
         argv = sys.argv
@@ -145,6 +145,8 @@ def main(argv = None):
 
     if args.raw is None:
         args.raw = []
+    else:
+        args.raw = [r[0] for r in args.raw]
 
     if args.ganache and args.master:
         parser.print_help()
