@@ -247,9 +247,16 @@ class RpcProxyClient(SelfPostingClient):
                 time.sleep(1.0)
                 self.logger.info(f"Retrying JSON RPC call to {self.client.urlstring}")
 
+    def is_running(self):
+        return webserver_is_up(self.client.urlstring)
+
     def wait_until_running(self):
-        while not webserver_is_up(self.client.urlstring):
-            time.sleep(1.0)
+        slept = 0.0
+        while not self.is_running():
+            time.sleep(0.25)
+            slept += 0.25
+            if slept % 5 == 0:
+                self.logger.info("Waiting for the client to start...")
 
 def QUANTITY(to_convert):
     if to_convert is None:

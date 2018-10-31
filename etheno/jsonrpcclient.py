@@ -6,7 +6,7 @@ import shutil
 import tempfile
 import time
 
-from .client import RpcHttpProxy, SelfPostingClient
+from .client import RpcProxyClient
 from .genesis import make_accounts
 from .logger import PtyLogger
 from .utils import ConstantTemporaryFile, format_hex_address, is_port_free
@@ -17,9 +17,9 @@ class Tempfile(object):
     delete_on_exit=True
     rewrite_paths=False
 
-class JSONRPCClient(SelfPostingClient):
+class JSONRPCClient(RpcProxyClient):
     def __init__(self, name, genesis, port=8546):
-        super().__init__(RpcHttpProxy("http://localhost:%d/" % port))
+        super().__init__("http://localhost:%d/" % port)
         self._basename = name
         self.short_name = "%s@%d" % (name, port)
         self.port = port
@@ -166,6 +166,9 @@ class JSONRPCClient(SelfPostingClient):
         '''Called once the client is completely intialized but before it is started'''
         pass
 
+    def is_running(self):
+        return not is_port_free(self.port)
+
     def stop(self):
         if self.instance is not None:
             instance = self.instance
@@ -185,11 +188,3 @@ class JSONRPCClient(SelfPostingClient):
     def shutdown(self):
         self.stop()
         self.cleanup()
-
-    def wait_until_running(self):
-        slept = 0.0
-        while is_port_free(self.port):
-            time.sleep(0.25)
-            slept += 0.25
-            if slept % 5 == 0:
-                self.logger.info("Waiting for the process to start...")
