@@ -85,7 +85,12 @@ class EchidnaPlugin(EthenoPlugin):
             self._shutdown()
             return
         # First, deploy the testing contract:
+        self.logger.info('Deploying Echidna test contract...')
         self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0], ECHIDNA_CONTRACT_BYTECODE), True)
+        if self.contract_address is None:
+            self.logger.error('Unable to deploy Echidna test contract!')
+            self._shutdown()
+            return
         self.logger.info("Deployed Echidna test contract to %s" % self.contract_address)
         with ConstantTemporaryFile(ECHIDNA_CONFIG, prefix='echidna', suffix='.yaml') as config:
             with ConstantTemporaryFile(ECHIDNA_CONTRACT, prefix='echidna', suffix='.sol') as sol:
