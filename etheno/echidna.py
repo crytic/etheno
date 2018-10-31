@@ -15,8 +15,6 @@ contract C {
 }
 '''
 
-ECHIDNA_CONTRACT_BYTECODE = b'608060405234801561001057600080fd5b506101c0806100206000396000f300608060405260043610610057576000357c0100000000000000000000000000000000000000000000000000000000900463ffffffff168063554c5abd1461005c5780638c9670b51461008b5780639ccb138f14610107575b600080fd5b34801561006857600080fd5b50610071610181565b604051808215151515815260200191505060405180910390f35b34801561009757600080fd5b50610105600480360381019080803515159060200190929190803590602001909291908035906020019082018035906020019080806020026020016040519081016040528093929190818152602001838360200280828437820191505050505050919291929050505061018a565b005b34801561011357600080fd5b5061017f60048036038101908080359060200190929190803590602001909291908035906020019082018035906020019080806020026020016040519081016040528093929190818152602001838360200280828437820191505050505050919291929050505061018f565b005b60006001905090565b505050565b5050505600a165627a7a72305820c33d6d41fb62e921093df0df9278328c3f1f256bac6be1400b47d233c6b1aeff0029'
-
 ECHIDNA_CONFIG = b'''outputRawTxs: True\n'''
 
 def echidna_exists():
@@ -41,7 +39,7 @@ def install_echidna(allow_reinstall = False):
         # TODO: Once the `dev-no-hedgehog` branch is merged into `master`, we can remove this:
         subprocess.call(['/usr/bin/env', 'git', 'checkout', 'dev-no-hedgehog'], cwd=path)
         subprocess.check_call(['/usr/bin/env', 'stack', 'install'], cwd=path)
-
+        
 def decode_binary_json(text):
     orig = text
     text = decode(text).strip()
@@ -63,20 +61,30 @@ def decode_binary_json(text):
     return text[:-1]
 
 class EchidnaPlugin(EthenoPlugin):
-    def __init__(self, transaction_limit=None):
+    def __init__(self, transaction_limit=None, contract_source=None):
         self._transaction = 0
         self.limit = transaction_limit
         self.contract_address = None
+        if contract_source is None:
+            self.contract_source = ECHIDNA_CONTRACT
+        else:
+            self.contract_source = contract_source
+        self.contract_bytecode = None
+
+    def added(self):
+        # Wait until the plugin was added to Etheno so its logger is initialized
+        self.contract_bytecode = self.compile(self.contract_source)
+
     def run(self):
         if not self.etheno.accounts:
             self.logger.info("Etheno does not know about any accounts, so Echidna has nothing to do!")
             self._shutdown()
             return
         # First, deploy the testing contract:
-        self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0], ECHIDNA_CONTRACT_BYTECODE), True)
+        self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0], self.contract_bytecode), True)
         self.logger.info("Deployed Echidna test contract to %s" % self.contract_address)
         with ConstantTemporaryFile(ECHIDNA_CONFIG, prefix='echidna', suffix='.yaml') as config:
-            with ConstantTemporaryFile(ECHIDNA_CONTRACT, prefix='echidna', suffix='.sol') as sol:
+            with ConstantTemporaryFile(self.contract_source, prefix='echidna', suffix='.sol') as sol:
                 echidna = subprocess.Popen(['/usr/bin/env', 'echidna-test', sol, '--config', config], stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
                 while self.limit is None or self._transaction < self.limit:
                     line = echidna.stdout.readline()
@@ -93,6 +101,29 @@ class EchidnaPlugin(EthenoPlugin):
         etheno = self.etheno
         self.etheno.remove_plugin(self)
         etheno.shutdown()
+
+    def compile(self, solidity):
+        with ConstantTemporaryFile(solidity, prefix='echidna', suffix='.sol') as contract:
+            solc = subprocess.Popen(['/usr/bin/env', 'solc', '--bin', contract], stderr=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
+            errors = solc.stderr.read().strip()
+            output = solc.stdout.read()
+            if solc.wait() != 0:
+                self.logger.error(f"{errors}\n{output}")
+                return None
+            elif errors:
+                if solidity == ECHIDNA_CONTRACT:
+                    # no need to raise a warning with our own contract:
+                    self.logger.debug(errors)
+                else:
+                    self.logger.warning(errors)
+            binary_key = 'Binary:'
+            offset = output.find(binary_key)
+            if offset < 0:
+                self.logger.error(f"Could not parse `solc` output:\n{output}")
+                return None
+            code = hex(int(output[offset+len(binary_key):].strip(), 16))
+            self.logger.debug(f"Compiled contract code: {code}")
+            return code
 
     def emit_transaction(self, txn):
         self._transaction += 1
