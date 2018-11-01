@@ -8,6 +8,9 @@ related to how clients interpreted [a new
 EIP](https://eips.ethereum.org/EIPS/eip-1283) changing how gas refunds
 are accounted across calls.
 
+Run this example by using the included
+[`run_etheno.sh`](run_etheno.sh) script.
+
 This example uses [Echidna](https://github.com/trailofbits/echidna), a
 property-based fuzzer, so results are nondeterminstic. But generally
 running this example should result in at least one failed differential
