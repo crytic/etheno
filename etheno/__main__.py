@@ -267,7 +267,6 @@ def main(argv = None):
                     manticoreutils.register_all_detectors(manticore_client.manticore)
                     manticore_client.multi_tx_analysis()
                     manticore_client.manticore.finalize()
-                manticore_client.logger.info(manticore_client.manticore.global_findings)
                 manticore_client.logger.info("Results are in %s" % manticore_client.manticore.workspace)
                 ETHENO.shutdown()
             elif not ETHENO.clients and not ETHENO.plugins:
