@@ -116,8 +116,8 @@ class ManticoreClient(EthenoClient):
                 address = None
             contract_address = self.manticore.create_contract(owner = from_addr, balance = value, init=data)
             self.contracts.append(contract_address)
-            self.logger.info("\n  Manticore contract created: %s\n%s\n" % (encode_hex(contract_address.address), map(lambda a : hex(a.address), self.manticore.accounts.values())))
-            #self.logger.info("  Block number: %s" % self.manticore.world.block_number())
+            self.logger.info(f"Manticore contract created: {encode_hex(contract_address.address)}")
+            #self.logger.info("Block number: %s" % self.manticore.world.block_number())
         else:
             self.manticore.transaction(address = to, data = data, caller=from_addr, value = value)
         # Just mimic the result from the master client
