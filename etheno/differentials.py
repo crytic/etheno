@@ -91,7 +91,7 @@ class DifferentialTester(EthenoPlugin):
                         except Exception:
                             pass
                         if gas_used != master_gas:
-                            test = DifferentialTest(self, 'GAS_USAGE', TestResult.FAILED, "transaction %s used 0x%x gas in the master client but only 0x%x gas in %s!" % (data['params'][0], master_gas, gas_used, client))
+                            test = DifferentialTest(self, 'GAS_USAGE', TestResult.FAILED, "transaction %s used 0x%x gas in the master client but 0x%x gas in %s!" % (data['params'][0], master_gas, gas_used, client))
                             self.add_test_result(test)
                             self.logger.error(test.message)
                         else:
