@@ -3,11 +3,23 @@ import subprocess
 import tempfile
 
 from .ascii_escapes import decode
+from .client import JSONRPCError
 from .etheno import EthenoPlugin
 from .utils import ConstantTemporaryFile, format_hex_address
 
 ECHIDNA_CONTRACT = b'''pragma solidity ^0.4.24;
 contract C {
+  mapping(int => int) public s;
+  int public stored = 1337;
+  function save(int key, int value) public {
+    s[key] = value;
+  }
+  function remove(int key) public {
+    delete s[key];
+  }
+  function setStored(int value) public {
+    stored = value;
+  }
   function f(uint, int, int[]) public { }
   function g(bool, int, address[]) public { }
   function echidna_() public returns (bool) {
@@ -16,7 +28,7 @@ contract C {
 }
 '''
 
-ECHIDNA_CONFIG = b'''outputRawTxs: True\n'''
+ECHIDNA_CONFIG = b'''outputRawTxs: True\ngasLimit: 0xfffff\n'''
 
 def echidna_exists():
     return subprocess.call(['/usr/bin/env', 'echidna-test', '--help'], stdout=subprocess.DEVNULL) == 0
@@ -82,7 +94,12 @@ class EchidnaPlugin(EthenoPlugin):
             self._shutdown()
             return
         # First, deploy the testing contract:
+        self.logger.info('Deploying Echidna test contract...')
         self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0], self.contract_bytecode), True)
+        if self.contract_address is None:
+            self.logger.error('Unable to deploy Echidna test contract!')
+            self._shutdown()
+            return
         self.logger.info("Deployed Echidna test contract to %s" % self.contract_address)
         config = self.logger.make_constant_logged_file(ECHIDNA_CONFIG, prefix='echidna', suffix='.yaml')
         sol = self.logger.make_constant_logged_file(self.contract_source, prefix='echidna', suffix='.sol')
@@ -145,8 +162,12 @@ class EchidnaPlugin(EthenoPlugin):
                 'data': "0x%s" % txn.hex()
             }]
         }
-        gas = "0x%x" % self.etheno.master_client.estimate_gas(transaction)
-        self.logger.info("Estimating gas cost for Transaction %d... %s" % (self._transaction, gas))
+        gas = self.etheno.estimate_gas(transaction)
+        if gas is None:
+            self.logger.warning(f"All clients were unable to estimate the gas cost for transaction {self._transaction}. This typically means that Echidna emitted a transaction that is too large.")
+            return
+        gas = "0x%x" % gas
+        self.logger.info(f"Estimated gas cost for Transaction {self._transaction}: {gas}")
         transaction['params'][0]['gas'] = gas
         self.logger.info("Emitting Transaction %d" % self._transaction)
         self.etheno.post(transaction)

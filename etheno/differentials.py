@@ -21,6 +21,7 @@ class TestResult(Enum):
 
 class DifferentialTester(EthenoPlugin):
     def __init__(self):
+        self._transactions_by_hash = {}
         self._unprocessed_transactions = set()
         self.tests = {}
         self._printed_summary = False
@@ -42,14 +43,14 @@ class DifferentialTester(EthenoPlugin):
         if clients_with_errors:
             clients = [self.etheno.master_client] + self.etheno.clients
             if clients_without_errors:
-                test = DifferentialTest(self, 'JSON_RPC_ERRORS', TestResult.FAILED, "%s executed transaction %s with no errors, but %s executed the same transaction with errors:\n%s" % (
+                test = DifferentialTest(self, 'JSON_RPC_ERRORS', TestResult.FAILED, "%s executed JSON RPC call %s with no errors, but %s executed the same transaction with errors:\n%s" % (
                     ', '.join(str(clients[client]) for client in clients_without_errors),
                     data,
                     ', '.join(str(clients[client]) for client in clients_with_errors),
                     '\n'.join(str(client_results[client]) for client in clients_with_errors)
                 ))
             else:
-                test = DifferentialTest(self, 'JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed transaction %s with errors" % data)
+                test = DifferentialTest(self, 'JSON_RPC_ERRORS', TestResult.PASSED, "All clients executed JSON RPC call %s with errors" % data)
             self.add_test_result(test)
             self.logger.error(test.message)
             return
@@ -60,6 +61,7 @@ class DifferentialTester(EthenoPlugin):
         if method == 'eth_sendTransaction' or method == 'eth_sendRawTransaction':
             if not isinstance(master_result, JSONRPCError) and 'result' in master_result and master_result['result']:
                 self._unprocessed_transactions.add(master_result['result'])
+                self._transactions_by_hash[master_result['result']] = data
         elif method == 'eth_getTransactionReceipt':
             if master_result and 'result' in master_result and master_result['result']:
                 # mark that we have processed the receipt for this transaction:
@@ -76,7 +78,7 @@ class DifferentialTester(EthenoPlugin):
                         except Exception:
                             pass
                         if not created:
-                            test = DifferentialTest(self, 'CONTRACT_CREATION', TestResult.FAILED, "the master client created a contract for transaction %s, but %s did not" % (data['params'][0], client))
+                            test = DifferentialTest(self, 'CONTRACT_CREATION', TestResult.FAILED, f"{self.etheno.master_client} created a contract for transaction {data['params'][0]}, but {client} did not")
                             self.add_test_result(test)
                             self.logger.error(test.message)
                         else:
@@ -91,11 +93,22 @@ class DifferentialTester(EthenoPlugin):
                         except Exception:
                             pass
                         if gas_used != master_gas:
-                            test = DifferentialTest(self, 'GAS_USAGE', TestResult.FAILED, "transaction %s used 0x%x gas in the master client but only 0x%x gas in %s!" % (data['params'][0], master_gas, gas_used, client))
+                            test = DifferentialTest(self, 'GAS_USAGE', TestResult.FAILED, f"""Transaction {data['params'][0]} used:
+
+    0x{hex(master_gas)} gas in {self.etheno.master_client} but
+    0x{hex(gas_used)} gas in {client}
+
+while mining this transaction:
+
+{self._transactions_by_hash.get(data['params'][0], 'UNKNOWN TRANSACTION')}""")
                             self.add_test_result(test)
                             self.logger.error(test.message)
                         else:
                             self.add_test_result(DifferentialTest(self, 'GAS_USAGE', TestResult.PASSED, "client %s transaction %s used 0x%x gas" % (client, data['params'][0], gas_used)))
+
+                # we have processed this transaction, so no need to keep its original arguments around:
+                if data['params'][0] in self._transactions_by_hash:
+                    del self._transactions_by_hash[data['params'][0]]
 
     def finalize(self):
         unprocessed = self._unprocessed_transactions
