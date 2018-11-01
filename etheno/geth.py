@@ -6,7 +6,7 @@ import time
 from . import logger
 from .client import JSONRPCError
 from .jsonrpcclient import JSONRPCClient
-from .utils import ConstantTemporaryFile, format_hex_address
+from .utils import format_hex_address
 
 def ltrim_ansi(text):
     if text.startswith(logger.ANSI_RESET):
