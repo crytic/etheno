@@ -16,3 +16,8 @@ property-based fuzzer, so results are nondeterminstic. But generally
 running this example should result in at least one failed differential
 test. You can get additional details of the transaction that triggered
 the bug by examining `log/DifferentialTester/GAS_USAGE/FAILED.log`.
+
+Note that this example was tested with Geth 1.8.17-stable and Parity
+v2.0.8-stable. Newer versions of these clients will likely have
+patched the Constantinople consensus bug and Etheno's differential
+tester will therefore pass all tests.
