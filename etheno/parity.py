@@ -114,19 +114,18 @@ class ParityClient(JSONRPCClient):
     def etheno_set(self):
         super().etheno_set()
         self.import_account(self.miner_account.private_key)
-        config_file = self.make_tempfile(prefix='config', suffix='.toml', rewrite_paths=True)
-        self.config = config_file.name
-        try:
-            config_file.write(make_config(
-                genesis_path=self.genesis_file,
-                base_path=self.datadir,
+        self.config = self.logger.make_constant_logged_file(
+            make_config(
+                genesis_path=self.logger.to_log_path(self.genesis_file),
+                base_path=self.logger.to_log_path(self.datadir),
                 port=self.port,
                 chainId=self.genesis['config']['chainId'],
                 accounts=tuple(self.accounts),
-                password_file=self.passwords
-            ))
-        finally:
-            config_file.close()
+                password_file=self.logger.to_log_path(self.passwords)
+            ),
+            prefix='config',
+            suffix='.toml'
+        )
         
     def write_passwords(self, outfile):
         outfile.write(b'etheno')
@@ -172,7 +171,7 @@ class ParityClient(JSONRPCClient):
                 raise e
 
     def get_start_command(self, unlock_accounts=True):
-        return ['/usr/bin/env', 'parity', '--config', self.config, '--fast-unlock', '--jsonrpc-apis=all']        
+        return ['/usr/bin/env', 'parity', '--config', self.config, '--fast-unlock', '--jsonrpc-apis=all']
             
     def start(self, unlock_accounts=True):
         self._unlock_accounts = unlock_accounts

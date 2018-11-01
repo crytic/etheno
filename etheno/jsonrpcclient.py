@@ -143,7 +143,7 @@ class JSONRPCClient(RpcProxyClient):
 
     def start(self, unlock_accounts=True):
         start_args = self.get_start_command(unlock_accounts)
-        self.instance = PtyLogger(self.logger, start_args)
+        self.instance = PtyLogger(self.logger, start_args, cwd=self.log_directory)
         if self.log_directory:
             self.add_to_run_script(start_args)
             self.save_logs()

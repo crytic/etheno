@@ -291,8 +291,8 @@ class ProcessLogger(StreamLogger):
         return self.process.poll() is not None
 
 class PtyLogger(StreamLogger):
-    def __init__(self, logger, args, **kwargs):
-        self.process = ptyprocess.PtyProcessUnicode.spawn(args)
+    def __init__(self, logger, args, cwd=None, **kwargs):
+        self.process = ptyprocess.PtyProcessUnicode.spawn(args, cwd=cwd)
         super().__init__(logger, self.process, **kwargs)
     def is_done(self):
         return not self.process.isalive()
