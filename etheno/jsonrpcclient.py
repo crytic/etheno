@@ -29,26 +29,12 @@ class JSONRPCClient(RpcProxyClient):
         self._tempfiles = []
         self._accounts = []
         self._created_address_index = -1
-        genesis_output = self.make_tempfile(prefix='genesis', suffix='.json')
-        self.genesis_file = genesis_output.name
-        password_output = self.make_tempfile(prefix=name, suffix='.passwd')
-        self.passwords = password_output.name
         self._runscript = []
-
-        try:
-            self.write_genesis(genesis_output)
-        finally:
-            genesis_output.close()
-
-        try:
-            self.write_passwords(password_output)
-        finally:
-            password_output.close()
-
-        # This is set in self.etheno_set():
+        # These are set in self.etheno_set():
+        self.genesis_file = None
+        self.passwords = None
         self.datadir = None
         self._datadir_tmp = None
-
         # This is set when self.start() is called:
         self.instance = None
 
@@ -61,12 +47,15 @@ class JSONRPCClient(RpcProxyClient):
         
     def etheno_set(self):
         super().etheno_set()
-        if self.log_directory:
-            self.datadir = os.path.join(self.log_directory, 'chain_data')
-            os.makedirs(self.datadir)
-        else:
-            self._datadir_tmp = tempfile.TemporaryDirectory()
-            self.datadir = self._datadir_tmp.name
+        self.datadir = os.path.join(self.log_directory, 'chain_data')
+        os.makedirs(self.datadir)
+        with self.logger.make_logged_file(prefix='genesis', suffix='.json') as genesis_output:
+            self.genesis_file = genesis_output.name
+            self.write_genesis(genesis_output)
+            genesis_output.close()
+        with self.logger.make_logged_file(prefix=self._basename, suffix='.passwd') as password_output:
+            self.passwords = password_output.name
+            self.write_passwords(password_output)
 
     def add_to_run_script(self, command):
         if isinstance(command, Sequence):

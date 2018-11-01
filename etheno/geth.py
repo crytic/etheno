@@ -56,19 +56,15 @@ class GethClient(JSONRPCClient):
 
     def import_account(self, private_key):
         content = format_hex_address(private_key).encode('utf-8') + bytes([ord('\n')])
-        with ConstantTemporaryFile(content, prefix='private', suffix='.key') as keyfile:
-            if self.log_directory:
-                import_dir = os.path.join(self.log_directory, 'private_keys')
-                with self.make_tempfile(prefix='private', suffix='.key', dir=import_dir, delete_on_exit=False) as f:
-                    f.write(content)
-                    keyfile = f.name
-            while True:
-                args = ['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.datadir, '--password', self.passwords, keyfile]
-                self.add_to_run_script(args)
-                geth = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                if geth.wait() == 0:
-                    return
-                # This sometimes happens with geth, I have no idea why, so just try again
+        import_dir = os.path.join(self.log_directory, 'private_keys')
+        keyfile = self.logger.make_constant_logged_file(content, prefix='private', suffix='.key', dir=import_dir)
+        while True:
+            args = ['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.datadir, '--password', self.passwords, keyfile]
+            self.add_to_run_script(args)
+            geth = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            if geth.wait() == 0:
+                return
+            # This sometimes happens with geth, I have no idea why, so just try again
 
     def post(self, data):
         # geth takes a while to unlock all of the accounts, so check to see if that caused an error and just wait a bit
