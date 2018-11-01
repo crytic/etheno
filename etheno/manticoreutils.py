@@ -1,5 +1,6 @@
 import inspect
 
+from manticore.core.smtlib.operators import AND
 from manticore.ethereum import ManticoreEVM, Detector
 import manticore.ethereum.detectors
 
@@ -41,14 +42,25 @@ class ManticoreTest(object):
         return self.can_be_true()
     def can_be_true(self):
         return self.state.can_be_true(self.expression)
-    def solve_one(self, *variables):
-        '''Finds a solution to the state and returns all of the variables in that solution'''
-        with self.state as state:
+    def _solve_one(self, *variables, initial_state):
+        with initial_state as state:
             state.constrain(self.expression)
             for v in variables:
                 value = state.solve_one(v)
                 yield value
-                state.constrain(v == value)
+                state.constrain(v == value)        
+    def solve_one(self, *variables):
+        '''Finds a solution to the state and returns all of the variables in that solution'''
+        return self._solve_one(*variables, initial_state=self.state)
+    def solve_all(self, *variables):
+        '''Enumerates all solutions to the state for the given variables'''
+        with self.state as state:
+            while state.can_be_true(self.expression):
+                solution = tuple(self._solve_one(*variables, initial_state=state))
+                if len(solution) < len(variables):
+                    break
+                yield solution
+                state.constrain(AND(*(v != s for v, s in zip(variables, solution))))
     def __enter__(self):
         return self
     def __exit__(self, exc_type, exc_val, exc_tb):
