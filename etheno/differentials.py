@@ -95,8 +95,8 @@ class DifferentialTester(EthenoPlugin):
                         if gas_used != master_gas:
                             test = DifferentialTest(self, 'GAS_USAGE', TestResult.FAILED, f"""Transaction {data['params'][0]} used:
 
-    0x{hex(master_gas)} gas in {self.etheno.master_client} but
-    0x{hex(gas_used)} gas in {client}
+    {hex(master_gas)} gas in {self.etheno.master_client} but
+    {hex(gas_used)} gas in {client}
 
 while mining this transaction:
 
