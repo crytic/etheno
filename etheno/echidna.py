@@ -1,3 +1,4 @@
+import os
 import subprocess
 import tempfile
 
@@ -83,18 +84,23 @@ class EchidnaPlugin(EthenoPlugin):
         # First, deploy the testing contract:
         self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0], self.contract_bytecode), True)
         self.logger.info("Deployed Echidna test contract to %s" % self.contract_address)
-        with ConstantTemporaryFile(ECHIDNA_CONFIG, prefix='echidna', suffix='.yaml') as config:
-            with ConstantTemporaryFile(self.contract_source, prefix='echidna', suffix='.sol') as sol:
-                echidna = subprocess.Popen(['/usr/bin/env', 'echidna-test', sol, '--config', config], stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
-                while self.limit is None or self._transaction < self.limit:
-                    line = echidna.stdout.readline()
-                    if line != b'':
-                        txn = decode_binary_json(line)
-                        if txn is None:
-                            continue
-                        self.emit_transaction(txn)
-                    else:
-                        break
+        config = self.logger.make_constant_logged_file(ECHIDNA_CONFIG, prefix='echidna', suffix='.yaml')
+        sol = self.logger.make_constant_logged_file(self.contract_source, prefix='echidna', suffix='.sol')
+        echidna_args = ['/usr/bin/env', 'echidna-test', self.logger.to_log_path(sol), '--config', self.logger.to_log_path(config)]
+        run_script = self.logger.make_constant_logged_file(' '.join(echidna_args), prefix='run_echidna', suffix='.sh')
+        # make the script executable:
+        os.chmod(run_script, 0o755)
+
+        echidna = subprocess.Popen(echidna_args, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, cwd=self.log_directory)
+        while self.limit is None or self._transaction < self.limit:
+            line = echidna.stdout.readline()
+            if line != b'':
+                txn = decode_binary_json(line)
+                if txn is None:
+                    continue
+                self.emit_transaction(txn)
+            else:
+                break
         self._shutdown()
 
     def _shutdown(self):
