@@ -1,0 +1,15 @@
+# Constantinople Gas Usage Consensus Bug
+
+This example is able to automatically reproduce [the Constantinople
+gas usage
+discrepancy](https://github.com/paritytech/parity-ethereum/pull/9746)
+that caused a hard-fork on Ropsten in October of 2018. This bug was
+related to how clients interpreted [a new
+EIP](https://eips.ethereum.org/EIPS/eip-1283) changing how gas refunds
+are accounted across calls.
+
+This example uses [Echidna](https://github.com/trailofbits/echidna), a
+property-based fuzzer, so results are nondeterminstic. But generally
+running this example should result in at least one failed differential
+test. You can get additional details of the transaction that triggered
+the bug by examining `log/DifferentialTester/GAS_USAGE/FAILED.log`.
