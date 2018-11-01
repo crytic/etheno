@@ -47,9 +47,9 @@ class GethClient(JSONRPCClient):
     def etheno_set(self):
         super().etheno_set()
         try:
-            args = ['/usr/bin/env', 'geth', 'init', self.genesis_file, '--datadir', self.datadir]
+            args = ['/usr/bin/env', 'geth', 'init', self.logger.to_log_path(self.genesis_file), '--datadir', self.logger.to_log_path(self.datadir)]
             self.add_to_run_script(args)
-            subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.check_call(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=self.log_directory)
         except Exception as e:
             self.cleanup()
             raise e
@@ -59,9 +59,9 @@ class GethClient(JSONRPCClient):
         import_dir = os.path.join(self.log_directory, 'private_keys')
         keyfile = self.logger.make_constant_logged_file(content, prefix='private', suffix='.key', dir=import_dir)
         while True:
-            args = ['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.datadir, '--password', self.passwords, keyfile]
+            args = ['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.logger.to_log_path(self.datadir), '--password', self.logger.to_log_path(self.passwords), self.logger.to_log_path(keyfile)]
             self.add_to_run_script(args)
-            geth = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            geth = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.log_directory)
             if geth.wait() == 0:
                 return
             # This sometimes happens with geth, I have no idea why, so just try again
@@ -89,7 +89,7 @@ class GethClient(JSONRPCClient):
             verbosity = 3
         else:
             verbosity = 4
-        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.datadir, '--mine', '--etherbase', format_hex_address(self.miner_account.address), f"--verbosity={verbosity}", '--minerthreads=1']
+        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.logger.to_log_path(self.datadir), '--mine', '--etherbase', format_hex_address(self.miner_account.address), f"--verbosity={verbosity}", '--minerthreads=1']
         if unlock_accounts:
             addresses = filter(lambda a : a != format_hex_address(self.miner_account.address), map(format_hex_address, self.genesis['alloc']))
             unlock_args = ['--unlock', ','.join(addresses), '--password', self.passwords]

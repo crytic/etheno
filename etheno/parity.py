@@ -171,7 +171,7 @@ class ParityClient(JSONRPCClient):
                 raise e
 
     def get_start_command(self, unlock_accounts=True):
-        return ['/usr/bin/env', 'parity', '--config', self.config, '--fast-unlock', '--jsonrpc-apis=all']
+        return ['/usr/bin/env', 'parity', '--config', self.logger.to_log_path(self.config), '--fast-unlock', '--jsonrpc-apis=all']
             
     def start(self, unlock_accounts=True):
         self._unlock_accounts = unlock_accounts
