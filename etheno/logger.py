@@ -190,6 +190,8 @@ class EthenoLogger(object):
 
     def make_constant_logged_file(self, contents, *args, **kwargs):
         '''Creates a logged file, populates it with the provided contents, and returns the absolute path to the file.'''
+        if isinstance(contents, str):
+            contents = contents.encode('utf-8')
         with self.make_logged_file(*args, **kwargs) as f:
             f.write(contents)
             return os.path.realpath(f.name)

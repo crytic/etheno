@@ -189,6 +189,14 @@ class EthenoPlugin(object):
         self._etheno = instance
         self.logger = logger.EthenoLogger(self.__class__.__name__, parent=self._etheno.logger)
 
+    @property
+    def log_directory(self):
+        '''Returns a log directory that this client can use to save additional files, or None if one is not available'''
+        if self.logger is None:
+            return None
+        else:
+            return self.logger.directory
+
     def added(self):
         '''
         A callback when this plugin is added to an Etheno instance
