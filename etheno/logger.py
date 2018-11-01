@@ -1,6 +1,7 @@
 import enum
 import logging
 import os
+import tempfile
 import threading
 import time
 
@@ -107,6 +108,7 @@ class EthenoLogger(object):
             parent._add_child(self)
         self._handlers[0].setFormatter(formatter)
         self._logger.addHandler(self._handlers[0])
+        self._tmpdir = None
         
     def close(self):
         for child in self.children:
@@ -125,6 +127,9 @@ class EthenoLogger(object):
                 for dirpath, dirnames, filenames in os.walk(self.directory, topdown=False):
                     if len(dirnames) == 0 and len(filenames) == 0 and dirpath != self.directory:
                         os.rmdir(dirpath)
+        if self._tmpdir is not None:
+            self._tmpdir.cleanup()
+            self._tmpdir = None
 
     @property
     def directory(self):
@@ -136,6 +141,9 @@ class EthenoLogger(object):
         self.children.append(child)
         if self.directory is not None:
             child.save_to_directory(os.path.join(self.directory, child.name))
+        else:
+            child._tmpdir = tempfile.TemporaryDirectory()
+            child.save_to_directory(child._tmpdir)
         parent = self
         while parent is not None:
             for handler in self._descendant_handlers:
@@ -161,6 +169,37 @@ class EthenoLogger(object):
                     child.addHandler(handler, include_descendants=include_descendants, set_log_level=set_log_level)
                 else:
                     child.addHandler(handler)
+
+    def make_logged_file(self, prefix=None, suffix=None, mode='w+b', dir=None):
+        '''Returns an opened file stream to a unique file created according to the provided naming scheme'''
+        if dir is None:
+            dir = ''
+        else:
+            dir = os.path.relpath(os.path.realpath(dir), start=os.path.realpath(self.directory))
+        os.makedirs(os.path.join(self.directory, dir), exist_ok=True)
+        i = 1
+        while True:
+            if i == 1:
+                filename = f"{prefix}{suffix}"
+            else:
+                filename = f"{prefix}{i}{suffix}"
+            path = os.path.join(self.directory, dir, filename)
+            if not os.path.exists(path):
+                return open(path, mode)
+            i += 1
+
+    def make_constant_logged_file(self, contents, *args, **kwargs):
+        '''Creates a logged file, populates it with the provided contents, and returns the absolute path to the file.'''
+        with self.make_logged_file(*args, **kwargs) as f:
+            f.write(contents)
+            return os.path.realpath(f.name)
+
+    def to_log_path(self, absolute_path):
+        if self.directory is None:
+            return absolute_path
+        absolute_path = os.path.realpath(absolute_path)
+        dirpath = os.path.realpath(self.directory)
+        return os.path.relpath(absolute_path, start=dirpath)
 
     def save_to_file(self, path, include_descendants=True, log_level=None):
         if log_level is None:
@@ -203,7 +242,7 @@ class EthenoLogger(object):
         self._log_level = level
         self._logger.setLevel(level)
         for handler in self._handlers:
-            handler.setLevel(level)        
+            handler.setLevel(level)
 
     def __getattr__(self, name):
         return getattr(self._logger, name)
