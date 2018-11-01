@@ -143,7 +143,7 @@ class EthenoLogger(object):
             child.save_to_directory(os.path.join(self.directory, child.name))
         else:
             child._tmpdir = tempfile.TemporaryDirectory()
-            child.save_to_directory(child._tmpdir)
+            child.save_to_directory(child._tmpdir.name)
         parent = self
         while parent is not None:
             for handler in self._descendant_handlers:
