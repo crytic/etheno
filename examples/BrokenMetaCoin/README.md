@@ -1,4 +1,4 @@
-#Broken MetaCoin Truffle and Manticore Example
+# Broken MetaCoin Truffle and Manticore Example
 
 This example is the same `MetaCoin` project used in the Truffle
 documentation and tutorials, however, we have added common Solidity
