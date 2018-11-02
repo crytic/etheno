@@ -24,5 +24,13 @@ setup(
         'console_scripts': [
             'etheno = etheno.__main__:main'
         ]
-    }
+    },
+    classifiers=[
+        'Development Status :: 4 - Beta',
+        'Environment :: Console',
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: GNU Affero General Public License v3',
+        'Topic :: Security',
+        'Topic :: Software Development :: Testing'
+    ]
 )
