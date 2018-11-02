@@ -5,7 +5,7 @@
 <br />
 
 
-Etheno is the Ethereum testing Swiss Army knife. It's a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools like [Manticore](https://github.com/trailofbits/manticore/) and [Echidna](https://github.com/trailofbits/echidna) on large, multi-contract projects. In particular, custom Manticore analysis scripts require less code, are simpler to write, and integrate with Truffle.
+Etheno is the Ethereum testing Swiss Army knife. It’s a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools like [Manticore](https://github.com/trailofbits/manticore/) and [Echidna](https://github.com/trailofbits/echidna) on large, multi-contract projects. In particular, custom Manticore analysis scripts require less code, are simpler to write, and integrate with Truffle.
 
 If you are a smart contract developer, you should use Echidna to test your contracts. If you are an Ethereum client developer, you should use Etheno to perform differential testing on your implementation. For example, Etheno is [capable of automatically reproducing](examples/ConstantinopleGasUsage) the Constantinople gas usage consensus bug that caused a fork on Ropsten.
 
@@ -67,7 +67,7 @@ This command starts a JSON RPC server and forwards all messages to the given cli
 etheno https://client1.url.com:1234/ https://client2.url.com:8545/ http://client3.url.com:8888/
 ```
 
-* `--port` or `-p` allows you to specify a port on which to run Etheno's JSON RPC server (default is 8545)
+* `--port` or `-p` allows you to specify a port on which to run Etheno’s JSON RPC server (default is 8545)
 * `--run-publicly` allows incoming JSON RPC connections from external computers on the network
 * `--debug` will run a web-based interactive debugger in the event that an internal Etheno client throws an exception while processing a JSON RPC call; this should _never_ be used in conjunction with `--run-publicly`
 * `--master` or `-s` will set the “master” client, which will be used for synchronizing with Etheno clients like Manticore. If a master is not explicitly provided, it defaults to the first client listed.
@@ -79,7 +79,7 @@ A Ganache instance can automatically be run within Etheno:
 etheno --ganache
 ```
 
-* `--ganache-port` will set the port on which Ganache is run; if omitted, Etheno will choose the lowest port higher than the port on which Etheno's JSON RPC server is running
+* `--ganache-port` will set the port on which Ganache is run; if omitted, Etheno will choose the lowest port higher than the port on which Etheno’s JSON RPC server is running
 * `--ganache-args` lets you pass additional arguments to Ganache
 * `--accounts` or `-a` sets the number of accounts to create in Ganache (default is 10)
 * `--balance` or `-b` sets the default balance (in Ether) to seed to each Ganache account (default is 100.0)
@@ -87,13 +87,13 @@ etheno --ganache
 
 ### Manticore Client
 
-Manticore—which, by itself, does not implemnent a JSON RPC interface—can be run as an Etheno client, synchronizing its accounts with Etheno's master client and symbolically executing all transactions sent to Etheno.
+Manticore—which, by itself, does not implemnent a JSON RPC interface—can be run as an Etheno client, synchronizing its accounts with Etheno’s master client and symbolically executing all transactions sent to Etheno.
 ```
 etheno --manticore
 ```
 This alone will not run any Manticore analyses; they must either be run manually, or automated through [the `--truffle` command](#truffle-integration);
 
-* `--manticore-verbosity` sets Manticore's logging verbosity (default is 3)
+* `--manticore-verbosity` sets Manticore’s logging verbosity (default is 3)
 * `--manticore-max-depth` sets the maximum state depth for Manticore to explore; if omitted, Manticore will have no depth limit
 
 ### Truffle Integration
@@ -103,7 +103,7 @@ Truffle migrations can automatically be run within a Truffle project:
 etheno --truffle
 ```
 
-When combined with the `--manticore` option, this will automatically run Manticore's default analyses on all contracts created once the Truffle migration completes:
+When combined with the `--manticore` option, this will automatically run Manticore’s default analyses on all contracts created once the Truffle migration completes:
 ```
 etheno --truffle --manticore
 ```
@@ -144,4 +144,4 @@ Documentation is available in several places:
 
 ## License
 
-Etheno is licensed and distributed under the [AGPLv3](LICENSE) license. [Contact us](mailto:opensource@trailofbits.com) if you're looking for an exception to the terms.
+Etheno is licensed and distributed under the [AGPLv3](LICENSE) license. [Contact us](mailto:opensource@trailofbits.com) if you’re looking for an exception to the terms.
