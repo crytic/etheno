@@ -174,8 +174,8 @@ saved:
 * [Truffle and Ganache](https://truffleframework.com/) for their associated integrations
 * [Geth](https://github.com/ethereum/go-ethereum) and/or [Parity](https://github.com/paritytech/parity-ethereum), if you would like to have Etheno run them
 * [Echidna](https://github.com/trailofbits/echidna), for smart contract fuzzing and differential testing
-** Note that Etheno currently requires the features in the [`dev-no-hedgehog` branch](https://github.com/trailofbits/echidna/tree/dev-no-hedgehog); Etheno will prompt you to automatically install this when you try and run it the first time
-** Running Echidna also requires the [`solc`](https://github.com/ethereum/solidity) compiler
+  * Note that Etheno currently requires the features in the [`dev-no-hedgehog` branch](https://github.com/trailofbits/echidna/tree/dev-no-hedgehog); Etheno will prompt you to automatically install this when you try and run it the first time
+  * Running Echidna also requires the [`solc`](https://github.com/ethereum/solidity) compiler
 
 ## Getting Help
 
