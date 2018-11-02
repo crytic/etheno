@@ -45,14 +45,10 @@ Alternatively, natively install Etheno in a few shell commands:
 # Install system dependencies
 sudo apt-get update && sudo apt-get install python3 python3-pip -y
 
-# Install Manticore
-# Note: This will not work until Manticore 0.2.3 is released
-# pip3 install manticore --user
-
 # Clone and install Etheno
 git clone https://github.com/trailofbits/etheno.git
 cd etheno
-pip3 install -e '.'
+pip3 install .
 
 # Use the Etheno CLI
 cd /path/to/a/truffle/project
@@ -126,9 +122,15 @@ Additional arguments can be passed to Truffle using `--truffle-args`.
 ## Requirements
 
 * Python 3.6 or newer
-* [Manticore](https://github.com/trailofbits/manticore/) (Note: Use the docker image or wait for Manticore 0.2.3)
+* [Manticore](https://github.com/trailofbits/manticore/) release 0.2.2 or newer
 * [Flask](http://flask.pocoo.org/), which is used to run the JSON RPC server
+
+### Optional Requirements
 * [Truffle and Ganache](https://truffleframework.com/) for their associated integrations
+* [Geth](https://github.com/ethereum/go-ethereum) and/or [Parity](https://github.com/paritytech/parity-ethereum), if you would like to have Etheno run them
+* [Echidna](https://github.com/trailofbits/echidna), for smart contract fuzzing and differential testing
+** Note that Etheno currently requires the features in the [`dev-no-hedgehog` branch](https://github.com/trailofbits/echidna/tree/dev-no-hedgehog); Etheno will prompt you to automatically install this when you try and run it the first time
+** Running Echidna also requires the [`solc`](https://github.com/ethereum/solidity) compiler
 
 ## Getting Help
 
