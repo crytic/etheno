@@ -43,14 +43,10 @@ Alternatively, natively install Etheno in a few shell commands:
 # Install system dependencies
 sudo apt-get update && sudo apt-get install python3 python3-pip -y
 
-# Install Manticore
-# Note: This will not work until Manticore 0.2.3 is released
-# pip3 install manticore --user
-
 # Clone and install Etheno
 git clone https://github.com/trailofbits/etheno.git
 cd etheno
-pip3 install -e '.'
+pip3 install .
 
 # Use the Etheno CLI
 cd /path/to/a/truffle/project
