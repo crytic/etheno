@@ -20,7 +20,7 @@ First formal release of Etheno.
 - Improved automated testing
     - Automated differential testing that reports differences between clients
     - Integration with the [Echidna](https://github.com/trailofbits/echidna) EVM fuzzer
-- Improved extensibility and user friendliness 
+- Improved extensibility and user friendliness
     - Client and Plugin API
     - Logging framework with ANSI color on the terminal
     - Optional log directory with client- and plugin-specific log files, including auto-generated scripts to re-run the clients
