@@ -10,7 +10,7 @@ setup(
     packages=find_packages(),
     python_requires='>=3.6',
     install_requires=[
-        'manticore', # TODO: specify a specific manticore version once https://github.com/trailofbits/manticore/pull/1054 makes it into a release
+        'manticore>=0.2.2',
         'ptyprocess',
         'pysha3>=1.0.2',
         'flask>=1.0.2',
