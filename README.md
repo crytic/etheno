@@ -152,6 +152,20 @@ This script does not need to import Manticore or create a `ManticoreEVM` object;
 
 Additional arguments can be passed to Truffle using `--truffle-args`.
 
+### Logging
+
+By default, Etheno only prints log messages to the console with a log
+level defaulting to `INFO`. An alternative log level can be specified
+with `--log-level` or `-l`.  You can specify a log file with the
+`--log-file` option. In addition, you can provide the path to a
+logging directory with `--log-dir` in which the following will be
+saved:
+* a complete log file including log messages at all log levels;
+* separate log files for each Etheno client and plugin;
+* the genesis file used to instantiate clients;
+* a subdirectory in which each client and plugin can store additional files such as test results;
+* a script to re-run Geth and/or Parity using the same genesis and chain data that Etheno used.
+
 ## Requirements
 
 * Python 3.6 or newer
