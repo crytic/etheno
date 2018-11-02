@@ -8,7 +8,7 @@ import sys
 from .client import RpcProxyClient
 from .differentials import DifferentialTester
 from .echidna import echidna_exists, EchidnaPlugin, install_echidna
-from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO
+from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO, VERSION_NAME
 from .genesis import Account, make_accounts, make_genesis
 from .synchronization import AddressSynchronizingClient, RawTransactionClient
 from .utils import clear_directory, decode_value, find_open_port, format_hex_address, ynprompt
