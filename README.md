@@ -5,9 +5,11 @@
 <br />
 
 
-Etheno is a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools on large, multi-contract projects, like [Manticore](https://github.com/trailofbits/manticore/). In particular, custom Manticore analysis scripts require less code, are simpler to write, and integrate with Truffle.
+Etheno is the Ethereum testing swiss army knife. It's a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools like [Manticore](https://github.com/trailofbits/manticore/) and [Echidna](https://github.com/trailofbits/echidna) on large, multi-contract projects. In particular, custom Manticore analysis scripts require less code, are simpler to write, and integrate with Truffle.
 
-It is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Stheno), sister of Medusa, and mother of Echidna—which also happens to be the name of [our EVM property-based fuzz tester](https://github.com/trailofbits/echidna).
+If you are a smart contract developer, you should use Echidna to test your contracts. If you are an Ethereum client developer, you should use Etheno to perform differential testing on your implementation. For example, Etheno is [capable of automatically reproducing](examples/ConstantinopleGasUsage) the Constantinople gas usage consensus bug that caused a fork on Ropsten.
+
+Etheno is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Stheno), sister of Medusa, and mother of Echidna—which also happens to be the name of [our EVM property-based fuzz tester](https://github.com/trailofbits/echidna).
 
 ## Features
 
