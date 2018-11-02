@@ -107,6 +107,17 @@ usage differences. A report is printed when Etheno exits.
 
 This plugin can be disabled with the `--no-differential-testing` option.
 
+### Property-Based Fuzz Testing
+
+Echidna can be run to fuzz test the clients, which is useful for differential testing:
+```
+etheno --echidna
+```
+By default, Echidna deploys a generic fuzz testing contract to all clients, enumerates a minimal set of transactions that maximize the coverage of the contract, sends those transactions to the clients, and then exits.
+
+* `--fuzz-limit` limits the number of transactions that Echidna will emit
+* `--fuzz-contract` lets the user specify a custom contract for Echidna to deploy and fuzz
+
 ### Manticore Client
 
 Manticore—which, by itself, does not implemnent a JSON RPC interface—can be run as an Etheno client, synchronizing its accounts with Etheno’s master client and symbolically executing all transactions sent to Etheno.
