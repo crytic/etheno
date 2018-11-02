@@ -45,10 +45,8 @@ Alternatively, natively install Etheno in a few shell commands:
 # Install system dependencies
 sudo apt-get update && sudo apt-get install python3 python3-pip -y
 
-# Clone and install Etheno
-git clone https://github.com/trailofbits/etheno.git
-cd etheno
-pip3 install .
+# Install Etheno
+pip3 install --user etheno
 
 # Use the Etheno CLI
 cd /path/to/a/truffle/project
