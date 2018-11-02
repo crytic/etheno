@@ -98,6 +98,15 @@ etheno --ganache
 * `--balance` or `-b` sets the default balance (in Ether) to seed to each Ganache account (default is 100.0)
 * `--gas-price` or `-c` sets the default gas price for Ganache (default is 20000000000)
 
+### Differential Testing
+
+Whenever two or more clients are run within Etheno, the differential
+testing plugin will automatically be loaded. This plugin checks for a
+variety of different discrepancies between the clients, such as gas
+usage differences. A report is printed when Etheno exits.
+
+This plugin can be disabled with the `--no-differential-testing` option.
+
 ### Manticore Client
 
 Manticore—which, by itself, does not implemnent a JSON RPC interface—can be run as an Etheno client, synchronizing its accounts with Etheno’s master client and symbolically executing all transactions sent to Etheno.
