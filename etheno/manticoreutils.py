@@ -1,8 +1,25 @@
 import inspect
+import itertools
+import pkg_resources
 
 from manticore.core.smtlib.operators import AND
 from manticore.ethereum import ManticoreEVM, Detector
 import manticore.ethereum.detectors
+
+def manticore_version():
+    return pkg_resources.get_distribution('manticore').version
+
+def manticore_is_new_enough():
+    '''Checks if Manticore is newer than version 0.2.2. Returns True or False if known, or None if uncertain.'''
+    try:
+        version = manticore_version()
+        version = map(int, version.split('.'))
+        for v, required in itertools.zip_longest(version, (0, 2, 2), fillvalue=0):
+            if v < required:
+                return False
+    except Exception as e:
+        return None
+    return True
 
 def get_detectors():
     for name, obj in inspect.getmembers(manticore.ethereum.detectors):

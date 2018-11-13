@@ -18,6 +18,7 @@ setup(
         # but they should already be satisfied by the `web3` requirement
         'cytoolz>=0.9.0,<1.0.0',
         'pycryptodome>=3.4.7,<4.0.0',
+        'setuptools'
     ],
     extras_require={
         'manticore': ['manticore>=0.2.2']
