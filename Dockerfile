@@ -53,7 +53,7 @@ COPY etheno/*.py /home/etheno/etheno/etheno/
 RUN mkdir -p /home/etheno/examples
 COPY examples /home/etheno/examples/
 
-RUN cd etheno && pip3 install --user .
+RUN cd etheno && pip3 install --user '.[manticore]'
 
 USER root
 
