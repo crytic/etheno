@@ -2,7 +2,11 @@
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased](https://github.com/trailofbits/manticore/compare/0.2.2...HEAD)
+## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.2.0...HEAD)
+
+### Changed
+
+- Manticore is now an optional requirement
 
 ## 0.2.0 — 2018-11-02
 
