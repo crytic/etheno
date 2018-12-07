@@ -1,4 +1,6 @@
 # Etheno
+[![Slack Status](https://empireslacking.herokuapp.com/badge.svg)](https://empireslacking.herokuapp.com)
+[![PyPI version](https://badge.fury.io/py/etheno.svg)](https://badge.fury.io/py/etheno)
 <p align="center">
   <img src="logo/etheno.png?raw=true" width="256" title="Etheno">
 </p>
