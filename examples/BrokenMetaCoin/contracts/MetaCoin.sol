@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.5.0;
 
 import "./ConvertLib.sol";
 
@@ -26,7 +26,7 @@ contract MetaCoin {
                  return metadata[key];
         }
 
-        function backdoor() {
+        function backdoor() public {
                  selfdestruct(msg.sender);
         }
 
