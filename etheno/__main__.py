@@ -257,7 +257,6 @@ def main(argv = None):
         if args.manticore_max_depth is not None:
             manticore_client.manticore.register_detector(manticoreutils.StopAtDepth(args.manticore_max_depth))
         manticore_client.manticore.verbosity(getattr(logger, args.log_level))
-        manticore_client.reassign_manticore_loggers()
 
     if args.truffle:
         truffle_controller = truffle.Truffle(parent_logger=ETHENO.logger)

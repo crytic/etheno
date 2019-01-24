@@ -48,6 +48,7 @@ class ManticoreClient(EthenoClient):
         for balance, address in self._accounts_to_create:
             self._manticore.create_account(balance=balance, address=address)
         self._accounts_to_create = []
+        self.reassign_manticore_loggers()
         self.logger.cleanup_empty = True
 
     def create_account(self, balance, address):            
@@ -57,6 +58,8 @@ class ManticoreClient(EthenoClient):
     def reassign_manticore_loggers(self):
         # Manticore uses a global to track its loggers:
         for name in manticore.utils.log.all_loggers:
+            if not name.startswith('manticore'):
+                continue
             manticore_logger = logging.getLogger(name)
             for handler in list(manticore_logger.handlers):
                 manticore_logger.removeHandler(handler)
