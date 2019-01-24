@@ -25,17 +25,6 @@ def to_account_address(raw_address):
     addr = "%x" % raw_address
     return "0x%s%s" % ('0'*(40 - len(addr)), addr)
 
-def encode_hex(data):
-    if data is None:
-        return None
-    elif isinstance(data, int) or isinstance(data, long):
-        encoded = hex(data)
-        if encoded[-1] == 'L':
-            encoded = encoded[:-1]
-        return encoded
-    else:
-        return "0x%s" % data.encode('hex')
-
 _CONTROLLER = threadwrapper.MainThreadController()
 
 @app.route('/shutdown')
