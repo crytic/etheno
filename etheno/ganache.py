@@ -13,9 +13,8 @@ class Ganache(RpcHttpProxy):
         super().__init__("http://127.0.0.1:%d/" % port)
         self.port = port
         if args is None:
-            self.args = []
-        else:
-            self.args = ['/usr/bin/env', 'ganache-cli', '-d', '-p', str(port)] + args
+            args = []
+        self.args = ['/usr/bin/env', 'ganache-cli', '-d', '-p', str(port)] + args
         self.ganache = None
         self._client = None
     def start(self):
