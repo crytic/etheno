@@ -342,6 +342,7 @@ class Etheno(object):
                         kwargs['rpc_client_result'] = ret
                         results.append(function(*args, **kwargs))
                     else:
+                        self.logger.warn(f"Function {method} of {client} is None!")
                         results.append(None)
                 elif isinstance(client, SelfPostingClient):
                     if method == 'eth_getTransactionReceipt':
