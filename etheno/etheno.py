@@ -303,7 +303,6 @@ class Etheno(object):
             plugin.before_post(data)
 
         method = data['method']
-        
         args = ()
         kwargs = {}
         if 'params' in data:
@@ -316,12 +315,15 @@ class Etheno(object):
                     del kwargs['from']
             else:
                 args = data['params']
+
         if self.master_client is None:
             ret = None
         else:
             if method == 'eth_getTransactionReceipt':
                 # for eth_getTransactionReceipt, make sure we block until all clients have mined the transaction
                 ret = self.master_client.wait_for_transaction(data['params'][0])
+                if 'id' in data and 'id' in ret:
+                    ret['id'] = data['id']
             else:
                 try:
                     ret = self.master_client.post(data)
