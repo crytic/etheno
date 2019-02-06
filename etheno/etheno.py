@@ -165,6 +165,8 @@ class Etheno(object):
         return None
             
     def post(self, data):
+        self.logger.debug(f"Handling JSON RPC request {data}")
+
         for plugin in self.plugins:
             plugin.before_post(data)
 
@@ -198,6 +200,7 @@ class Etheno(object):
                     ret = e
     
         self.rpc_client_result = ret
+        self.logger.debug(f"Result from the master client ({self.master_client}): {ret}")
 
         results = []
 
@@ -223,6 +226,7 @@ class Etheno(object):
             except JSONRPCError as e:
                 self.logger.error(e)
                 results.append(e)
+            self.logger.debug(f"Result from client {client}: {results[-1]}")
 
         if ret is None:
             return None
@@ -352,6 +356,8 @@ class EthenoView(MethodView):
             ETHENO.logger.warn("Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
 
         ret = ETHENO.post(data)
+
+        ETHENO.logger.debug(f"Returning {ret}")
 
         if ret is None:
             return None
