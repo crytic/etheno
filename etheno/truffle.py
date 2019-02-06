@@ -19,7 +19,7 @@ class Truffle(object):
 
     def run(self, args):
         self._running = True
-        if isinstance(args, Sequence):
+        if isinstance(args, Sequence) and not isinstance(args, str) and not isinstance(args, bytes):
             if not isinstance(args, list):
                 args = list(args)
         else:

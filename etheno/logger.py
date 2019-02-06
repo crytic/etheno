@@ -140,7 +140,7 @@ class EthenoLogger(object):
             raise ValueError("Cannot double-add child logger %s to logger %s" % (child.name, self.name))
         self.children.append(child)
         if self.directory is not None:
-            child.save_to_directory(os.path.join(self.directory, child.name))
+            child.save_to_directory(os.path.join(self.directory, child.name.replace(os.sep, '-')))
         else:
             child._tmpdir = tempfile.TemporaryDirectory()
             child.save_to_directory(child._tmpdir.name)
@@ -219,7 +219,7 @@ class EthenoLogger(object):
             raise ValueError("Logger %s's save directory is already set to %s" % (self.name, path))
         self._directory = os.path.realpath(path)
         os.makedirs(path, exist_ok=True)
-        self.save_to_file(os.path.join(path, "%s.log" % self.name), include_descendants=False, log_level=DEBUG)
+        self.save_to_file(os.path.join(path, "%s.log" % self.name.replace(os.sep, '-')), include_descendants=False, log_level=DEBUG)
         for child in self.children:
             child.save_to_directory(os.path.join(path, child.name))
 
