@@ -1,6 +1,34 @@
 import logging
 import time
 
+import builtins
+import sys
+
+# ####BEGIN####
+# Horrible hack to workaround Manticore's global logging system.
+# This can be removed after https://github.com/trailofbits/manticore/issues/1369
+# is resolved.
+from . import manticorelogger
+
+oldimport = builtins.__import__
+def manticoreimport(name, *args, **kwargs):
+    if name == 'manticore.utils.log':
+        manticorelogger.__name__ = 'manticore.utils.log'
+        sys.modules[name] = manticorelogger
+        return manticorelogger
+    else:
+        return oldimport(name, *args, **kwargs)
+
+builtins.__import__ = manticoreimport
+try:
+    import manticore.utils.log
+    import manticore.utils
+finally:
+    builtins.__import__ = oldimport
+
+manticore.utils.log = manticorelogger
+# ####END####
+
 from manticore.ethereum import ManticoreEVM
 import manticore
 
@@ -57,13 +85,21 @@ class ManticoreClient(EthenoClient):
 
     def reassign_manticore_loggers(self):
         # Manticore uses a global to track its loggers:
-        for name in manticore.utils.log.all_loggers:
-            if not name.startswith('manticore'):
-                continue
-            manticore_logger = logging.getLogger(name)
-            for handler in list(manticore_logger.handlers):
-                manticore_logger.removeHandler(handler)
-            logger.EthenoLogger(name, parent=self.logger, cleanup_empty=True)
+        manticore.utils.log.ETHENO_LOGGER = self.logger
+        manticore_loggers = (name for name in logging.root.manager.loggerDict if name.startswith('manticore'))
+        logger_parents = {}
+        for name in sorted(manticore_loggers):
+            sep = name.rfind('.')
+            if sep > 0:
+                path = name[:sep]
+                parent = logger_parents[path]
+                displayname = name[len(path)+1:]
+            else:
+                parent = self.logger
+                displayname = name
+            m_logger = logger.EthenoLogger(name, parent=parent, cleanup_empty=True, displayname=displayname)
+            m_logger.propagate = False
+            logger_parents[name] = m_logger
 
     @jsonrpc(from_addr = QUANTITY, to = QUANTITY, gas = QUANTITY, gasPrice = QUANTITY, value = QUANTITY, data = DATA, nonce = QUANTITY, RETURN = DATA)
     def eth_sendTransaction(self, from_addr, to = None, gas = 90000, gasPrice = None, value = 0, data = None, nonce = None, rpc_client_result = None):
