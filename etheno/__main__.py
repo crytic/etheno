@@ -20,8 +20,8 @@ from . import parity
 from . import truffle
 
 try:
-    from . import manticoreutils
     from .manticoreclient import ManticoreClient
+    from . import manticoreutils
     MANTICORE_INSTALLED = True
 except ModuleNotFoundError:
     MANTICORE_INSTALLED = False
