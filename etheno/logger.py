@@ -83,21 +83,47 @@ class NonInfoFormatter(ComposableFormatter):
         else:
             return self._parent_formatter.format(*args, **kwargs)
 
+ETHENO_LOGGERS = {}
+
+_LOGGING_GETLOGGER = logging.getLogger
+def getLogger(name):
+    if name in ETHENO_LOGGERS:
+        # TODO: Only enable this if Etheno was run as a standalone application
+        ret = ETHENO_LOGGERS[name]
+    else:
+        ret = _LOGGING_GETLOGGER(name)
+    # ####BEGIN####
+    # Horrible hack to workaround Manticore's global logging system.
+    # This can be removed after https://github.com/trailofbits/manticore/issues/1369
+    # is resolved.
+    if name.startswith('manticore'):
+        ret.propagate = False
+    # ####END####
+    return ret
+logging.getLogger = getLogger
+
 class EthenoLogger(object):
     DEFAULT_FORMAT='$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD]$NAME$RESET %(message)s'
     
-    def __init__(self, name, log_level=None, parent=None, cleanup_empty=False):
+    def __init__(self, name, log_level=None, parent=None, cleanup_empty=False, displayname=None):
+        if name in ETHENO_LOGGERS:
+            raise Exception(f'An EthenoLogger instance for name {name} already exists: {ETHENO_LOGGERS[name]}')
+        ETHENO_LOGGERS[name] = self
         self._directory = None
         self.parent = parent
         self.cleanup_empty = cleanup_empty
         self.children = []
         self._descendant_handlers = []
+        if displayname is None:
+            self.displayname = name
+        else:
+            self.displayname = displayname
         if log_level is None:
             if parent is None:
                 raise ValueError('A logger must be provided a parent if `log_level` is None')
             log_level = parent.log_level
         self._log_level = log_level
-        self._logger = logging.getLogger(name)
+        self._logger = _LOGGING_GETLOGGER(name)
         self._handlers = [logging.StreamHandler()]
         if log_level is not None:
             self.log_level = log_level
@@ -136,7 +162,7 @@ class EthenoLogger(object):
         return self._directory
 
     def _add_child(self, child):
-        if child in self.children:
+        if child in self.children or any(c for c in self.children if c.name == child.name):
             raise ValueError("Cannot double-add child logger %s to logger %s" % (child.name, self.name))
         self.children.append(child)
         if self.directory is not None:
@@ -155,7 +181,7 @@ class EthenoLogger(object):
             ret = self.parent._name_format()
         else:
             ret = ''
-        return ret + "[$RESET$WHITE%s$BLUE$BOLD]" % self._logger.name
+        return ret + "[$RESET$WHITE%s$BLUE$BOLD]" % self.displayname
 
     def addHandler(self, handler, include_descendants=True, set_log_level=True):
         if set_log_level:
@@ -249,6 +275,10 @@ class EthenoLogger(object):
     def __getattr__(self, name):
         return getattr(self._logger, name)
 
+    def __repr__(self):
+        return f'{type(self).__name__}(name={self.name!r}, log_level={self.log_level!r}, parent={self.parent!r}, cleanup_empty={self.cleanup_empty!r}, displayname={self.displayname!r})'
+
+    
 class StreamLogger(threading.Thread):
     def __init__(self, logger, *streams, newline_char=b'\n'):
         super().__init__(daemon=True)
