@@ -2,6 +2,11 @@ import inspect
 import itertools
 import pkg_resources
 
+# Import manticoreclient before we load any actual Manticore classes.
+# We don't need it here, but we do rely on it to hook in the Manticore loggers:
+from . import manticoreclient
+del manticoreclient
+
 from manticore.core.smtlib.operators import AND
 from manticore.ethereum import ManticoreEVM, Detector
 import manticore.ethereum.detectors
