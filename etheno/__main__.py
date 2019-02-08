@@ -8,7 +8,7 @@ import sys
 from .client import RpcProxyClient
 from .differentials import DifferentialTester
 from .echidna import echidna_exists, EchidnaPlugin, install_echidna
-from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ManticoreClient, ETHENO, VERSION_NAME
+from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ETHENO, VERSION_NAME
 from .genesis import Account, make_accounts, make_genesis
 from .synchronization import AddressSynchronizingClient, RawTransactionClient
 from .utils import clear_directory, decode_value, find_open_port, format_hex_address, ynprompt
@@ -16,9 +16,15 @@ from . import Etheno
 from . import ganache
 from . import geth
 from . import logger
-from . import manticoreutils
 from . import parity
 from . import truffle
+
+try:
+    from .manticoreclient import ManticoreClient
+    from . import manticoreutils
+    MANTICORE_INSTALLED = True
+except ModuleNotFoundError:
+    MANTICORE_INSTALLED = False
 
 def main(argv = None):
     parser = argparse.ArgumentParser(description='An Ethereum JSON RPC multiplexer and Manticore wrapper')
@@ -238,12 +244,19 @@ def main(argv = None):
 
     manticore_client = None
     if args.manticore:
+        if not MANTICORE_INSTALLED:
+            ETHENO.logger.error('Manticore is not installed! Running Etheno with Manticore requires Manticore version 0.2.2 or newer. Reinstall Etheno with Manticore support by running `pip3 install --user \'etheno[manticore]\'`, or install Manticore separately with `pip3 install --user \'manticore\'`')
+            sys.exit(1)
+        new_enough = manticoreutils.manticore_is_new_enough()
+        if new_enough is None:
+            ETHENO.logger.warning(f"Unknown Manticore version {manticoreutils.manticore_version()}; it may not be new enough to have Etheno support!")
+        elif not new_enough:
+            ETHENO.logger.error(f"The version of Manticore installed is {manticoreutils.manticore_version()}, but the minimum required version with Etheno support is 0.2.2. We will try to proceed, but things might not work correctly! Please upgrade Manticore.")
         manticore_client = ManticoreClient()
         ETHENO.add_client(manticore_client)
         if args.manticore_max_depth is not None:
             manticore_client.manticore.register_detector(manticoreutils.StopAtDepth(args.manticore_max_depth))
         manticore_client.manticore.verbosity(getattr(logger, args.log_level))
-        manticore_client.reassign_manticore_loggers()
 
     if args.truffle:
         truffle_controller = truffle.Truffle(parent_logger=ETHENO.logger)
