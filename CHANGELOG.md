@@ -4,9 +4,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
 ## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.2.0...HEAD)
 
-### Changed
+### 0.2.1 — 2019-02-07
+
+Bugfix release.
 
 - Manticore is now an optional requirement
+- Improvements and bugfixes to the logger integration with Manticore
+- Added a workaround to the examples for a bug in Truffle
 
 ## 0.2.0 — 2018-11-02
 
