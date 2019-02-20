@@ -1,12 +1,28 @@
 from collections.abc import Sequence
 import time
 
+from typing import Iterable
+
 from .logger import EthenoLogger, PtyLogger
 
+
+def make_list(args: Iterable):
+    if isinstance(args, str):
+        return args.split()
+    elif isinstance(args, Sequence) and not isinstance(args, bytes):
+        if isinstance(args, list):
+            return args
+        else:
+            return list(args)
+    else:
+        return [args]
+
+
 class Truffle(object):
-    def __init__(self, parent_logger=None, log_level=None):
+    def __init__(self, truffle_cmd='truffle', parent_logger=None, log_level=None):
         self._running = False
         self.logger = EthenoLogger('Truffle', log_level=log_level, parent=parent_logger)
+        self.truffle_cmd = make_list(truffle_cmd)
 
     def terminate(self):
         self._running = False
@@ -19,13 +35,9 @@ class Truffle(object):
 
     def run(self, args):
         self._running = True
-        if isinstance(args, Sequence) and not isinstance(args, str) and not isinstance(args, bytes):
-            if not isinstance(args, list):
-                args = list(args)
-        else:
-            args = [args]
+        args = make_list(args)
 
-        p = PtyLogger(self.logger, ['/usr/bin/env', 'truffle'] + args)
+        p = PtyLogger(self.logger, ['/usr/bin/env'] + self.truffle_cmd + args)
         p.start()
 
         try:

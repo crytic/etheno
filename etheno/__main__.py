@@ -42,6 +42,7 @@ def main(argv = None):
     parser.add_argument('--fuzz-limit', type=int, default=None, help='The maximum number of transactions for Echidna to generate (default=unlimited)')
     parser.add_argument('--fuzz-contract', type=str, default=None, help='Path to a Solidity contract to have Echidna use for fuzzing (default is to use a builtin generic Echidna fuzzing contract)')
     parser.add_argument('-t', '--truffle', action='store_true', default=False, help='Run the truffle migrations in the current directory and exit')
+    parser.add_argument('--truffle-cmd', type=str, default='truffle', help='Command to run truffle (default=truffle)')
     parser.add_argument('--truffle-args', type=str, default='migrate', help='Arguments to pass to truffle (default=migrate)')
     parser.add_argument('-g', '--ganache', action='store_true', default=False, help='Run Ganache as a master JSON RPC client (cannot be used in conjunction with --master)')
     parser.add_argument('--ganache-args', type=str, default=None, help='Additional arguments to pass to Ganache')
@@ -259,7 +260,8 @@ def main(argv = None):
         manticore_client.manticore.verbosity(getattr(logger, args.log_level))
 
     if args.truffle:
-        truffle_controller = truffle.Truffle(parent_logger=ETHENO.logger)
+        truffle_controller = truffle.Truffle(truffle_cmd=args.truffle_cmd, parent_logger=ETHENO.logger)
+
         def truffle_thread():
             if ETHENO.master_client:
                 ETHENO.master_client.wait_until_running()
