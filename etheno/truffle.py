@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import shlex
 import time
 
 from typing import Iterable
@@ -8,7 +9,7 @@ from .logger import EthenoLogger, PtyLogger
 
 def make_list(args: Iterable):
     if isinstance(args, str):
-        return args.split()
+        return shlex.split(args)
     elif isinstance(args, Sequence) and not isinstance(args, bytes):
         if isinstance(args, list):
             return args
