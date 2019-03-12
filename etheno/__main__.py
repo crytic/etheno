@@ -1,9 +1,10 @@
 import argparse
 import json
 import os
+import shlex
+import sys
 from threading import Thread
 import time
-import sys
 
 from .client import RpcProxyClient
 from .differentials import DifferentialTester
@@ -167,7 +168,12 @@ def main(argv = None):
 
         ganache_accounts = ["--account=%s,0x%x" % (acct.private_key, acct.balance) for acct in accounts]
 
-        ganache_instance = ganache.Ganache(args = ganache_accounts + ['-g', str(args.gas_price), '-i', str(args.network_id)], port=args.ganache_port)
+        ganache_args = ganache_accounts + ['-g', str(args.gas_price), '-i', str(args.network_id)]
+
+        if args.ganache_args is not None:
+            ganache_args += shlex.split(args.ganache_args)
+
+        ganache_instance = ganache.Ganache(args=ganache_args, port=args.ganache_port)
 
         ETHENO.master_client = ganache.GanacheClient(ganache_instance)
 
