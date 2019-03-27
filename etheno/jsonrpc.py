@@ -2,6 +2,7 @@ import json
 from typing import Dict, TextIO, Union
 
 from .etheno import EthenoPlugin
+from .utils import format_hex_address
 
 class JSONExporter:
     def __init__(self, out_stream: Union[str, TextIO]):
@@ -92,6 +93,14 @@ class EventSummaryExportPlugin(EventSummaryPlugin):
     def __init__(self, out_stream: Union[str, TextIO]):
         super().__init__()
         self._exporter = JSONExporter(out_stream)
+
+    def run(self):
+        for address in self.etheno.accounts:
+            self._exporter.write_entry({
+                'event' : 'AccountCreated',
+                'address' : format_hex_address(address)
+            })
+        super().run()
 
     def handle_contract_created(self, creator_address: str, contract_address: str, gas_used: str, gas_price: str, data: str, value: str):
         self._exporter.write_entry({
