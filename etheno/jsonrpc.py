@@ -40,8 +40,8 @@ class JSONRPCExportPlugin(EthenoPlugin):
     def __init__(self, out_stream: Union[str, TextIO]):
         self._exporter = JSONExporter(out_stream)
     
-    def before_post(self, post_data):
-        self._exporter.write_entry(post_data)
+    def after_post(self, post_data, client_results):
+        self._exporter.write_entry([post_data, client_results])
 
     def finalize(self):
         self._exporter.finalize()
