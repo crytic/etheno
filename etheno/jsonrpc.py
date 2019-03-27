@@ -13,12 +13,12 @@ class JSONRPCExportPlugin(EthenoPlugin):
         self._output.write('[')
         self._count = 0
 
-    def before_post(self, post_data):
+    def after_post(self, post_data, client_results):
         if self._count > 0:
             self._output.write(',')
         self._count += 1
         self._output.write('\n')
-        json.dump(post_data, self._output)
+        json.dump([post_data, client_results], self._output)
         self._output.flush()
 
     def finalize(self):
