@@ -11,7 +11,7 @@ from .differentials import DifferentialTester
 from .echidna import echidna_exists, EchidnaPlugin, install_echidna
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ETHENO, VERSION_NAME
 from .genesis import Account, make_accounts, make_genesis
-from .jsonrpc import JSONRPCExportPlugin
+from .jsonrpc import EventSummaryExportPlugin, JSONRPCExportPlugin
 from .synchronization import AddressSynchronizingClient, RawTransactionClient
 from .utils import clear_directory, decode_value, find_open_port, format_hex_address, ynprompt
 from . import Etheno
@@ -62,6 +62,7 @@ def main(argv = None):
     parser.add_argument('--log-file', type=str, default=None, help='Path to save all log output to a single file')
     parser.add_argument('--log-dir', type=str, default=None, help='Path to a directory in which to save all log output, divided by logging source')
     parser.add_argument('-d', '--dump-jsonrpc', type=str, default=None, help='Path to a JSON file in which to dump all raw JSON RPC calls; if `--log-dir` is provided, the raw JSON RPC calls will additionally be dumped to `rpc.json` in the log directory.')
+    parser.add_argument('-x', '--export-summary', type=str, default=None, help='Path to a JSON file in which to export an event summary')
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
     parser.add_argument('client', type=str, nargs='*', help='JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
     parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
@@ -110,6 +111,9 @@ def main(argv = None):
 
     if args.dump_jsonrpc is not None:
         ETHENO.add_plugin(JSONRPCExportPlugin(args.dump_jsonrpc))
+
+    if args.export_summary is not None:
+        ETHENO.add_plugin(EventSummaryExportPlugin(args.export_summary))
 
     # First, see if we need to install Echidna:
     if args.echidna:
