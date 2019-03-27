@@ -53,8 +53,11 @@ class EventSummaryPlugin(EthenoPlugin):
     def __init__(self):
         self._transactions: Dict[int, Dict[str, object]] = {} # Maps transaction hashes to their eth_sendTransaction arguments
 
-    def handle_contract_created(self, creator_address: str, contract_address: str, gas_used: str, gas_price: str, data: str):
+    def handle_contract_created(self, creator_address: str, contract_address: str, gas_used: str, gas_price: str, data: str, value: str):
         self.logger.info(f'Contract created at {contract_address} with {(len(data)-2)//2} bytes of data by account {creator_address} for {gas_used} gas with a gas price of {gas_price}')
+
+    def handle_function_call(self, from_address: str, to_address: str, gas_used: str, gas_price: str, data: str, value: str):
+        self.logger.info(f'Function call with {value} wei from {from_address} to {to_address} with {(len(data)-2)//2} bytes of data for {gas_used} gas with a gas price of {gas_price}')
 
     def after_post(self, post_data, result):
         if len(result):
@@ -72,11 +75,17 @@ class EventSummaryPlugin(EthenoPlugin):
             if transaction_hash not in self._transactions:
                 self.logger.error(f'Received transaction receipt {result} for unknown transaction hash {post_data["params"][0]}')
                 return
+            original_transaction = self._transactions[transaction_hash]['params'][0]
+            if 'value' not in original_transaction or original_transaction['value'] is None:
+                value = '0x0'
+            else:
+                value = original_transaction['value']
             if 'to' not in result['result'] or result['result']['to'] is None:
                 # this transaction is creating a contract:
                 contract_address = result['result']['contractAddress']
-                original_transaction = self._transactions[transaction_hash]['params'][0]
-                self.handle_contract_created(original_transaction['from'], contract_address, result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'])
+                self.handle_contract_created(original_transaction['from'], contract_address, result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'], value)
+            else:
+                self.handle_function_call(original_transaction['from'], original_transaction['to'], result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'], value)
 
 
 class EventSummaryExportPlugin(EventSummaryPlugin):
@@ -84,16 +93,29 @@ class EventSummaryExportPlugin(EventSummaryPlugin):
         super().__init__()
         self._exporter = JSONExporter(out_stream)
 
-    def handle_contract_created(self, creator_address: str, contract_address: str, gas_used: str, gas_price: str, data: str):
+    def handle_contract_created(self, creator_address: str, contract_address: str, gas_used: str, gas_price: str, data: str, value: str):
         self._exporter.write_entry({
             'event' : 'ContractCreated',
             'from' : creator_address,
             'contract_address' : contract_address,
             'gas_used' : gas_used,
             'gas_price' : gas_price,
-            'data' : data
+            'data' : data,
+            'value' : value
         })
-        super().handle_contract_created(creator_address, contract_address, gas_used, gas_price, data)
+        super().handle_contract_created(creator_address, contract_address, gas_used, gas_price, data, value)
+
+    def handle_function_call(self, from_address: str, to_address: str, gas_used: str, gas_price: str, data: str, value: str):
+        self._exporter.write_entry({
+            'event' : 'FunctionCall',
+            'from' : from_address,
+            'to' : to_address,
+            'gas_used' : gas_used,
+            'gas_price' : gas_price,
+            'data' : data,
+            'value' : value
+        })
+        super().handle_function_call(from_address, to_address, gas_used, gas_price, data, value)
 
     def finalize(self):
         self._exporter.finalize()
