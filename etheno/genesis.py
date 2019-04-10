@@ -2,17 +2,21 @@ from web3.auto import w3
 
 from .utils import format_hex_address
 
+
 class Account(object):
     def __init__(self, address, balance = None, private_key = None):
         self._address = address
         self.balance = balance
         self._private_key = private_key
+
     @property
     def address(self):
         return self._address
+
     @property
     def private_key(self):
         return self._private_key
+
 
 def make_genesis(network_id=0x657468656E6F, difficulty=20, gas_limit=200000000000, accounts=None, byzantium_block=0, dao_fork_block=0, homestead_block=0, eip150_block=0, eip155_block=0, eip158_block=0, constantinople_block=None):
     if accounts:
@@ -40,8 +44,9 @@ def make_genesis(network_id=0x657468656E6F, difficulty=20, gas_limit=20000000000
 
     return ret
 
+
 def geth_to_parity(genesis):
-    '''Converts a Geth style genesis to Parity style'''
+    """Converts a Geth style genesis to Parity style"""
     ret = {
         'name': 'etheno',
         'engine': {
@@ -59,16 +64,17 @@ def geth_to_parity(genesis):
             # }
         },
         'genesis': {
-	    "seal": { "generic": "0x0"
-                      #'ethereum': {
-                      #    'nonce': '0x0000000000000042',
-                      #    'mixHash': '0x0000000000000000000000000000000000000000000000000000000000000000'
-                      #}
-	    },
-	    'difficulty': "0x%s" % genesis['difficulty'],
-	    'gasLimit': "0x%s" % genesis['gasLimit'],
+            "seal": {
+                "generic": "0x0"
+                # 'ethereum': {
+                #    'nonce': '0x0000000000000042',
+                #    'mixHash': '0x0000000000000000000000000000000000000000000000000000000000000000'
+                # }
+            },
+            'difficulty': "0x%s" % genesis['difficulty'],
+            'gasLimit': "0x%s" % genesis['gasLimit'],
             'author': list(genesis['alloc'])[-1]
-	},
+        },
         'params': {
             'networkID' : "0x%x" % genesis['config']['chainId'],
             'maximumExtraDataSize': '0x20',
@@ -80,7 +86,7 @@ def geth_to_parity(genesis):
             'eip161dTransition': '0x0',
             'eip155Transition': "0x%x" % genesis['config']['eip155Block'],
             'eip98Transition': '0x7fffffffffffff',
-            'eip86Transition': '0x7fffffffffffff',
+            # 'eip86Transition': '0x7fffffffffffff',
             'maxCodeSize': 24576,
             'maxCodeSizeTransition': '0x0',
             'eip140Transition': '0x0',
@@ -100,9 +106,10 @@ def geth_to_parity(genesis):
 
     return ret
 
+
 def make_accounts(num_accounts, default_balance = None):
     ret = []
     for i in range(num_accounts):
         acct = w3.eth.account.create()
-        ret.append(Account(address = int(acct.address, 16), private_key = int(acct.privateKey.hex(), 16), balance = default_balance))
+        ret.append(Account(address=int(acct.address, 16), private_key=int(acct.privateKey.hex(), 16), balance=default_balance))
     return ret

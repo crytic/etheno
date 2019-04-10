@@ -35,13 +35,26 @@ USER etheno
 RUN git clone https://github.com/trailofbits/echidna.git
 WORKDIR /home/etheno/echidna
 # Etheno currently requires the dev-no-hedgehog branch;
-RUN git checkout dev-no-hedgehog
+RUN git checkout dev-etheno
 RUN stack upgrade
 RUN stack setup
 RUN stack install
 WORKDIR /home/etheno
 
 # END Install Echidna
+
+USER root
+
+# Install Parity
+RUN apt-get install -y cmake libudev-dev
+RUN curl https://get.parity.io -L | bash
+
+# Allow passwordless sudo for etheno
+RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+RUN chown -R etheno:etheno /home/etheno/
+
+USER etheno
 
 RUN mkdir -p /home/etheno/etheno/etheno
 
@@ -57,14 +70,8 @@ RUN cd etheno && pip3 install --user '.[manticore]'
 
 USER root
 
-# Install Parity
-RUN apt-get install -y cmake libudev-dev
-RUN curl https://get.parity.io -L | bash
-
-# Allow passwordless sudo for etheno
-RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
-
-RUN chown -R etheno:etheno /home/etheno/
+RUN chown -R etheno:etheno /home/etheno/etheno
+RUN chown -R etheno:etheno /home/etheno/examples
 
 USER etheno
 

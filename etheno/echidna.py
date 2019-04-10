@@ -3,7 +3,6 @@ import subprocess
 import tempfile
 
 from .ascii_escapes import decode
-from .client import JSONRPCError
 from .etheno import EthenoPlugin
 from .utils import ConstantTemporaryFile, format_hex_address
 
@@ -28,16 +27,20 @@ contract C {
 }
 '''
 
-ECHIDNA_CONFIG = b'''outputRawTxs: True\ngasLimit: 0xfffff\n'''
+ECHIDNA_CONFIG = b'''outputRawTxs: true\nquiet: true\ndashboard: false\ngasLimit: 0xfffff\n'''
+
 
 def echidna_exists():
     return subprocess.call(['/usr/bin/env', 'echidna-test', '--help'], stdout=subprocess.DEVNULL) == 0
 
+
 def stack_exists():
     return subprocess.call(['/usr/bin/env', 'stack', '--help'], stdout=subprocess.DEVNULL) == 0
 
+
 def git_exists():
     return subprocess.call(['/usr/bin/env', 'git', '--version'], stdout=subprocess.DEVNULL) == 0
+
 
 def install_echidna(allow_reinstall = False):
     if not allow_reinstall and echidna_exists():
@@ -52,7 +55,8 @@ def install_echidna(allow_reinstall = False):
         # TODO: Once the `dev-no-hedgehog` branch is merged into `master`, we can remove this:
         subprocess.call(['/usr/bin/env', 'git', 'checkout', 'dev-no-hedgehog'], cwd=path)
         subprocess.check_call(['/usr/bin/env', 'stack', 'install'], cwd=path)
-        
+
+
 def decode_binary_json(text):
     orig = text
     text = decode(text).strip()
@@ -72,6 +76,7 @@ def decode_binary_json(text):
     if text[-1:] != b'"':
         raise ValueError("Malformed JSON list! Expected '%s' but instead got '%s' at offset %d" % ('"', chr(text[-1]), offset + len(text) - 1))
     return text[:-1]
+
 
 class EchidnaPlugin(EthenoPlugin):
     def __init__(self, transaction_limit=None, contract_source=None):
@@ -93,6 +98,9 @@ class EchidnaPlugin(EthenoPlugin):
             self.logger.info("Etheno does not know about any accounts, so Echidna has nothing to do!")
             self._shutdown()
             return
+        elif self.contract_source is None:
+            self.logger.error("Error compiling source contract")
+            self._shutdown()
         # First, deploy the testing contract:
         self.logger.info('Deploying Echidna test contract...')
         self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0], self.contract_bytecode), True)
@@ -172,5 +180,6 @@ class EchidnaPlugin(EthenoPlugin):
         self.logger.info("Emitting Transaction %d" % self._transaction)
         self.etheno.post(transaction)
 
+
 if __name__ == '__main__':
-    install_echidna(allow_reinstall = True)
+    install_echidna(allow_reinstall=True)
