@@ -2,9 +2,26 @@
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.2.0...HEAD)
+## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.2.2...HEAD)
 
-### 0.2.1 — 2019-02-07
+## 0.2.2 — 2019-04-11
+
+### Added
+
+- Updated to support a [newer version of Echidna](https://github.com/crytic/echidna/tree/dev-etheno)
+    - We are almost at feature parity with Echidna master, which we expect to happen at the next release
+- Two new commandline options to export raw transactions as a JSON file
+- New `--truffle-cmd` argument to specify the build command 
+
+### Changed
+
+- The [`BrokenMetaCoin` example](examples/BrokenMetaCoin) was updated to a newer version of Solidity
+
+### Fixed
+
+- Fixes a bug in honoring the `--ganache-args` option
+
+## 0.2.1 — 2019-02-07
 
 Bugfix release.
 
