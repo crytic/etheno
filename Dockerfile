@@ -29,7 +29,7 @@ ENV LANG C.UTF-8
 # BEGIN Install Echidna
 
 USER root
-RUN apt-get install -y libgmp-dev libbz2-dev libreadline-dev curl libsecp256k1-dev
+RUN apt-get install -y libgmp-dev libbz2-dev libreadline-dev curl libsecp256k1-dev software-properties-common locales-all locales zlib1g-dev
 RUN curl -sSL https://get.haskellstack.org/ | sh
 USER etheno
 RUN git clone https://github.com/trailofbits/echidna.git
