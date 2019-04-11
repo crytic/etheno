@@ -34,7 +34,7 @@ RUN curl -sSL https://get.haskellstack.org/ | sh
 USER etheno
 RUN git clone https://github.com/trailofbits/echidna.git
 WORKDIR /home/etheno/echidna
-# Etheno currently requires the dev-no-hedgehog branch;
+# Etheno currently requires the dev-etheno branch;
 RUN git checkout dev-etheno
 RUN stack upgrade
 RUN stack setup

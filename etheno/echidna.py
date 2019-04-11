@@ -52,8 +52,8 @@ def install_echidna(allow_reinstall = False):
 
     with tempfile.TemporaryDirectory() as path:
         subprocess.check_call(['/usr/bin/env', 'git', 'clone', 'https://github.com/trailofbits/echidna.git', path])
-        # TODO: Once the `dev-no-hedgehog` branch is merged into `master`, we can remove this:
-        subprocess.call(['/usr/bin/env', 'git', 'checkout', 'dev-no-hedgehog'], cwd=path)
+        # TODO: Once the `dev-etheno` branch is merged into `master`, we can remove this:
+        subprocess.call(['/usr/bin/env', 'git', 'checkout', 'dev-etheno'], cwd=path)
         subprocess.check_call(['/usr/bin/env', 'stack', 'install'], cwd=path)
 
 
