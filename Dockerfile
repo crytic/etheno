@@ -29,19 +29,32 @@ ENV LANG C.UTF-8
 # BEGIN Install Echidna
 
 USER root
-RUN apt-get install -y libgmp-dev libbz2-dev libreadline-dev curl libsecp256k1-dev
+RUN apt-get install -y libgmp-dev libbz2-dev libreadline-dev curl libsecp256k1-dev software-properties-common locales-all locales zlib1g-dev
 RUN curl -sSL https://get.haskellstack.org/ | sh
 USER etheno
 RUN git clone https://github.com/trailofbits/echidna.git
 WORKDIR /home/etheno/echidna
-# Etheno currently requires the dev-no-hedgehog branch;
-RUN git checkout dev-no-hedgehog
+# Etheno currently requires the dev-etheno branch;
+RUN git checkout dev-etheno
 RUN stack upgrade
 RUN stack setup
 RUN stack install
 WORKDIR /home/etheno
 
 # END Install Echidna
+
+USER root
+
+# Install Parity
+RUN apt-get install -y cmake libudev-dev
+RUN curl https://get.parity.io -L | bash
+
+# Allow passwordless sudo for etheno
+RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+
+RUN chown -R etheno:etheno /home/etheno/
+
+USER etheno
 
 RUN mkdir -p /home/etheno/etheno/etheno
 
@@ -57,14 +70,8 @@ RUN cd etheno && pip3 install --user '.[manticore]'
 
 USER root
 
-# Install Parity
-RUN apt-get install -y cmake libudev-dev
-RUN curl https://get.parity.io -L | bash
-
-# Allow passwordless sudo for etheno
-RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
-
-RUN chown -R etheno:etheno /home/etheno/
+RUN chown -R etheno:etheno /home/etheno/etheno
+RUN chown -R etheno:etheno /home/etheno/examples
 
 USER etheno
 

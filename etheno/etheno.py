@@ -57,53 +57,54 @@ class EthenoPlugin(object):
 
     @property
     def log_directory(self):
-        '''Returns a log directory that this client can use to save additional files, or None if one is not available'''
+        """Returns a log directory that this client can use to save additional files, or None if one is not available"""
         if self.logger is None:
             return None
         else:
             return self.logger.directory
 
     def added(self):
-        '''
+        """
         A callback when this plugin is added to an Etheno instance
-        '''
+        """
         pass
     
     def before_post(self, post_data):
-        '''
+        """
         A callback when Etheno receives a JSON RPC POST, but before it is processed.
         :param post_data: The raw JSON RPC data
         :return: the post_data to be used by Etheno (can be modified)
-        '''
+        """
         pass
 
     def after_post(self, post_data, client_results):
-        '''
+        """
         A callback when Etheno receives a JSON RPC POST after it is processed by all clients.
         :param post_data: The raw JSON RPC data
         :param client_results: A lost of the results returned by each client
-        '''
+        """
         pass
 
     def run(self):
-        '''
+        """
         A callback when Etheno is running and all other clients and plugins are initialized
-        '''
+        """
         pass
     
     def finalize(self):
-        '''
+        """
         Called when an analysis pass should be finalized (e.g., after a Truffle migration completes).
         Subclasses implementing this function should support it to be called multiple times in a row.
-        '''
+        """
         pass
 
     def shutdown(self):
-        '''
+        """
         Called before Etheno shuts down.
         The default implementation calls `finalize()`.
-        '''
+        """
         self.finalize()
+
 
 class Etheno(object):
     def __init__(self, master_client=None):
@@ -151,11 +152,11 @@ class Etheno(object):
             self._create_accounts(client)
 
     def estimate_gas(self, transaction):
-        '''
+        """
         Estimates the gas cost of a transaction.
         Iterates through all clients until it finds a client that is capable of estimating the gas cost without error.
         If all clients return an error, this function will return None.
-        '''
+        """
         clients = [self.master_client] + self.clients
         for client in clients:
             try:
@@ -261,7 +262,7 @@ class Etheno(object):
         self.clients.append(client)
         self._create_accounts(client)
 
-    def deploy_contract(self, from_address, bytecode, gas = 0x99999, gas_price = None, value = 0):
+    def deploy_contract(self, from_address, bytecode, gas=0x99999, gas_price=None, value=0):
         if gas_price is None:
             gas_price = self.master_client.get_gas_price()
         if isinstance(bytecode, bytes):
