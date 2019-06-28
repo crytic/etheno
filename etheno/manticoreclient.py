@@ -30,12 +30,14 @@ manticore.utils.log = manticorelogger
 # ####END####
 
 from manticore.ethereum import ManticoreEVM
+from manticore.exceptions import NoAliveStates
 import manticore
 
 from . import logger
 from . import threadwrapper
 from .client import EthenoClient, jsonrpc, DATA, QUANTITY
 from .etheno import _CONTROLLER
+from .manticoreutils import manticore_is_new_enough
 
 def encode_hex(data):
     if data is None:
@@ -139,15 +141,24 @@ class ManticoreClient(EthenoClient):
     def multi_tx_analysis(self, contract_address = None, tx_limit=None, tx_use_coverage=True, args=None):
         if contract_address is None:
             for contract_address in self.contracts:
-                self.multi_tx_analysis(contract_address = contract_address, tx_limit = tx_limit, tx_use_coverage = tx_use_coverage, args = args)
+                self.multi_tx_analysis(
+                    contract_address=contract_address,
+                    tx_limit=tx_limit,
+                    tx_use_coverage=tx_use_coverage,
+                    args=args
+                )
             return
 
         tx_account = self.etheno.accounts
 
-        prev_coverage = 0
         current_coverage = 0
         tx_no = 0
-        while (current_coverage < 100 or not tx_use_coverage) and not self.manticore.is_shutdown():
+        if manticore_is_new_enough(0, 3, 0):
+            shutdown_test = 'is_killed'
+        else:
+            shutdown_test = 'is_shutdown'
+
+        while (current_coverage < 100 or not tx_use_coverage) and not getattr(self.manticore, shutdown_test)():
             try:
                 self.logger.info("Starting symbolic transaction: %d" % tx_no)
 
@@ -158,7 +169,11 @@ class ManticoreClient(EthenoClient):
                                  address=contract_address,
                                  data=symbolic_data,
                                  value=symbolic_value)
-                self.logger.info("%d alive states, %d terminated states" % (self.manticore.count_running_states(), self.manticore.count_terminated_states()))
+                if manticore_is_new_enough(0, 3, 0):
+                    # TODO: find the equivalent functions to get state counts in v0.3.0
+                    pass
+                else:
+                    self.logger.info("%d alive states, %d terminated states" % (self.manticore.count_running_states(), self.manticore.count_terminated_states()))
             except NoAliveStates:
                 break
 
