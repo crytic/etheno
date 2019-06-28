@@ -30,6 +30,7 @@ manticore.utils.log = manticorelogger
 # ####END####
 
 from manticore.ethereum import ManticoreEVM
+from manticore.exceptions import NoAliveStates
 import manticore
 
 from . import logger
@@ -168,7 +169,11 @@ class ManticoreClient(EthenoClient):
                                  address=contract_address,
                                  data=symbolic_data,
                                  value=symbolic_value)
-                self.logger.info("%d alive states, %d terminated states" % (self.manticore.count_running_states(), self.manticore.count_terminated_states()))
+                if manticore_is_new_enough(0, 3, 0):
+                    # TODO: find the equivalent functions to get state counts in v0.3.0
+                    pass
+                else:
+                    self.logger.info("%d alive states, %d terminated states" % (self.manticore.count_running_states(), self.manticore.count_terminated_states()))
             except NoAliveStates:
                 break
 
