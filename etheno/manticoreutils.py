@@ -16,8 +16,10 @@ def manticore_version():
     return pkg_resources.get_distribution('manticore').version
 
 
-def manticore_is_new_enough(required_version=(0, 2, 2)):
+def manticore_is_new_enough(*required_version):
     """Checks if Manticore is newer than the given version. Returns True or False if known, or None if uncertain."""
+    if required_version is None or len(required_version) == 0:
+        required_version = (0, 2, 2)
     try:
         version = manticore_version()
         version = list(map(int, version.split('.')))
@@ -53,7 +55,7 @@ class StopAtDepth(Detector):
                 reps.clear()
 
         # this callback got renamed to `will_run_callback` in Manticore 0.3.0
-        if manticore_is_new_enough((0, 3, 0)):
+        if manticore_is_new_enough(0, 3, 0):
             self.will_run_callback = will_start_run_callback
         else:
             self.will_start_run_callback = will_start_run_callback
