@@ -33,15 +33,42 @@ def manticore_is_new_enough(*required_version):
     return True
 
 
+"""Detectors that should not be included in the results from `get_detectors()` (e.g., because they are buggy)"""
+if manticore_is_new_enough(0, 2, 3):
+    # At some point after Manticore 0.2.2, these all stopped working:
+    DETECTOR_BLACKLIST = {
+        manticore.ethereum.detectors.DetectDelegatecall,
+        manticore.ethereum.detectors.DetectEnvInstruction,
+        manticore.ethereum.detectors.DetectExternalCallAndLeak,
+        manticore.ethereum.detectors.DetectIntegerOverflow,
+        manticore.ethereum.detectors.DetectInvalid,
+        manticore.ethereum.detectors.DetectRaceCondition,
+        manticore.ethereum.detectors.DetectReentrancyAdvanced,
+        manticore.ethereum.detectors.DetectReentrancySimple,
+        manticore.ethereum.detectors.DetectSuicidal,
+        manticore.ethereum.detectors.DetectUninitializedMemory,
+        manticore.ethereum.detectors.DetectUninitializedStorage,
+        manticore.ethereum.detectors.DetectUnusedRetVal
+    }
+else:
+    DETECTOR_BLACKLIST = set()
+
+
 def get_detectors():
     for name, obj in inspect.getmembers(manticore.ethereum.detectors):
-        if inspect.isclass(obj) and issubclass(obj, manticore.ethereum.detectors.Detector) and obj != manticore.ethereum.detectors.Detector:
+        if inspect.isclass(obj)\
+                and issubclass(obj, manticore.ethereum.detectors.Detector)\
+                and obj != manticore.ethereum.detectors.Detector\
+                and obj not in DETECTOR_BLACKLIST:
             yield obj
 
 
 def register_all_detectors(manticore):
     for detector in get_detectors():
-        manticore.register_detector(detector())
+        try:
+            manticore.register_detector(detector())
+        except Exception as e:
+            manticore.logger.warning(f"Unable to register detector {detector!r}: {e!s}")
 
 
 class StopAtDepth(Detector):
