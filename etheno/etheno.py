@@ -177,7 +177,7 @@ class Etheno(object):
 
         for plugin in self.plugins:
             try:
-                new_data = plugin.before_post(data)
+                new_data = plugin.before_post(dict(data))
                 if new_data is not None and new_data != data:
                     self.logger.debug(f"Incoming JSON RPC request {data} changed by plugin {plugin!r} to {new_data}")
                     data = new_data
