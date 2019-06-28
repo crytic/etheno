@@ -4,7 +4,6 @@ import os
 import shlex
 import sys
 from threading import Thread
-import time
 
 from .client import RpcProxyClient
 from .differentials import DifferentialTester
@@ -14,7 +13,6 @@ from .genesis import Account, make_accounts, make_genesis
 from .jsonrpc import EventSummaryExportPlugin, JSONRPCExportPlugin
 from .synchronization import AddressSynchronizingClient, RawTransactionClient
 from .utils import clear_directory, decode_value, find_open_port, format_hex_address, ynprompt
-from . import Etheno
 from . import ganache
 from . import geth
 from . import logger
@@ -27,6 +25,7 @@ try:
     MANTICORE_INSTALLED = True
 except ModuleNotFoundError:
     MANTICORE_INSTALLED = False
+
 
 def main(argv = None):
     parser = argparse.ArgumentParser(description='An Ethereum JSON RPC multiplexer and Manticore wrapper')
@@ -274,7 +273,12 @@ def main(argv = None):
         ETHENO.add_client(manticore_client)
         if args.manticore_max_depth is not None:
             manticore_client.manticore.register_detector(manticoreutils.StopAtDepth(args.manticore_max_depth))
-        manticore_client.manticore.verbosity(getattr(logger, args.log_level))
+        if manticoreutils.manticore_is_new_enough(0, 2, 4):
+            # the verbosity static method was deprecated
+            from manticore.utils.log import set_verbosity
+            set_verbosity(getattr(logger, args.log_level))
+        else:
+            manticore_client.manticore.verbosity(getattr(logger, args.log_level))
 
     if args.truffle:
         truffle_controller = truffle.Truffle(truffle_cmd=args.truffle_cmd, parent_logger=ETHENO.logger)
