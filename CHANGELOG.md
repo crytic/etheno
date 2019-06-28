@@ -2,7 +2,18 @@
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.2.2...HEAD)
+## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.2.3...HEAD)
+
+## 0.2.3 — 2019-06-27
+
+### Added
+
+- Support for the latest version of Manticore (v0.3.0)
+
+### Fixed
+
+- Fixes a bug due to a change in the way the latest version of Truffle handles its config files
+- Fixes a bug that would erroneously print a warning that the version of Manticore is too old
 
 ## 0.2.2 — 2019-04-11
 
