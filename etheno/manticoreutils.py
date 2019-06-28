@@ -16,12 +16,12 @@ def manticore_version():
     return pkg_resources.get_distribution('manticore').version
 
 
-def manticore_is_new_enough():
-    """Checks if Manticore is newer than version 0.2.2. Returns True or False if known, or None if uncertain."""
+def manticore_is_new_enough(required_version=(0, 2, 2)):
+    """Checks if Manticore is newer than the given version. Returns True or False if known, or None if uncertain."""
     try:
         version = manticore_version()
         version = list(map(int, version.split('.')))
-        for v, required in itertools.zip_longest(version, (0, 2, 2), fillvalue=0):
+        for v, required in itertools.zip_longest(version, required_version, fillvalue=0):
             if v < required:
                 return False
             elif v > required:
@@ -46,12 +46,19 @@ class StopAtDepth(Detector):
     """This just aborts explorations that are too deep"""
 
     def __init__(self, max_depth):
-        super().__init__()
         self.max_depth = max_depth
 
-    def will_start_run_callback(self, *args):
-        with self.manticore.locked_context('seen_rep', dict) as reps:
-            reps.clear()
+        def will_start_run_callback(self, *args):
+            with self.manticore.locked_context('seen_rep', dict) as reps:
+                reps.clear()
+
+        # this callback got renamed to `will_run_callback` in Manticore 0.3.0
+        if manticore_is_new_enough((0, 3, 0)):
+            self.will_run_callback = will_start_run_callback
+        else:
+            self.will_start_run_callback = will_start_run_callback
+
+        super().__init__()
 
     def will_decode_instruction_callback(self, state, pc):
         world = state.platform
