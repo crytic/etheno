@@ -1,9 +1,8 @@
-VERSION='0.2.0'
+VERSION='0.2.3'
 VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
 
-import logging
 from threading import Thread
 
 from flask import Flask, g, jsonify, request, abort

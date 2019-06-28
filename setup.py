@@ -1,4 +1,3 @@
-import os
 from setuptools import setup, find_packages
 
 setup(
@@ -6,7 +5,7 @@ setup(
     description='Etheno is a JSON RPC multiplexer, Manticore wrapper, differential fuzzer, and test framework integration tool.',
     url='https://github.com/trailofbits/etheno',
     author='Trail of Bits',
-    version='0.2.2',
+    version='0.2.3',
     packages=find_packages(),
     python_requires='>=3.6',
     install_requires=[
