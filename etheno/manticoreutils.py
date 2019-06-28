@@ -50,8 +50,10 @@ class StopAtDepth(Detector):
     def __init__(self, max_depth):
         self.max_depth = max_depth
 
-        def will_start_run_callback(self, *args):
-            with self.manticore.locked_context('seen_rep', dict) as reps:
+        stop_at_death = self
+
+        def will_start_run_callback(*args):
+            with stop_at_death.manticore.locked_context('seen_rep', dict) as reps:
                 reps.clear()
 
         # this callback got renamed to `will_run_callback` in Manticore 0.3.0
@@ -66,7 +68,7 @@ class StopAtDepth(Detector):
         world = state.platform
         with self.manticore.locked_context('seen_rep', dict) as reps:
             item = (world.current_transaction.sort == 'CREATE', world.current_transaction.address, pc)
-            if not item in reps:
+            if item not in reps:
                 reps[item] = 0
             reps[item] += 1
             if reps[item] > self.max_depth:
