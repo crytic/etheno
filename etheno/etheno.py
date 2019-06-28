@@ -1,4 +1,4 @@
-VERSION='0.2.3'
+VERSION='0.2.4'
 VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
 JSONRPC_VERSION = '2.0'
 VERSION_ID=67
@@ -20,11 +20,14 @@ ETH_DEFAULT_RPC_PORT = 8545
 PARITY_DEFAULT_RPC_PORT = 8545
 PYETHAPP_DEFAULT_RPC_PORT = 4000
 
+
 def to_account_address(raw_address):
     addr = "%x" % raw_address
     return "0x%s%s" % ('0'*(40 - len(addr)), addr)
 
+
 _CONTROLLER = threadwrapper.MainThreadController()
+
 
 @app.route('/shutdown')
 def _etheno_shutdown():
@@ -35,6 +38,11 @@ def _etheno_shutdown():
     _CONTROLLER.quit()
     shutdown()
     return ''
+
+
+class DropPost(RuntimeError):
+    pass
+
 
 class EthenoPlugin(object):
     _etheno = None
@@ -72,7 +80,7 @@ class EthenoPlugin(object):
         """
         A callback when Etheno receives a JSON RPC POST, but before it is processed.
         :param post_data: The raw JSON RPC data
-        :return: the post_data to be used by Etheno (can be modified)
+        :return: the post_data to be used by Etheno (can be modified); if None, the post proceeds as usual and is not modified; if you want to drop the post, `raise DropPost`
         """
         pass
 
@@ -168,7 +176,13 @@ class Etheno(object):
         self.logger.debug(f"Handling JSON RPC request {data}")
 
         for plugin in self.plugins:
-            plugin.before_post(data)
+            try:
+                new_data = plugin.before_post(data)
+                if new_data is not None and new_data != data:
+                    self.logger.debug(f"Incoming JSON RPC request {data} changed by plugin {plugin!r} to {new_data}")
+                    data = new_data
+            except DropPost:
+                self.logger.info(f"Incoming JSON RPC request {data} dropped by plugin {plugin!r}")
 
         method = data['method']
         args = ()
