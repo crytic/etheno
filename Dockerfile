@@ -26,19 +26,18 @@ ENV HOME /home/etheno
 ENV PATH $PATH:$HOME/.local/bin
 ENV LANG C.UTF-8
 
+
 # BEGIN Install Echidna
 
 USER root
-RUN apt-get install -y libgmp-dev libbz2-dev libreadline-dev curl libsecp256k1-dev software-properties-common locales-all locales zlib1g-dev
+RUN apt-get install -y cmake curl wget libgmp-dev libssl-dev libbz2-dev libreadline-dev software-properties-common locales-all locales libsecp256k1-dev python3-setuptools
+COPY docker/install-libff.sh .
+RUN ./install-libff.sh && rm ./install-libff.sh
 RUN curl -sSL https://get.haskellstack.org/ | sh
 USER etheno
 RUN git clone https://github.com/trailofbits/echidna.git
 WORKDIR /home/etheno/echidna
-# Etheno currently requires the dev-etheno branch;
-RUN git checkout dev-etheno
-RUN stack upgrade
-RUN stack setup
-RUN stack install
+RUN stack upgrade && stack setup && stack install --extra-include-dirs=/usr/local/include --extra-lib-dirs=/usr/local/lib
 WORKDIR /home/etheno
 
 # END Install Echidna
@@ -46,7 +45,7 @@ WORKDIR /home/etheno
 USER root
 
 # Install Parity
-RUN apt-get install -y cmake libudev-dev
+RUN apt-get install -y libudev-dev
 RUN curl https://get.parity.io -L | bash
 
 # Allow passwordless sudo for etheno
