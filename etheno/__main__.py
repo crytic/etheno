@@ -3,6 +3,7 @@ import json
 import os
 import shlex
 import sys
+import runpy
 from threading import Thread
 
 from .client import RpcProxyClient
@@ -13,6 +14,7 @@ from .genesis import Account, make_accounts, make_genesis
 from .jsonrpc import EventSummaryExportPlugin, JSONRPCExportPlugin
 from .synchronization import AddressSynchronizingClient, RawTransactionClient
 from .utils import clear_directory, decode_value, find_open_port, format_hex_address, ynprompt
+from . import Interceptor
 from . import ganache
 from . import geth
 from . import logger
@@ -66,6 +68,9 @@ def main(argv = None):
     parser.add_argument('client', type=str, nargs='*', help='JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
     parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
     parser.add_argument('--raw', type=str, nargs='*', action='append', help='JSON RPC client URLs to multiplex that do not have any local accounts; Etheno will automatically use auto-generated accounts with known private keys, pre-sign all transactions, and only use eth_sendRawTransaction')
+    parser.add_argument('--intercept', action='store_true', default=False, help='Run the transaction interceptor')
+    parser.add_argument('--intercept-contracts-dir', type=str, default=None, help='A directory containing compiled contracts for interception')
+    parser.add_argument('--intercept-scripts', type=str, default=None, help='A list of scripts to run on intercepted transactions')
 
     if argv is None:
         argv = sys.argv
@@ -329,6 +334,40 @@ def main(argv = None):
             with open(args.fuzz_contract, 'rb') as c:
                 contract_source = c.read()
         ETHENO.add_plugin(EchidnaPlugin(transaction_limit=args.fuzz_limit, contract_source=contract_source))
+
+    if args.intercept:
+        contracts = []
+        scripts = []
+
+        if not args.intercept_contracts_dir:
+            ETHENO.logger.info("Missing --intercept-contracts-dir; exiting...")
+            return
+        if not os.path.isdir(args.intercept_contracts_dir):
+            ETHENO.logger.info("{} is not a directory; exiting...".format(args.intercept_contracts_dir))
+            return
+        if args.intercept_scripts:
+            for path in args.intercept_scripts.split(","):
+                try:
+                    script = runpy.run_path(path)
+                    if script.get('run', False):
+                        scripts.append(script)
+                    else:
+                        ETHENO.logger.warn("Script {} is missing run method".format(path))
+                except:
+                    ETHENO.logger.warn("Failed to load script {}".format(path))
+
+        for base, dirs, files in os.walk(args.intercept_contracts_dir):
+            for file in files:
+                path = os.path.join(base,file)
+                ext = os.path.splitext(path)[1]
+                if ext == ".json":
+                    contracts.append(path)
+
+        if len(contracts) == 0:
+            ETHENO.logger.info("No compiled contracts found in {}; exiting...".format(args.intercept_contracts_dir))
+            return
+
+        ETHENO.add_plugin(Interceptor(args.network_id, contracts, scripts))
 
     had_plugins = len(ETHENO.plugins) > 0
 
