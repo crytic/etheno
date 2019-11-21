@@ -64,6 +64,7 @@ RUN git clone https://github.com/trailofbits/echidna.git && \
 # END Install Echidna
 
 USER root
+WORKDIR /root
 
 # Install Parity
 RUN apt-get update && \
@@ -74,27 +75,16 @@ RUN curl https://get.parity.io -L | bash
 # Allow passwordless sudo for etheno
 RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
-RUN chown -R etheno:etheno /home/etheno/
-
 USER etheno
+WORKDIR /home/etheno
 
-RUN mkdir -p /home/etheno/etheno/etheno
+COPY --chown=etheno:etheno LICENSE setup.py etheno/
+COPY --chown=etheno:etheno etheno/*.py etheno/etheno/
+RUN cd etheno && \
+    pip3 install --no-cache-dir --user '.[manticore]' && \
+    cd .. && \
+    rm -rf etheno
 
-COPY LICENSE /home/etheno/etheno
-COPY setup.py /home/etheno/etheno
-
-COPY etheno/*.py /home/etheno/etheno/etheno/
-
-RUN mkdir -p /home/etheno/examples
-COPY examples /home/etheno/examples/
-
-RUN cd etheno && pip3 install --user '.[manticore]'
-
-USER root
-
-RUN chown -R etheno:etheno /home/etheno/etheno
-RUN chown -R etheno:etheno /home/etheno/examples
-
-USER etheno
+COPY --chown=etheno:etheno examples examples/
 
 CMD ["/bin/bash"]
