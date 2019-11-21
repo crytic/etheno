@@ -51,10 +51,15 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 USER etheno
-RUN git clone https://github.com/trailofbits/echidna.git
-WORKDIR /home/etheno/echidna
-RUN stack upgrade && stack setup && stack install --extra-include-dirs=/usr/local/include --extra-lib-dirs=/usr/local/lib
 WORKDIR /home/etheno
+RUN git clone https://github.com/trailofbits/echidna.git && \
+    cd echidna && \
+    stack upgrade && \
+    stack setup && \
+    stack install --extra-include-dirs=/usr/local/include --extra-lib-dirs=/usr/local/lib && \
+    stack purge && \
+    cd .. && \
+    rm -rf .stack echidna
 
 # END Install Echidna
 
