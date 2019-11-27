@@ -21,3 +21,4 @@ mkdir build
 cd build
 CXXFLAGS="-fPIC $CXXFLAGS" cmake $ARGS ..
 make && sudo make install
+cd ../.. && rm -rf libff
