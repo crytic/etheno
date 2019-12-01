@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y \
     sudo \
 && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g ganache-cli truffle && npm cache clean
+RUN npm install --production -g ganache-cli truffle && npm cache clean
 
 # BEGIN Requirements for Manticore:
 
