@@ -2,13 +2,15 @@ FROM ubuntu:18.04
 MAINTAINER Evan Sultanik
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    npm \
+    curl \
     ca-certificates \
     bash-completion \
     sudo \
 && rm -rf /var/lib/apt/lists/*
 
-RUN npm install --production -g ganache-cli truffle && npm cache clean
+RUN curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && sudo apt-get install -y --no-install-recommends nodejs && rm -rf /var/lib/apt/lists/*
+
+RUN npm install --production -g ganache-cli truffle && npm --force cache clean
 
 # BEGIN Requirements for Manticore:
 
@@ -28,18 +30,8 @@ RUN add-apt-repository -y ppa:ethereum/ethereum && \
 
 # END Requirements for Manticore
 
-RUN useradd -m etheno
-RUN usermod -aG sudo etheno
-USER etheno
-WORKDIR /home/etheno
-ENV HOME /home/etheno
-ENV PATH $PATH:$HOME/.local/bin
-ENV LANG C.UTF-8
-
-
 # BEGIN Install Echidna
 
-USER root
 WORKDIR /root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     cmake curl wget libgmp-dev libssl1.0-dev libbz2-dev libreadline-dev \
@@ -52,8 +44,14 @@ RUN apt-get update && \
     curl -sSL https://get.haskellstack.org/ | sh && \
     rm -rf /var/lib/apt/lists/*
 
+RUN useradd -m etheno
+RUN usermod -aG sudo etheno
 USER etheno
 WORKDIR /home/etheno
+ENV HOME /home/etheno
+ENV PATH $PATH:$HOME/.local/bin
+ENV LANG C.UTF-8
+
 RUN git clone https://github.com/trailofbits/echidna.git && \
     cd echidna && \
     stack upgrade && \
