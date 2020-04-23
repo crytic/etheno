@@ -10,13 +10,6 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: DockerHub Login
-        uses: azure/docker-login@v1
-        with:
-          login-server: registry.hub.docker.com
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
-
       - name: GitHub Login
         uses: azure/docker-login@v1
         with:
@@ -24,7 +17,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker Build and Push
+      - name: Docker Build
         run: |
           set +e
           _=$(echo "$GITHUB_REF" | grep "^refs/heads/")
@@ -35,7 +28,7 @@ jobs:
               PKG=etheno
             else
               VER=testing
-              PKG=testing
+              PKG=etheno
             fi
           fi
           _=$(echo "$GITHUB_REF" | grep "^refs/tags/")
@@ -46,5 +39,14 @@ jobs:
             PKG=etheno
           fi
           set -e
-          docker build -t registry.hub.docker.com/$GITHUB_REPOSITORY/$PKG:$VER .
-          docker push registry.hub.docker.com/$GITHUB_REPOSITORY/$PKG:$VER
+          docker build -t trailofbits/$PKG:$VER .
+
+      - name: DockerHub Login
+        uses: azure/docker-login@v1
+        with:
+          login-server: registry.hub.docker.com
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+      - name: Docker Push
+        run: docker push trailofbits/$PKG:$VER
