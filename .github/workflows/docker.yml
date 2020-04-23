@@ -46,5 +46,5 @@ jobs:
             PKG=etheno
           fi
           set -e
-          docker build -t $GITHUB_REPOSITORY/$PKG:$VER .
-          docker push $GITHUB_REPOSITORY/$PKG:$VER
+          docker build -t registry.hub.docker.com/$GITHUB_REPOSITORY/$PKG:$VER .
+          docker push registry.hub.docker.com/$GITHUB_REPOSITORY/$PKG:$VER
