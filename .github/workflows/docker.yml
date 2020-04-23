@@ -43,7 +43,7 @@ jobs:
           echo "::set-env name=VER::$VER"
 
       - name: Docker Build
-        run: docker build -t registry.hub.docker.com/trailofbits/$PKG:$VER .
+        run: docker build -t $PKG:$VER .
 
       - name: DockerHub Login
         uses: azure/docker-login@v1
@@ -53,4 +53,6 @@ jobs:
           password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
       - name: Docker Push
-        run: docker push registry.hub.docker.com/trailofbits/$PKG:$VER
+        run: |
+          docker tag $PKG:$VER registry.hub.docker.com/trailofbits/$PKG:$VER
+          docker push registry.hub.docker.com/trailofbits/$PKG:$VER
