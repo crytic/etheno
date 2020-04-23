@@ -5,19 +5,19 @@ on:
     tags:
       - '*'
 jobs:
-  build:
+  docker:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+      - uses: actions/checkout@v2
 
-    - name: Docker Login
+      - name: Docker Login
         uses: azure/docker-login@v1
         with:
           login-server: registry.hub.docker.com
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
-    - name: Docker Build and Push
+      - name: Docker Build and Push
         run: |
           set +e
           _=$(echo "$GITHUB_REF" | grep "^refs/heads/")
@@ -41,4 +41,3 @@ jobs:
           set -e
           docker build -t $GITHUB_REPOSITORY/$PKG:$VER .
           docker push $GITHUB_REPOSITORY/$PKG:$VER
-
