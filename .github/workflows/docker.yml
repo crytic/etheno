@@ -53,4 +53,4 @@ jobs:
           password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
       - name: Docker Push
-        run: docker push trailofbits/$PKG:$VER
+        run: docker push registry.hub.docker.com/trailofbits/$PKG:$VER
