@@ -10,12 +10,19 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Docker Login
+      - name: DockerHub Login
         uses: azure/docker-login@v1
         with:
           login-server: registry.hub.docker.com
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+      - name: GitHub Login
+        uses: azure/docker-login@v1
+        with:
+          login-server: docker.pkg.github.com
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Docker Build and Push
         run: |
