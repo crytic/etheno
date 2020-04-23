@@ -17,7 +17,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker Build
+      - name: Set Docker Package and Version
         run: |
           set +e
           _=$(echo "$GITHUB_REF" | grep "^refs/heads/")
@@ -39,7 +39,11 @@ jobs:
             PKG=etheno
           fi
           set -e
-          docker build -t trailofbits/$PKG:$VER .
+          echo "::set-env name=PKG::$PKG"
+          echo "::set-env name=VER::$VER"
+
+      - name: Docker Build
+        run: docker build -t trailofbits/$PKG:$VER .
 
       - name: DockerHub Login
         uses: azure/docker-login@v1
