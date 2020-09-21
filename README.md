@@ -98,6 +98,11 @@ etheno --ganache
 * `--balance` or `-b` sets the default balance (in Ether) to seed to each Ganache account (default is 100.0)
 * `--gas-price` or `-c` sets the default gas price for Ganache (default is 20000000000)
 
+**NOTE**: As of September, 2020, there is
+[an upstream bug in `ganache-cli` that prevents it from being run on Node version 14](https://github.com/trufflesuite/ganache-cli/issues/732).
+If you intend to use Truffle and/or Ganache, we suggest using Node 12 (_e.g._,
+with [`nvm`](https://github.com/nvm-sh/nvm)). 
+
 ### Differential Testing
 
 Whenever two or more clients are run within Etheno, the differential
