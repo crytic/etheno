@@ -108,16 +108,16 @@ class EventSummaryExportPlugin(EventSummaryPlugin):
 
     def handle_increase_block_number(self):
         self._exporter.write_entry({
-            'event' : 'Wait',
-            'block.number' : "1",
-            'block.timestamp' : "0"
+            'event' : 'BlockMined',
+            'number_increment' : "1",
+            'timestamp_increment' : "0"
         })
 
     def handle_increase_block_timestamp(self, number : str):
         self._exporter.write_entry({
-            'event' : 'Wait',
-            'block.number' : "0",
-            'block.timestamp': number 
+            'event' : 'BlockMined',
+            'number_increment' : "0",
+            'timestamp_increment': str(number) 
         }) 
 
     def handle_contract_created(self, creator_address: str, contract_address: str, gas_used: str, gas_price: str, data: str, value: str):
