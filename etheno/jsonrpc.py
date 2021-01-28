@@ -71,6 +71,10 @@ class EventSummaryPlugin(EthenoPlugin):
             except ValueError:
                 return
             self._transactions[transaction_hash] = post_data
+        elif post_data['method'] == 'evm_mine':
+            self.handle_increase_block_number()
+        elif post_data['method'] == 'evm_increaseTime':
+            self.handle_increase_block_timestamp(post_data['params'][0])
         elif post_data['method'] == 'eth_getTransactionReceipt':
             transaction_hash = int(post_data['params'][0], 16)
             if transaction_hash not in self._transactions:
@@ -101,6 +105,20 @@ class EventSummaryExportPlugin(EventSummaryPlugin):
                 'address' : format_hex_address(address)
             })
         super().run()
+
+    def handle_increase_block_number(self):
+        self._exporter.write_entry({
+            'event' : 'BlockMined',
+            'number_increment' : "1",
+            'timestamp_increment' : "0"
+        })
+
+    def handle_increase_block_timestamp(self, number : str):
+        self._exporter.write_entry({
+            'event' : 'BlockMined',
+            'number_increment' : "0",
+            'timestamp_increment': str(number) 
+        }) 
 
     def handle_contract_created(self, creator_address: str, contract_address: str, gas_used: str, gas_price: str, data: str, value: str):
         self._exporter.write_entry({
