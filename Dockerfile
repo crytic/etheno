@@ -33,7 +33,7 @@ RUN npm install --production -g ganache-cli truffle && npm --force cache clean
 
 # BEGIN Install Echidna
 
-COPY --from=docker.pkg.github.com/crytic/echidna/echidna:latest /root/.local/bin/echidna-test /usr/local/bin/echidna-test
+COPY --from=trailofbits/echidna:latest /root/.local/bin/echidna-test /usr/local/bin/echidna-test
 
 RUN update-locale LANG=en_US.UTF-8 && locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
