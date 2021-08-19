@@ -18,6 +18,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set Docker Package and Version
+        env:
+          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
         run: |
           set +e
           _=$(echo "$GITHUB_REF" | grep "^refs/heads/")
