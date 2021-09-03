@@ -19,9 +19,6 @@ setup(
         'pycryptodome>=3.4.7,<4.0.0',
         'setuptools'
     ],
-    extras_require={
-        'manticore': ['manticore>=0.2.2']
-    },
     entry_points={
         'console_scripts': [
             'etheno = etheno.__main__:main'
