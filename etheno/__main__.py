@@ -46,6 +46,7 @@ def main(argv = None):
     parser.add_argument('--truffle-cmd', type=str, default='truffle', help='Command to run truffle (default=truffle)')
     parser.add_argument('--truffle-args', type=str, default='migrate', help='Arguments to pass to truffle (default=migrate)')
     parser.add_argument('-g', '--ganache', action='store_true', default=False, help='Run Ganache as a master JSON RPC client (cannot be used in conjunction with --master)')
+    parser.add_argument('--ganache-cmd', type=str, default=None, help='Specify a command that runs Ganache. (default="/usr/bin/env ganache-cli")')
     parser.add_argument('--ganache-args', type=str, default=None, help='Additional arguments to pass to Ganache')
     parser.add_argument('--ganache-port', type=int, default=None, help='Port on which to run Ganache (defaults to the closest available port to the port specified with --port plus one)')
     parser.add_argument('-go', '--geth', action='store_true', default=False, help='Run Geth as a JSON RPC client')
@@ -184,7 +185,7 @@ def main(argv = None):
         if args.ganache_args is not None:
             ganache_args += shlex.split(args.ganache_args)
 
-        ganache_instance = ganache.Ganache(args=ganache_args, port=args.ganache_port)
+        ganache_instance = ganache.Ganache(cmd=args.ganache_cmd, args=ganache_args, port=args.ganache_port)
 
         ETHENO.master_client = ganache.GanacheClient(ganache_instance)
 
