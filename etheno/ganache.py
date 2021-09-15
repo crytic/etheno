@@ -25,12 +25,27 @@ class Ganache(RpcHttpProxy):
         if self._client:
             self.ganache = PtyLogger(self._client.logger, self.args)
             self.ganache.start()
+
+            def ganache_errored() -> int:
+                if self.ganache.is_done:
+                    return self.ganache.exitstatus
+                return 0
         else:
             self.ganache = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+
+            def ganache_errored():
+                try:
+                    return self.ganache.wait(0.5)
+                except TimeoutError:
+                    return 0
+
         atexit.register(Ganache.stop.__get__(self, Ganache))
         # wait until Ganache has started listening:
-        while is_port_free(self.port):
+        while is_port_free(self.port) and not self.ganache.is_done():
             time.sleep(0.25)
+        retcode = ganache_errored()
+        if retcode != 0:
+            raise RuntimeError(f"{' '.join(self.args)} exited with non-zero status {retcode}")
 
     def post(self, data):
         if self.ganache is None:
