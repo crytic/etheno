@@ -1,17 +1,19 @@
-VERSION='0.2.4'
-VERSION_NAME="ToB/v%s/source/Etheno" % VERSION
-JSONRPC_VERSION = '2.0'
-VERSION_ID=67
-
+import pkg_resources
 from threading import Thread
+from typing import Any, Dict, List, Optional
 
-from flask import Flask, g, jsonify, request, abort
+from flask import Flask, jsonify, request, abort
 from flask.views import MethodView
 
 from . import logger
 from . import threadwrapper
-from .client import JSONRPCError, SelfPostingClient
+from .client import EthenoClient, JSONRPCError, SelfPostingClient
 from .utils import format_hex_address
+
+VERSION: str = pkg_resources.require("etheno")[0].version
+VERSION_NAME = f"ToB/v{VERSION}/source/Etheno"
+JSONRPC_VERSION = '2.0'
+VERSION_ID=67
 
 app = Flask(__name__)
 
@@ -21,7 +23,7 @@ PARITY_DEFAULT_RPC_PORT = 8545
 PYETHAPP_DEFAULT_RPC_PORT = 4000
 
 
-def to_account_address(raw_address):
+def to_account_address(raw_address: int) -> str:
     addr = "%x" % raw_address
     return "0x%s%s" % ('0'*(40 - len(addr)), addr)
 
@@ -44,16 +46,16 @@ class DropPost(RuntimeError):
     pass
 
 
-class EthenoPlugin(object):
-    _etheno = None
-    logger = None
+class EthenoPlugin:
+    _etheno: Optional["Etheno"] = None
+    logger: logger.EthenoLogger = None
 
     @property
-    def etheno(self):
+    def etheno(self) -> "Etheno":
         return self._etheno
 
     @etheno.setter
-    def etheno(self, instance):
+    def etheno(self, instance: "Etheno"):
         if self._etheno is not None:
             if instance is None:
                 self._etheno = None
@@ -75,16 +77,17 @@ class EthenoPlugin(object):
         A callback when this plugin is added to an Etheno instance
         """
         pass
-    
-    def before_post(self, post_data):
+
+    def before_post(self, post_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
         A callback when Etheno receives a JSON RPC POST, but before it is processed.
         :param post_data: The raw JSON RPC data
-        :return: the post_data to be used by Etheno (can be modified); if None, the post proceeds as usual and is not modified; if you want to drop the post, `raise DropPost`
+        :return: the post_data to be used by Etheno (can be modified); if None, the post proceeds as usual and is not
+        modified; if you want to drop the post, `raise DropPost`
         """
-        pass
+        return None
 
-    def after_post(self, post_data, client_results):
+    def after_post(self, post_data: Dict[str, Any], client_results):
         """
         A callback when Etheno receives a JSON RPC POST after it is processed by all clients.
         :param post_data: The raw JSON RPC data
@@ -113,34 +116,34 @@ class EthenoPlugin(object):
         self.finalize()
 
 
-class Etheno(object):
-    def __init__(self, master_client=None):
+class Etheno:
+    def __init__(self, master_client: Optional[SelfPostingClient] = None):
         self.accounts = []
-        self._master_client = None
+        self._master_client: Optional[SelfPostingClient] = None
         if master_client is None:
             self.master_client = None
         else:
             self.master_client = master_client
-        self.clients = []
+        self.clients: List[EthenoClient] = []
         self.rpc_client_result = None
-        self.plugins = []
-        self._shutting_down = False
-        self.logger = logger.EthenoLogger('Etheno', logger.INFO)
+        self.plugins: List[EthenoPlugin] = []
+        self._shutting_down: bool = False
+        self.logger: logger.EthenoLogger = logger.EthenoLogger('Etheno', logger.INFO)
 
     @property
-    def log_level(self):
+    def log_level(self) -> int:
         return self.logger.log_level
 
     @log_level.setter
-    def log_level(self, level):
+    def log_level(self, level: int):
         self.logger.log_level = level
 
     @property
-    def master_client(self):
+    def master_client(self) -> Optional[SelfPostingClient]:
         return self._master_client
 
     @master_client.setter
-    def master_client(self, client):
+    def master_client(self, client: Optional[SelfPostingClient]):
         if client is None:
             if self._master_client is not None:
                 self._master_client.etheno = None
@@ -150,7 +153,7 @@ class Etheno(object):
             raise Exception('The master client must be an instance of a SelfPostingClient')
         client.etheno = self
         self._master_client = client
-        self.accounts = list(map(lambda a : int(a, 16), client.post({
+        self.accounts: list[int] = list(map(lambda a: int(a, 16), client.post({
             'id': 1,
             'jsonrpc': '2.0',
             'method': 'eth_accounts'
@@ -158,16 +161,17 @@ class Etheno(object):
         for client in self.clients:
             self._create_accounts(client)
 
-    def estimate_gas(self, transaction):
+    def estimate_gas(self, transaction) -> Optional[int]:
         """
         Estimates the gas cost of a transaction.
         Iterates through all clients until it finds a client that is capable of estimating the gas cost without error.
         If all clients return an error, this function will return None.
         """
-        clients = [self.master_client] + self.clients
+        clients = [self.master_client] + \
+                  [client for client in self.clients if hasattr(client, "estimate_gas")]  # type: ignore
         for client in clients:
             try:
-                return self.master_client.estimate_gas(transaction)
+                return client.estimate_gas(transaction)
             except JSONRPCError:
                 continue
         return None
@@ -251,31 +255,31 @@ class Etheno(object):
 
         return ret
             
-    def add_plugin(self, plugin):
+    def add_plugin(self, plugin: EthenoPlugin):
         plugin.etheno = self
         self.plugins.append(plugin)
         plugin.added()
 
-    def remove_plugin(self, plugin):
-        '''
-        Removes a plugin, automatically calling plugin.shutdown() in the process
+    def remove_plugin(self, plugin: EthenoPlugin):
+        """Removes a plugin, automatically calling plugin.shutdown() in the process
+
         :param plugin: The plugin to remove
-        '''
+        """
         self.plugins.remove(plugin)
         plugin.shutdown()
         plugin.etheno = None
-        
+
     def _create_accounts(self, client):
         for account in self.accounts:
             # TODO: Actually get the correct balance from the JSON RPC client instead of using hard-coded 100.0 ETH
             client.create_account(balance=int(100.0 * 10**18), address=account)
 
-    def add_client(self, client):
+    def add_client(self, client: EthenoClient):
         client.etheno = self
         self.clients.append(client)
         self._create_accounts(client)
 
-    def deploy_contract(self, from_address, bytecode, gas=0x99999, gas_price=None, value=0):
+    def deploy_contract(self, from_address, bytecode, gas=0x99999, gas_price=None, value=0) -> Optional[int]:
         if gas_price is None:
             gas_price = self.master_client.get_gas_price()
         if isinstance(bytecode, bytes):
@@ -295,12 +299,13 @@ class Etheno(object):
             }]
         })['result']
         receipt = self.master_client.wait_for_transaction(tx_hash)
-        if 'result' in receipt and receipt['result'] and 'contractAddress' in receipt['result'] and receipt['result']['contractAddress']:
+        if 'result' in receipt and receipt['result'] and 'contractAddress' in receipt['result'] and \
+                receipt['result']['contractAddress']:
             return int(receipt['result']['contractAddress'], 16)
         else:
             return None
 
-    def shutdown(self, port=GETH_DEFAULT_RPC_PORT):
+    def shutdown(self, port: int = GETH_DEFAULT_RPC_PORT):
         if self._shutting_down:
             return
         self._shutting_down = True
@@ -330,8 +335,8 @@ class Etheno(object):
             else:
                 host = None        
             # Do not use the reloader, because Flask needs to run in the main thread to use the reloader
-            app.run(debug=debug, host=host, port = port, use_reloader = False)
-        thread = Thread(target = flask_thread)
+            app.run(debug=debug, host=host, port=port, use_reloader=False)
+        thread = Thread(target=flask_thread)
         thread.start()
 
         self.logger.info("Etheno v%s" % VERSION)
@@ -343,7 +348,9 @@ class Etheno(object):
         self.shutdown()
         thread.join()
 
+
 ETHENO = Etheno()
+
 
 class EthenoView(MethodView):
     def post(self):
@@ -367,7 +374,8 @@ class EthenoView(MethodView):
         if jsonrpc_version < 2.0:
             abort(426)
         elif jsonrpc_version > 2.0:
-            ETHENO.logger.warn("Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got %s" % jsonrpc_version)
+            ETHENO.logger.warn(
+                f"Client is using a newer version of the JSONRPC protocol! Expected 2.0, but got {jsonrpc_version}")
 
         ret = ETHENO.post(data)
 
