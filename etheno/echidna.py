@@ -1,6 +1,7 @@
 import os
 import subprocess
 import tempfile
+from typing import Optional, Union
 
 from .ascii_escapes import decode
 from .etheno import EthenoPlugin
@@ -42,13 +43,14 @@ def git_exists():
     return subprocess.call(['/usr/bin/env', 'git', '--version'], stdout=subprocess.DEVNULL) == 0
 
 
-def install_echidna(allow_reinstall = False):
+def install_echidna(allow_reinstall: bool = False):
     if not allow_reinstall and echidna_exists():
         return
     elif not git_exists():
         raise Exception('Git must be installed in order to install Echidna')
     elif not stack_exists():
-        raise Exception('Haskell Stack must be installed in order to install Echidna. On OS X you can easily install it using Homebrew: `brew install haskell-stack`')
+        raise Exception('Haskell Stack must be installed in order to install Echidna. On macOS you can easily install '
+                        'it using Homebrew: `brew install haskell-stack`')
 
     with tempfile.TemporaryDirectory() as path:
         subprocess.check_call(['/usr/bin/env', 'git', 'clone', 'https://github.com/trailofbits/echidna.git', path])
@@ -57,7 +59,7 @@ def install_echidna(allow_reinstall = False):
         subprocess.check_call(['/usr/bin/env', 'stack', 'install'], cwd=path)
 
 
-def decode_binary_json(text):
+def decode_binary_json(text: Union[str, bytes]) -> Optional[bytes]:
     orig = text
     text = decode(text).strip()
     if not text.startswith(b'['):
@@ -67,24 +69,30 @@ def decode_binary_json(text):
     text = text[1:].strip()
     offset += len(orig) - len(text)
     if text[:1] != b'"':
-        raise ValueError("Malformed JSON list! Expected '%s' but instead got '%s' at offset %d" % ('"', text[0:1].decode(), offset))
+        raise ValueError(
+            f"Malformed JSON list! Expected '\"' but instead got '{text[0:1].decode()}' at offset {offset}"
+        )
     text = text[1:]
     offset += 1
     if text[-1:] != b']':
-        raise ValueError("Malformed JSON list! Expected '%s' but instead got '%s' at offset %d" % (']', chr(text[-1]), offset + len(text) - 1))
+        raise ValueError(
+            f"Malformed JSON list! Expected ']' but instead got '{chr(text[-1])}' at offset {offset + len(text) - 1}"
+        )
     text = text[:-1].strip()
     if text[-1:] != b'"':
-        raise ValueError("Malformed JSON list! Expected '%s' but instead got '%s' at offset %d" % ('"', chr(text[-1]), offset + len(text) - 1))
+        raise ValueError(
+            f"Malformed JSON list! Expected '\"' but instead got '{chr(text[-1])}' at offset {offset + len(text) - 1}"
+        )
     return text[:-1]
 
 
 class EchidnaPlugin(EthenoPlugin):
-    def __init__(self, transaction_limit=None, contract_source=None):
-        self._transaction = 0
-        self.limit = transaction_limit
+    def __init__(self, transaction_limit: Optional[int] = None, contract_source: Optional[bytes] = None):
+        self._transaction: int = 0
+        self.limit: Optional[int] = transaction_limit
         self.contract_address = None
         if contract_source is None:
-            self.contract_source = ECHIDNA_CONTRACT
+            self.contract_source: bytes = ECHIDNA_CONTRACT
         else:
             self.contract_source = contract_source
         self.contract_bytecode = None
@@ -103,20 +111,24 @@ class EchidnaPlugin(EthenoPlugin):
             self._shutdown()
         # First, deploy the testing contract:
         self.logger.info('Deploying Echidna test contract...')
-        self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0], self.contract_bytecode), True)
+        self.contract_address = format_hex_address(self.etheno.deploy_contract(self.etheno.accounts[0],
+                                                                               self.contract_bytecode), True)
         if self.contract_address is None:
             self.logger.error('Unable to deploy Echidna test contract!')
             self._shutdown()
             return
         self.logger.info("Deployed Echidna test contract to %s" % self.contract_address)
         config = self.logger.make_constant_logged_file(ECHIDNA_CONFIG, prefix='echidna', suffix='.yaml')
-        sol = self.logger.make_constant_logged_file(self.contract_source, prefix='echidna', suffix='.sol')
-        echidna_args = ['/usr/bin/env', 'echidna-test', self.logger.to_log_path(sol), '--config', self.logger.to_log_path(config)]
+        sol = self.logger.make_constant_logged_file(
+            self.contract_source, prefix='echidna', suffix='.sol')  # type: ignore
+        echidna_args = ['/usr/bin/env', 'echidna-test', self.logger.to_log_path(sol), '--config',
+                        self.logger.to_log_path(config)]
         run_script = self.logger.make_constant_logged_file(' '.join(echidna_args), prefix='run_echidna', suffix='.sh')
         # make the script executable:
         os.chmod(run_script, 0o755)
 
-        echidna = subprocess.Popen(echidna_args, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True, cwd=self.log_directory)
+        echidna = subprocess.Popen(echidna_args, stderr=subprocess.DEVNULL, stdout=subprocess.PIPE, bufsize=1,
+                                   universal_newlines=True, cwd=self.log_directory)
         while self.limit is None or self._transaction < self.limit:
             line = echidna.stdout.readline()
             if line != b'':
@@ -135,7 +147,8 @@ class EchidnaPlugin(EthenoPlugin):
 
     def compile(self, solidity):
         with ConstantTemporaryFile(solidity, prefix='echidna', suffix='.sol') as contract:
-            solc = subprocess.Popen(['/usr/bin/env', 'solc', '--bin', contract], stderr=subprocess.PIPE, stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
+            solc = subprocess.Popen(['/usr/bin/env', 'solc', '--bin', contract], stderr=subprocess.PIPE,
+                                    stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
             errors = solc.stderr.read().strip()
             output = solc.stdout.read()
             if solc.wait() != 0:
@@ -172,7 +185,8 @@ class EchidnaPlugin(EthenoPlugin):
         }
         gas = self.etheno.estimate_gas(transaction)
         if gas is None:
-            self.logger.warning(f"All clients were unable to estimate the gas cost for transaction {self._transaction}. This typically means that Echidna emitted a transaction that is too large.")
+            self.logger.warning(f"All clients were unable to estimate the gas cost for transaction {self._transaction}."
+                                f" This typically means that Echidna emitted a transaction that is too large.")
             return
         gas = "0x%x" % gas
         self.logger.info(f"Estimated gas cost for Transaction {self._transaction}: {gas}")
