@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import atexit
+import shutil
 import subprocess
 import time
 
@@ -22,12 +23,14 @@ class Ganache(RpcHttpProxy):
     def start(self):
         if self.ganache:
             return
+        if shutil.which("ganache-cli") is None:
+            raise ValueError("`ganache-cli` is not installed! Install it by running `npm -g i ganache-cli`")
         if self._client:
             self.ganache = PtyLogger(self._client.logger, self.args)
             self.ganache.start()
 
             def ganache_errored() -> int:
-                if self.ganache.is_done:
+                if self.ganache.is_done():
                     return self.ganache.exitstatus
                 return 0
         else:
