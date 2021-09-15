@@ -122,6 +122,8 @@ class EventSummaryPlugin(EthenoPlugin):
             result = result[0]
         if 'method' not in post_data:
             return
+        # print('POST DATA', post_data)
+        # print('RESULT', result)
         elif (post_data['method'] == 'eth_sendTransaction' or post_data['method'] == 'eth_sendRawTransaction') and 'result' in result:
             try:
                 transaction_hash = int(result['result'], 16)
@@ -135,12 +137,20 @@ class EventSummaryPlugin(EthenoPlugin):
             self.handle_increase_block_number()
         elif post_data['method'] == 'evm_increaseTime':
             self.handle_increase_block_timestamp(post_data['params'][0])
-        elif post_data['method'] == 'eth_getTransactionReceipt':
+        elif post_data['method'] == 'eth_getTransactionReceipt' or post_data['method'] == 'eth_getTransactionByHash':
             transaction_hash = int(post_data['params'][0], 16)
             if transaction_hash not in self._transactions:
                 self.logger.error(f'Received transaction receipt {result} for unknown transaction hash {post_data["params"][0]}')
                 return
             original_transaction = self._transactions[transaction_hash]
+            if post_data['method'] == 'eth_getTransactionByHash':
+                print('REQ eth_getTransactionByHash', original_transaction)
+                print('RES eth_getTransactionByHash', result)
+                # we need to fetch the contractAddress if to == None,
+                # however, for that we need the transaction receipt!!
+                # now i would like to ugly hack call self.client.post(<get tx receipt>) here
+                # but that ofcouse wont work, as there is no self.client
+                return # to not break down below because result['result']['contractAddress'] does not exist
             if 'value' not in original_transaction or original_transaction['value'] is None:
                 value = '0x0'
             else:
