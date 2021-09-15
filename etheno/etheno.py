@@ -46,9 +46,12 @@ class DropPost(RuntimeError):
     pass
 
 
+OptionalLogger = Optional[logger.EthenoLogger]
+
+
 class EthenoPlugin:
     _etheno: Optional["Etheno"] = None
-    logger: logger.EthenoLogger = None
+    logger: OptionalLogger = None
 
     @property
     def etheno(self) -> "Etheno":
