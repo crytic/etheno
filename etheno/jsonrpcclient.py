@@ -2,14 +2,12 @@ from collections.abc import Sequence
 import copy
 import json
 import os
-import shutil
-import tempfile
-import time
 
 from .client import RpcProxyClient
 from .genesis import make_accounts
 from .logger import PtyLogger
-from .utils import ConstantTemporaryFile, format_hex_address, is_port_free
+from .utils import format_hex_address, is_port_free
+
 
 class JSONRPCClient(RpcProxyClient):
     def __init__(self, name, genesis, port=8546):
@@ -19,7 +17,10 @@ class JSONRPCClient(RpcProxyClient):
         self.port = port
         self.genesis = copy.deepcopy(genesis)
         self.miner_account = make_accounts(1)[0]
-        self.genesis['alloc'][format_hex_address(self.miner_account.address)] = {'balance' : '0', 'privateKey' : format_hex_address(self.miner_account.private_key)}
+        self.genesis['alloc'][format_hex_address(self.miner_account.address)] = {
+            'balance': '0',
+            'privateKey': format_hex_address(self.miner_account.private_key)
+        }
         self._accounts = []
         self._created_address_index = -1
         self._runscript = []
@@ -62,7 +63,7 @@ class JSONRPCClient(RpcProxyClient):
         for addr, bal in self.genesis['alloc'].items():
             yield int(addr, 16)
 
-    def create_account(self, balance=0, address=None):
+    def create_account(self, balance: int = 0, address=None):
         accounts = list(self.accounts)
         if address is None:
             self._created_address_index += 1
@@ -70,7 +71,9 @@ class JSONRPCClient(RpcProxyClient):
                 raise Exception("Ran out of %s genesis accounts and could not create a new one!" % self.short_name)
             return accounts[self._created_address_index]
         elif address not in accounts:
-            raise Exception("Account %s did not exist in the genesis for client %s! Valid accounts:\n%s" % (address, self.short_name, '\n'.join(map(hex, accounts))))
+            valid_accounts = '\n'.join(map(hex, accounts))
+            raise ValueError(f"Account {address!s} did not exist in the genesis for client {self.short_name}! "
+                             f"Valid accounts:\n{valid_accounts}")
         else:
             return address
 
@@ -96,7 +99,7 @@ class JSONRPCClient(RpcProxyClient):
         self.wait_until_running()
 
     def initialized(self):
-        '''Called once the client is completely intialized but before it is started'''
+        """Called once the client is completely intialized but before it is started"""
         pass
 
     def is_running(self):

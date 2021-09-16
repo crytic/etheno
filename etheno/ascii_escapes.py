@@ -1,3 +1,5 @@
+from typing import Iterable, Union
+
 CONTROL_CODES = {
     b'0'   : b'\0',
     b'a'   : b'\x07',	# alert
@@ -56,7 +58,8 @@ CONTROL_CODES = {
 for i in range(26):
     CONTROL_CODES[bytes([ord('^'), ord('A') + i])] = bytes([i + 1])
 
-def decode(text):
+
+def decode(text: Union[str, bytes, Iterable[int]]) -> bytes:
     escaped = None
     ret = b''
     for c in text:
@@ -74,13 +77,13 @@ def decode(text):
                     # see if it is an integer in the range [0, 255]
                     try:
                         value = int(escaped)
-                        if value >= 0 and value <= 255:
+                        if 0 <= value <= 255:
                             ret += bytes([value])
                             escaped = None
                             continue
-                    except Exception:
+                    except ValueError:
                         pass
-                raise ValueError("Unknown escape sequence '\\%s'" % escaped)
+                raise ValueError(f"Unknown escape sequence: {escaped!r}")
         elif c == b'\\':
             escaped = b''
         else:
