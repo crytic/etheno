@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
 
 import atexit
+import shlex
 import subprocess
 import time
 
 from .client import RpcHttpProxy, SelfPostingClient
 from .logger import PtyLogger
 from .utils import is_port_free
+from .etheno import ETHENO
 
 class Ganache(RpcHttpProxy):
-    def __init__(self, args=None, port=8546):
+    def __init__(self, cmd=None, args=None, port=8546):
         super().__init__("http://127.0.0.1:%d/" % port)
         self.port = port
+        if cmd is not None:
+            cmd = shlex.split(cmd)
+        else:
+            cmd = ['/usr/bin/env', 'ganache-cli']
         if args is None:
             args = []
-        self.args = ['/usr/bin/env', 'ganache-cli', '-d', '-p', str(port)] + args
+        self.args = cmd + ['-d', '-p', str(port)] + args
         self.ganache = None
         self._client = None
     def start(self):
@@ -24,6 +30,7 @@ class Ganache(RpcHttpProxy):
             self.ganache = PtyLogger(self._client.logger, self.args)
             self.ganache.start()
         else:
+            ETHENO.logger.debug(f"Running ganache: {self.args}")
             self.ganache = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
         atexit.register(Ganache.stop.__get__(self, Ganache))
         # wait until Ganache has started listening:
