@@ -4,10 +4,6 @@ from typing import Dict, TextIO, Union
 from .etheno import EthenoPlugin
 from .utils import format_hex_address
 
-from dataclasses import asdict, dataclass
-from pprint import pprint
-from typing import Optional
-
 
 # source: https://ethereum.stackexchange.com/a/83855
 import rlp
@@ -144,13 +140,17 @@ class EventSummaryPlugin(EthenoPlugin):
                 return
             original_transaction = self._transactions[transaction_hash]
             if post_data['method'] == 'eth_getTransactionByHash':
-                print('REQ eth_getTransactionByHash', original_transaction)
-                print('RES eth_getTransactionByHash', result)
+                self.logger.debug('REQ eth_getTransactionByHash', original_transaction)
+                self.logger.debug('RES eth_getTransactionByHash', result)
                 # we need to fetch the contractAddress if to == None,
-                # however, for that we need the transaction receipt!!
-                # now i would like to ugly hack call self.client.post(<get tx receipt>) here
-                # but that ofcouse wont work, as there is no self.client
-                return # to not break down below because result['result']['contractAddress'] does not exist
+                # however, for that we need the transaction receipt!
+                if self.etheno.master_client is None:
+                    return  # there is no way to figure out the contract address
+                receipt = self.etheno.master_client.wait_for_transaction(original_transaction)
+
+                # TODO @rmi7: I think the transaction receipt is what you need here,
+                #             but I am not sure what you need to do with it.
+
             if 'value' not in original_transaction or original_transaction['value'] is None:
                 value = '0x0'
             else:
