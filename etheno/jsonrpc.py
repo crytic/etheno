@@ -118,8 +118,6 @@ class EventSummaryPlugin(EthenoPlugin):
             result = result[0]
         if 'method' not in post_data:
             return
-        # print('POST DATA', post_data)
-        # print('RESULT', result)
         elif (post_data['method'] == 'eth_sendTransaction' or post_data['method'] == 'eth_sendRawTransaction') and 'result' in result:
             try:
                 transaction_hash = int(result['result'], 16)
@@ -133,24 +131,12 @@ class EventSummaryPlugin(EthenoPlugin):
             self.handle_increase_block_number()
         elif post_data['method'] == 'evm_increaseTime':
             self.handle_increase_block_timestamp(post_data['params'][0])
-        elif post_data['method'] == 'eth_getTransactionReceipt' or post_data['method'] == 'eth_getTransactionByHash':
+        elif post_data['method'] == 'eth_getTransactionReceipt':
             transaction_hash = int(post_data['params'][0], 16)
             if transaction_hash not in self._transactions:
                 self.logger.error(f'Received transaction receipt {result} for unknown transaction hash {post_data["params"][0]}')
                 return
             original_transaction = self._transactions[transaction_hash]
-            if post_data['method'] == 'eth_getTransactionByHash':
-                self.logger.debug('REQ eth_getTransactionByHash', original_transaction)
-                self.logger.debug('RES eth_getTransactionByHash', result)
-                # we need to fetch the contractAddress if to == None,
-                # however, for that we need the transaction receipt!
-                if self.etheno.master_client is None:
-                    return  # there is no way to figure out the contract address
-                receipt = self.etheno.master_client.wait_for_transaction(original_transaction)
-
-                # TODO @rmi7: I think the transaction receipt is what you need here,
-                #             but I am not sure what you need to do with it.
-
             if 'value' not in original_transaction or original_transaction['value'] is None:
                 value = '0x0'
             else:
