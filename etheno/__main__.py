@@ -237,7 +237,7 @@ def main(argv=None):
         ganache_accounts = ["--account=%s,0x%x" % (acct.private_key, acct.balance) for acct in accounts]
 
         ganache_args = ganache_accounts + ['-g', str(args.gas_price), '-i', str(args.network_id)]
-        
+
         if args.ganache_args is not None:
             ganache_args += shlex.split(args.ganache_args)
 
