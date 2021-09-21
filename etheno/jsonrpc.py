@@ -33,8 +33,9 @@ def hex_to_bytes(data: str) -> bytes:
 
 
 def decode_raw_tx(raw_tx: str):
-    tx = rlp.decode(hex_to_bytes(raw_tx), Transaction)
-    hash_tx = Web3.toHex(keccak(hex_to_bytes(raw_tx)))
+    tx_bytes = hex_to_bytes(raw_tx)
+    tx = rlp.decode(tx_bytes, Transaction)
+    hash_tx = Web3.toHex(keccak(tx_bytes))
     from_ = w3.eth.account.recover_transaction(raw_tx)
     to = w3.toChecksumAddress(tx.to) if tx.to else None
     data = w3.toHex(tx.data)
