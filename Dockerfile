@@ -48,9 +48,6 @@ WORKDIR /home/etheno
 USER root
 WORKDIR /root
 
-# Install Parity
-RUN curl https://get.parity.io -L | bash
-
 # Allow passwordless sudo for etheno
 RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
