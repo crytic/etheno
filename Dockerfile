@@ -41,6 +41,10 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
 # END Install Echidna
 
+# BEGIN Install Etheno
+RUN --mount=type=bind,target=/etheno cd /etheno && \
+    pip3 install --no-cache-dir '.[manticore]'
+
 RUN useradd -m etheno
 RUN usermod -aG sudo etheno
 USER etheno
@@ -54,13 +58,6 @@ RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 USER etheno
 ENV HOME=/home/etheno PATH=$PATH:/home/etheno/.local/bin
 WORKDIR /home/etheno
-
-COPY --chown=etheno:etheno LICENSE setup.py etheno/
-COPY --chown=etheno:etheno etheno/*.py etheno/etheno/
-RUN cd etheno && \
-    pip3 install --no-cache-dir --user '.[manticore]' && \
-    cd .. && \
-    rm -rf etheno
 
 COPY --chown=etheno:etheno examples examples/
 
