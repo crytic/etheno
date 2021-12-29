@@ -1,5 +1,6 @@
-FROM ubuntu:bionic
-MAINTAINER Evan Sultanik
+# syntax=docker/dockerfile:1.3
+FROM ubuntu:focal
+LABEL org.opencontainers.image.authors="Evan Sultanik"
 
 RUN DEBIAN_FRONTEND=noninteractive \
     apt-get update && apt-get install -y --no-install-recommends \
