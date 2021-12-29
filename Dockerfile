@@ -18,17 +18,17 @@ RUN DEBIAN_FRONTEND=noninteractive \
     locales-all locales \
     libudev-dev \
     gpg-agent \
-&& apt-get clean \
 && rm -rf /var/lib/apt/lists/*
 
 RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:ethereum/ethereum && \
     apt-get update && apt-get install -y --no-install-recommends \
     solc \
     ethereum \
-&& apt-get clean \
 && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && sudo apt-get install -y --no-install-recommends nodejs && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && \
+    sudo apt-get install -y --no-install-recommends nodejs \
+&& rm -rf /var/lib/apt/lists/*
 
 RUN npm install --production -g ganache-cli truffle && npm --force cache clean
 
