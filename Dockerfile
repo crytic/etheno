@@ -26,7 +26,7 @@ RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:ethereum/ethereum &
     ethereum \
 && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && \
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
     sudo apt-get install -y --no-install-recommends nodejs \
 && rm -rf /var/lib/apt/lists/*
 
