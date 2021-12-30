@@ -22,6 +22,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     libudev-dev \
     locales-all locales \
     python3 \
+    python3-pip \
     software-properties-common \
     sudo \
 && rm -rf /var/lib/apt/lists/*
@@ -48,10 +49,10 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 # END Install Echidna
 
 # BEGIN Install Etheno
-RUN --mount=type=bind,target=/etheno \
-    --mount=type=bind,target=/wheels,source=/wheels,from=python-wheels \
-    cd /etheno && \
-    pip3 install --no-cache-dir --no-index --find-links /wheels '.[manticore]'
+RUN --mount=type=bind,target=/mnt/etheno \
+    --mount=type=bind,target=/mnt/wheels,source=/wheels,from=python-wheels \
+    cd /mnt/etheno && \
+    pip3 install --no-cache-dir --no-index --find-links /mnt/wheels '.[manticore]'
 
 RUN useradd -m -G sudo etheno
 
