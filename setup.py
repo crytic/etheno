@@ -22,7 +22,7 @@ setup(
         'setuptools'
     ],
     extras_require={
-        'manticore': ['manticore>=0.2.2']
+        'manticore': ['manticore>=0.2.2,<0.3.6']
     },
     entry_points={
         'console_scripts': [
