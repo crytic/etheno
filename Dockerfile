@@ -2,8 +2,7 @@
 FROM ubuntu:focal
 LABEL org.opencontainers.image.authors="Evan Sultanik"
 
-RUN DEBIAN_FRONTEND=noninteractive \
-    apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     curl \
     ca-certificates \
     bash-completion \
@@ -20,7 +19,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
     gpg-agent \
 && rm -rf /var/lib/apt/lists/*
 
-RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:ethereum/ethereum && \
+RUN add-apt-repository -y ppa:ethereum/ethereum && \
     apt-get update && apt-get install -y --no-install-recommends \
     solc \
     ethereum \
@@ -51,7 +50,7 @@ RUN useradd -m -G sudo etheno
 RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
 USER etheno
-ENV HOME=/home/etheno PATH=$PATH:/home/etheno/.local/bin
+ENV HOME=/home/etheno
 WORKDIR /home/etheno
 
 COPY --chown=etheno:etheno examples examples/
