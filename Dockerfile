@@ -20,7 +20,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     curl \
     gpg-agent \
     libudev-dev \
-    locales-all locales \
+    locales \
     python3 \
     python3-pip \
     software-properties-common \
@@ -43,7 +43,7 @@ RUN npm install --production -g ganache-cli truffle && npm --force cache clean
 
 COPY --from=trailofbits/echidna:latest /root/.local/bin/echidna-test /usr/local/bin/echidna-test
 
-RUN update-locale LANG=en_US.UTF-8 && locale-gen en_US.UTF-8
+RUN locale-gen en_US.UTF-8 && update-locale LANG=en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 
 # END Install Echidna
