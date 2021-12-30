@@ -22,7 +22,9 @@ setup(
         'setuptools'
     ],
     extras_require={
-        'manticore': ['manticore>=0.2.2,<0.3.6']
+        # manticore 0.3.6 causes logging errors. See crytic/etheno#80
+        # rlp<3 is needed to stay compatible with manticore
+        'manticore': ['manticore>=0.2.2,<0.3.6', 'rlp<3']
     },
     entry_points={
         'console_scripts': [
