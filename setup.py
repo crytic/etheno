@@ -12,7 +12,9 @@ setup(
         'ptyprocess',
         'pysha3>=1.0.2',
         'flask>=1.0.2',
-        'web3',
+        # web3 3.16.3 and earlier use the older, deprecated `ethereum-*`
+        # libraries, which throw a deprecation warning when running etheno
+        'web3>=3.16.4',
         # The following two requirements are for our fork of `keyfile.py`,
         # but they should already be satisfied by the `web3` requirement
         'cytoolz>=0.9.0,<1.0.0',
