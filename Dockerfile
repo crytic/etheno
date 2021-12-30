@@ -45,12 +45,7 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 RUN --mount=type=bind,target=/etheno cd /etheno && \
     pip3 install --no-cache-dir '.[manticore]'
 
-RUN useradd -m etheno
-RUN usermod -aG sudo etheno
-USER etheno
-WORKDIR /home/etheno
-USER root
-WORKDIR /root
+RUN useradd -m -G sudo etheno
 
 # Allow passwordless sudo for etheno
 RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
