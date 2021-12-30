@@ -1,5 +1,17 @@
 # syntax=docker/dockerfile:1.3
-FROM ubuntu:focal
+FROM ubuntu:focal AS python-wheels
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    python3-dev \
+    python3-pip \
+    python3-setuptools
+RUN --mount=type=bind,target=/etheno \
+    cd /etheno && \
+    pip3 wheel --no-cache-dir -w /wheels '.[manticore]'
+
+
+FROM ubuntu:focal AS final
 LABEL org.opencontainers.image.authors="Evan Sultanik"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
@@ -8,11 +20,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     bash-completion \
     sudo \
     python3 \
-    libpython3-dev \
-    python3-pip \
-    python3-setuptools \
-    git \
-    build-essential \
     software-properties-common \
     locales-all locales \
     libudev-dev \
@@ -41,8 +48,10 @@ ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
 # END Install Echidna
 
 # BEGIN Install Etheno
-RUN --mount=type=bind,target=/etheno cd /etheno && \
-    pip3 install --no-cache-dir '.[manticore]'
+RUN --mount=type=bind,target=/etheno \
+    --mount=type=bind,target=/wheels,source=/wheels,from=python-wheels \
+    cd /etheno && \
+    pip3 install --no-cache-dir --no-index --find-links /wheels '.[manticore]'
 
 RUN useradd -m -G sudo etheno
 
