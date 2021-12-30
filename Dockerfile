@@ -15,15 +15,15 @@ FROM ubuntu:focal AS final
 LABEL org.opencontainers.image.authors="Evan Sultanik"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
     bash-completion \
-    sudo \
+    ca-certificates \
+    curl \
+    gpg-agent \
+    libudev-dev \
+    locales-all locales \
     python3 \
     software-properties-common \
-    locales-all locales \
-    libudev-dev \
-    gpg-agent \
+    sudo \
 && rm -rf /var/lib/apt/lists/*
 
 RUN add-apt-repository -y ppa:ethereum/ethereum && \
