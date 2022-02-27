@@ -35,11 +35,11 @@ def main(argv=None):
                         help='Allow the web server to accept external connections')
     parser.add_argument('-p', '--port', type=int, default=GETH_DEFAULT_RPC_PORT,
                         help='Port on which to run the JSON RPC webserver (default=%d)' % GETH_DEFAULT_RPC_PORT)
-    parser.add_argument('-a', '--accounts', type=int, default=None,
+    parser.add_argument('-a', '--accounts', type=int, default=10,
                         help='Number of accounts to create in the client (default=10)')
     parser.add_argument('-b', '--balance', type=float, default=100.0,
                         help='Default balance (in Ether) to seed to each account (default=100.0)')
-    parser.add_argument('-c', '--gas-price', type=int, default=None,
+    parser.add_argument('-c', '--gas-price', type=int, default=200000000000,
                         help='Default gas price (default=20000000000)')
     parser.add_argument('-i', '--network-id', type=int, default=None,
                         help='Specify a network ID (default is the network ID of the master client)')
@@ -74,6 +74,9 @@ def main(argv=None):
     parser.add_argument('--geth-port', type=int, default=None,
                         help='Port on which to run Geth (defaults to the closest available port to the port specified '
                              'with --port plus one)')
+    parser.add_argument('-u', '--geth-unlock-accounts', action='store_true', default=False, help='Unlock accounts in geth')
+    parser.add_argument('--geth-ipcpath', type=str, default=None,
+                        help='Custom path for geth ipc file')
     parser.add_argument('-pa', '--parity', action='store_true', default=False, help='Run Parity as a JSON RPC client')
     parser.add_argument('--parity-port', type=int, default=None,
                         help='Port on which to run Parity (defaults to the closest available port to the port '
@@ -115,7 +118,7 @@ def main(argv=None):
 
     if argv is None:
         argv = sys.argv
-    
+
     args = parser.parse_args(argv[1:])
 
     if args.version:
@@ -149,7 +152,7 @@ def main(argv=None):
                           "your own deleting this directory!" % abspath)
                     sys.exit(1)
                 clear_directory(args.log_dir)
-    
+
         ETHENO.logger.save_to_directory(args.log_dir)
         if not args.log_file:
             # Also create a unified log in the log dir:
@@ -174,34 +177,40 @@ def main(argv=None):
                 ETHENO.logger.error('Etheno failed to install Echidna. Please install it manually '
                                     'https://github.com/trailofbits/echidna')
                 sys.exit(1)
-        
+
     if args.genesis is None:
         # Set defaults since no genesis was supplied
         if args.accounts is None:
             args.accounts = 10
         if args.gas_price is None:
             args.gas_price = 20000000000
-        
+
     accounts = []
 
     if args.genesis:
         with open(args.genesis, 'rb') as f:
             genesis = json.load(f)
             if 'config' not in genesis:
+                ETHENO.logger.warn("No `config` entry in genesis json")
                 genesis['config'] = {}
             if 'alloc' not in genesis:
+                ETHENO.logger.warn("No `alloc` entry in genesis json")
                 genesis['alloc'] = {}
             if args.network_id is None:
-                args.network_id = genesis['config'].get('chainId', None)
+                args.network_id = genesis['config'].get('chainId')
             if args.constantinople_block is None:
-                args.constantinople_block = genesis['config'].get('constantinopleBlock', None)
+                args.constantinople_block = genesis['config'].get('constantinopleBlock')
                 args.constantinople = args.constantinople_block is not None
             for addr, bal in genesis['alloc'].items():
                 pkey = None
                 if 'privateKey' in bal:
-                    pkey = bal['privateKey']
-                accounts.append(Account(address=int(addr, 16), balance=decode_value(bal['balance']),
-                                        private_key=decode_value(pkey)))
+                    pkey = bal.get('privateKey')
+                    if pkey:
+                        pkey = decode_value(pkey)
+                ETHENO.logger.info("Account %s w/ balance %s found", addr, bal['balance'])
+                accounts.append(Account(address=int(addr, 16),
+                                        balance=decode_value(bal['balance']),
+                                        private_key=pkey))
     else:
         # We will generate it further below once we've resolved all of the parameters
         genesis = None
@@ -226,7 +235,7 @@ def main(argv=None):
     if args.ganache and args.master:
         parser.print_help()
         sys.stderr.write('\nError: You cannot specify both --ganache and --master at the same time!\n')
-        sys.exit(1)        
+        sys.exit(1)
     elif args.ganache:
         if args.ganache_port is None:
             args.ganache_port = find_open_port(args.port + 1)
@@ -254,7 +263,7 @@ def main(argv=None):
     elif args.raw and not args.geth and not args.parity:
         ETHENO.master_client = RawTransactionClient(RpcProxyClient(args.raw[0]), accounts)
         args.raw = args.raw[1:]
-        
+
     if args.network_id is None:
         if ETHENO.master_client:
             args.network_id = int(ETHENO.master_client.post({
@@ -283,11 +292,12 @@ def main(argv=None):
 
         geth_instance = geth.GethClient(genesis=genesis, port=args.geth_port)
         geth_instance.etheno = ETHENO
-        for account in accounts:
-            # TODO: Make some sort of progress bar here
-            geth_instance.logger.info("Unlocking Geth account %s" % format_hex_address(account.address, True))
-            geth_instance.import_account(account.private_key)
-        geth_instance.start(unlock_accounts=True)
+        if args.geth_unlock_accounts:
+            for account in accounts:
+                # TODO: Make some sort of progress bar here
+                geth_instance.logger.info("Unlocking Geth account %s" % format_hex_address(account.address, True))
+                geth_instance.import_account(account.private_key)
+        geth_instance.start(unlock_accounts=args.geth_unlock_accounts)
         if ETHENO.master_client is None:
             ETHENO.master_client = geth_instance
         else:
@@ -309,7 +319,7 @@ def main(argv=None):
         if ETHENO.master_client is None:
             ETHENO.master_client = parity_instance
         else:
-            ETHENO.add_client(AddressSynchronizingClient(parity_instance))        
+            ETHENO.add_client(AddressSynchronizingClient(parity_instance))
 
     for client in args.client:
         ETHENO.add_client(AddressSynchronizingClient(RpcProxyClient(client)))

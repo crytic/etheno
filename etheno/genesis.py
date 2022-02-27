@@ -119,8 +119,10 @@ DEFAULT_PRIVATE_KEYS = [0xf2f48ee19680706196e2e339e5da3491186e0c4c5030670656b0e0
 
 def make_accounts(num_accounts, default_balance = None):
     ret = []
+    if not num_accounts:
+        raise ValueError("No accounts passed in genesis.json")
     if num_accounts > len(DEFAULT_PRIVATE_KEYS):
-        raise Exception('TODO: Too many accounts')
+        raise ValueError('TODO: Too many accounts')
     for i in range(num_accounts):
         acct = w3.eth.account.from_key(DEFAULT_PRIVATE_KEYS[i])
         ret.append(Account(address=int(acct.address, 16), private_key=int(acct.privateKey.hex(), 16), balance=default_balance))
