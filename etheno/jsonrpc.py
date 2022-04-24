@@ -147,7 +147,7 @@ class EventSummaryPlugin(EthenoPlugin):
                 contract_address = result['result']['contractAddress']
                 self.handle_contract_created(original_transaction['from'], contract_address, result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'], value)
             else:
-                self.handle_function_call(original_transaction['from'], original_transaction['to'], result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'] if 'data' in original_transaction else '0x00', value)
+                self.handle_function_call(original_transaction['from'], original_transaction['to'], result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'] if 'data' in original_transaction else '0x', value)
 
 
 class EventSummaryExportPlugin(EventSummaryPlugin):
