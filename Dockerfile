@@ -31,15 +31,6 @@ RUN curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && sudo apt-
 
 RUN npm install --production -g ganache-cli truffle && npm --force cache clean
 
-# BEGIN Install Echidna
-
-COPY --from=trailofbits/echidna:latest /root/.local/bin/echidna-test /usr/local/bin/echidna-test
-
-RUN update-locale LANG=en_US.UTF-8 && locale-gen en_US.UTF-8
-ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
-
-# END Install Echidna
-
 RUN useradd -m etheno
 RUN usermod -aG sudo etheno
 USER etheno
