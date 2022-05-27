@@ -4,6 +4,60 @@ from typing import Dict, TextIO, Union
 from .etheno import EthenoPlugin
 from .utils import format_hex_address
 
+
+# source: https://ethereum.stackexchange.com/a/83855
+import rlp
+from eth_typing import HexStr
+from eth_utils import keccak, to_bytes
+from rlp.sedes import Binary, big_endian_int, binary
+from web3 import Web3
+from web3.auto import w3
+
+
+class Transaction(rlp.Serializable):
+    fields = [
+        ("nonce", big_endian_int),
+        ("gas_price", big_endian_int),
+        ("gas", big_endian_int),
+        ("to", Binary.fixed_length(20, allow_empty=True)),
+        ("value", big_endian_int),
+        ("data", binary),
+        ("v", big_endian_int),
+        ("r", big_endian_int),
+        ("s", big_endian_int),
+    ]
+
+
+def hex_to_bytes(data: str) -> bytes:
+    return to_bytes(hexstr=HexStr(data))
+
+
+def decode_raw_tx(raw_tx: str):
+    tx_bytes = hex_to_bytes(raw_tx)
+    tx = rlp.decode(tx_bytes, Transaction)
+    hash_tx = Web3.toHex(keccak(tx_bytes))
+    from_ = w3.eth.account.recover_transaction(raw_tx)
+    to = w3.toChecksumAddress(tx.to) if tx.to else None
+    data = w3.toHex(tx.data)
+    r = hex(tx.r)
+    s = hex(tx.s)
+    chain_id = (tx.v - 35) // 2 if tx.v % 2 else (tx.v - 36) // 2
+    return {
+        'txHash': hash_tx,
+        'from': from_,
+        'to': to,
+        'nonce': tx.nonce,
+        'gas': hex(tx.gas),
+        'gasPrice': hex(tx.gas_price),
+        'value': hex(tx.value),
+        'data': data,
+        'chainId': chain_id,
+        'r': r,
+        's': s,
+        'v': tx.v
+    }
+
+
 class JSONExporter:
     def __init__(self, out_stream: Union[str, TextIO]):
         self._was_path = isinstance(out_stream, str)
@@ -65,12 +119,15 @@ class EventSummaryPlugin(EthenoPlugin):
             result = result[0]
         if 'method' not in post_data:
             return
-        elif post_data['method'] == 'eth_sendTransaction' and 'result' in result:
+        elif (post_data['method'] == 'eth_sendTransaction' or post_data['method'] == 'eth_sendRawTransaction') and 'result' in result:
             try:
                 transaction_hash = int(result['result'], 16)
             except ValueError:
                 return
-            self._transactions[transaction_hash] = post_data
+            if post_data['method'] == 'eth_sendRawTransaction':
+                self._transactions[transaction_hash] = decode_raw_tx(post_data['params'][0])
+            else:
+                self._transactions[transaction_hash] = post_data['params'][0]
         elif post_data['method'] == 'evm_mine':
             self.handle_increase_block_number()
         elif post_data['method'] == 'evm_increaseTime':
@@ -80,7 +137,7 @@ class EventSummaryPlugin(EthenoPlugin):
             if transaction_hash not in self._transactions:
                 self.logger.error(f'Received transaction receipt {result} for unknown transaction hash {post_data["params"][0]}')
                 return
-            original_transaction = self._transactions[transaction_hash]['params'][0]
+            original_transaction = self._transactions[transaction_hash]
             if 'value' not in original_transaction or original_transaction['value'] is None:
                 value = '0x0'
             else:
@@ -90,7 +147,7 @@ class EventSummaryPlugin(EthenoPlugin):
                 contract_address = result['result']['contractAddress']
                 self.handle_contract_created(original_transaction['from'], contract_address, result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'], value)
             else:
-                self.handle_function_call(original_transaction['from'], original_transaction['to'], result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'], value)
+                self.handle_function_call(original_transaction['from'], original_transaction['to'], result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'] if 'data' in original_transaction else '0x', value)
 
 
 class EventSummaryExportPlugin(EventSummaryPlugin):

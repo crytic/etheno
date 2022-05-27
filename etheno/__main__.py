@@ -33,28 +33,59 @@ def main(argv = None):
     parser.add_argument('--fuzz-contract', type=str, default=None, help='Path to a Solidity contract to have Echidna use for fuzzing (default is to use a builtin generic Echidna fuzzing contract)')
     parser.add_argument('-t', '--truffle', action='store_true', default=False, help='Run the truffle migrations in the current directory and exit')
     parser.add_argument('--truffle-cmd', type=str, default='truffle', help='Command to run truffle (default=truffle)')
-    parser.add_argument('--truffle-args', type=str, default='migrate', help='Arguments to pass to truffle (default=migrate)')
-    parser.add_argument('-g', '--ganache', action='store_true', default=False, help='Run Ganache as a master JSON RPC client (cannot be used in conjunction with --master)')
-    parser.add_argument('--ganache-args', type=str, default=None, help='Additional arguments to pass to Ganache')
-    parser.add_argument('--ganache-port', type=int, default=None, help='Port on which to run Ganache (defaults to the closest available port to the port specified with --port plus one)')
+    parser.add_argument('--truffle-args', type=str, default='migrate',
+                        help='Arguments to pass to truffle (default=migrate)')
+    parser.add_argument('-g', '--ganache', action='store_true', default=False,
+                        help='Run Ganache as a master JSON RPC client (cannot be used in conjunction with --master)')
+    parser.add_argument('--ganache-cmd', type=str, default=None, help='Specify a command that runs Ganache '
+                                                                      '(default="/usr/bin/env ganache-cli")')
+    parser.add_argument('--ganache-args', type=str, default=None,
+                        help='Additional arguments to pass to Ganache')
+    parser.add_argument('--ganache-port', type=int, default=None,
+                        help='Port on which to run Ganache (defaults to the closest available port to the port '
+                             'specified with --port plus one)')
     parser.add_argument('-go', '--geth', action='store_true', default=False, help='Run Geth as a JSON RPC client')
-    parser.add_argument('--geth-port', type=int, default=None, help='Port on which to run Geth (defaults to the closest available port to the port specified with --port plus one)')
+    parser.add_argument('--geth-port', type=int, default=None,
+                        help='Port on which to run Geth (defaults to the closest available port to the port specified '
+                             'with --port plus one)')
     parser.add_argument('-pa', '--parity', action='store_true', default=False, help='Run Parity as a JSON RPC client')
-    parser.add_argument('--parity-port', type=int, default=None, help='Port on which to run Parity (defaults to the closest available port to the port specified with --port plus one)')
-    parser.add_argument('-j', '--genesis', type=str, default=None, help='Path to a genesis.json file to use for initializing clients. Any genesis-related options like --network-id will override the values in this file. If --accounts is greater than zero, that many new accounts will be appended to the accounts in the genesis file.')
-    parser.add_argument('--save-genesis', type=str, default=None, help="Save a genesis.json file to reproduce the state of this run. Note that this genesis file will include all known private keys for the genesis accounts, so use this with caution.")
-    parser.add_argument('--constantinople-block', type=int, default=None, help='The block in which to enable Constantinople EIPs (default=do not enable Constantinople)')
-    parser.add_argument('--constantinople', action='store_true', default=False, help='Enables Constantinople EIPs; equivalent to `--constantinople-block 0`')
-    parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True, help='Do not run differential testing, which is run by default')
-    parser.add_argument('-l', '--log-level', type=str.upper, choices={'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'}, default='INFO', help='Set Etheno\'s log level (default=INFO)')
-    parser.add_argument('--log-file', type=str, default=None, help='Path to save all log output to a single file')
-    parser.add_argument('--log-dir', type=str, default=None, help='Path to a directory in which to save all log output, divided by logging source')
-    parser.add_argument('-d', '--dump-jsonrpc', type=str, default=None, help='Path to a JSON file in which to dump all raw JSON RPC calls; if `--log-dir` is provided, the raw JSON RPC calls will additionally be dumped to `rpc.json` in the log directory.')
-    parser.add_argument('-x', '--export-summary', type=str, default=None, help='Path to a JSON file in which to export an event summary')
+    parser.add_argument('--parity-port', type=int, default=None,
+                        help='Port on which to run Parity (defaults to the closest available port to the port '
+                             'specified with --port plus one)')
+    parser.add_argument('-j', '--genesis', type=str, default=None,
+                        help='Path to a genesis.json file to use for initializing clients. Any genesis-related options '
+                             'like --network-id will override the values in this file. If --accounts is greater than '
+                             'zero, that many new accounts will be appended to the accounts in the genesis file.')
+    parser.add_argument('--save-genesis', type=str, default=None,
+                        help="Save a genesis.json file to reproduce the state of this run. Note that this genesis file "
+                             "will include all known private keys for the genesis accounts, so use this with caution.")
+    parser.add_argument('--constantinople-block', type=int, default=None,
+                        help='The block in which to enable Constantinople EIPs (default=do not enable Constantinople)')
+    parser.add_argument('--constantinople', action='store_true', default=False,
+                        help='Enables Constantinople EIPs; equivalent to `--constantinople-block 0`')
+    parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True,
+                        help='Do not run differential testing, which is run by default')
+    parser.add_argument('-l', '--log-level', type=str.upper, choices={'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'},
+                        default='INFO', help='Set Etheno\'s log level (default=INFO)')
+    parser.add_argument('--log-file', type=str, default=None,
+                        help='Path to save all log output to a single file')
+    parser.add_argument('--log-dir', type=str, default=None,
+                        help='Path to a directory in which to save all log output, divided by logging source')
+    parser.add_argument('-d', '--dump-jsonrpc', type=str, default=None,
+                        help='Path to a JSON file in which to dump all raw JSON RPC calls; if `--log-dir` is provided, '
+                             'the raw JSON RPC calls will additionally be dumped to `rpc.json` in the log directory.')
+    parser.add_argument('-x', '--export-summary', type=str, default=None,
+                        help='Path to a JSON file in which to export an event summary')
     parser.add_argument('-v', '--version', action='store_true', default=False, help='Print version information and exit')
-    parser.add_argument('client', type=str, nargs='*', help='JSON RPC client URLs to multiplex; if no client is specified for --master, the first client in this list will default to the master (format="http://foo.com:8545/")')
-    parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master (format="http://foo.com:8545/")')
-    parser.add_argument('--raw', type=str, nargs='*', action='append', help='JSON RPC client URLs to multiplex that do not have any local accounts; Etheno will automatically use auto-generated accounts with known private keys, pre-sign all transactions, and only use eth_sendRawTransaction')
+    parser.add_argument('client', type=str, nargs='*',
+                        help='JSON RPC client URLs to multiplex; if no client is specified for --master, the first '
+                             'client in this list will default to the master (format="http://foo.com:8545/")')
+    parser.add_argument('-s', '--master', type=str, default=None, help='A JSON RPC client to use as the master '
+                                                                       '(format="http://foo.com:8545/")')
+    parser.add_argument('--raw', type=str, nargs='*', action='append',
+                        help='JSON RPC client URLs to multiplex that do not have any local accounts; Etheno will '
+                             'automatically use auto-generated accounts with known private keys, pre-sign all '
+                             'transactions, and only use eth_sendRawTransaction')
 
     if argv is None:
         argv = sys.argv
@@ -81,12 +112,15 @@ def main(argv = None):
                 os.remove(args.log_dir)
             else:
                 # don't delete the directory, just its contents
-                # we can't use shutil.rmtree here, because that deletes the directory and also it doesn't work on symlinks
+                # we can't use shutil.rmtree here, because that deletes the directory and also it doesn't work on
+                # symlinks
                 if not ynprompt("We are about to delete the contents of `%s`. Are you sure? [yN] " % args.log_dir):
                     sys.exit(1)
                 abspath = os.path.abspath(args.log_dir)
                 if abspath == '' or abspath == '/' or abspath.endswith('://') or abspath.endswith(':\\\\'):
-                    print("Wait a sec, you want me to delete `%s`?!\nThat looks too dangerous.\nIf I were to do that, you'd file an angry GitHub issue complaining that I deleted your hard drive.\nYou're on your own deleting this directory!" % abspath)
+                    print("Wait a sec, you want me to delete `%s`?!\nThat looks too dangerous.\nIf I were to do that, "
+                          "you'd file an angry GitHub issue complaining that I deleted your hard drive.\nYou're on "
+                          "your own deleting this directory!" % abspath)
                     sys.exit(1)
                 clear_directory(args.log_dir)
     
@@ -106,11 +140,13 @@ def main(argv = None):
     # First, see if we need to install Echidna:
     if args.echidna:
         if not echidna_exists():
-            if not ynprompt('Echidna does not appear to be installed.\nWould you like to have Etheno attempt to install it now? [yN] '):
+            if not ynprompt('Echidna does not appear to be installed.\nWould you like to have Etheno attempt to '
+                            'install it now? [yN] '):
                 sys.exit(1)
             install_echidna()
             if not echidna_exists():
-                ETHENO.logger.error('Etheno failed to install Echidna. Please install it manually https://github.com/trailofbits/echidna')
+                ETHENO.logger.error('Etheno failed to install Echidna. Please install it manually '
+                                    'https://github.com/trailofbits/echidna')
                 sys.exit(1)
         
     if args.genesis is None:
@@ -138,17 +174,23 @@ def main(argv = None):
                 pkey = None
                 if 'privateKey' in bal:
                     pkey = bal['privateKey']
-                accounts.append(Account(address = int(addr, 16), balance = decode_value(bal['balance']), private_key = decode_value(pkey)))
+                accounts.append(Account(address=int(addr, 16), balance=decode_value(bal['balance']),
+                                        private_key=decode_value(pkey)))
     else:
         # We will generate it further below once we've resolved all of the parameters
         genesis = None
 
-    accounts += make_accounts(args.accounts, default_balance = int(args.balance * 1000000000000000000))
+    accounts += make_accounts(args.accounts, default_balance=int(args.balance * 1000000000000000000))
 
     if genesis is not None:
         # add the new accounts to the genesis
         for account in accounts[len(genesis['alloc']):]:
-            genesis['alloc'][format_hex_address(account.address)] = {'balance': "%d" % account.balance, 'privateKey': format_hex_address(account.private_key), 'comment': '`privateKey` and `comment` are ignored.  In a real chain, the private key should _not_ be stored!'}
+            genesis['alloc'][format_hex_address(account.address)] = {
+                'balance': "%d" % account.balance,
+                'privateKey': format_hex_address(account.private_key),
+                'comment': '`privateKey` and `comment` are ignored.  In a real chain, the private key should _not_ be '
+                           'stored!'
+            }
 
     if args.raw is None:
         args.raw = []
@@ -173,7 +215,7 @@ def main(argv = None):
         if args.ganache_args is not None:
             ganache_args += shlex.split(args.ganache_args)
 
-        ganache_instance = ganache.Ganache(args=ganache_args, port=args.ganache_port)
+        ganache_instance = ganache.Ganache(cmd=args.ganache_cmd, args=ganache_args, port=args.ganache_port)
 
         ETHENO.master_client = ganache.GanacheClient(ganache_instance)
 
@@ -198,7 +240,8 @@ def main(argv = None):
             args.network_id = 0x657468656E6F # 'etheno' in hex
 
     if genesis is None:
-        genesis = make_genesis(network_id=args.network_id, accounts=accounts, constantinople_block=args.constantinople_block)
+        genesis = make_genesis(network_id=args.network_id, accounts=accounts,
+                               constantinople_block=args.constantinople_block)
     else:
         # Update the genesis with any overridden values
         genesis['config']['chainId'] = args.network_id
@@ -271,9 +314,12 @@ def main(argv = None):
         thread = Thread(target=truffle_thread)
         thread.start()
 
-    if args.run_differential and (ETHENO.master_client is not None) and next(filter(lambda c : not isinstance(c, ManticoreClient), ETHENO.clients), False):
+    if args.run_differential and (ETHENO.master_client is not None) and \
+            next(filter(lambda c: not isinstance(c, ManticoreClient), ETHENO.clients), False):
         # There are at least two non-Manticore clients running
-        ETHENO.logger.info("Initializing differential tests to compare clients %s" % ', '.join(map(str, [ETHENO.master_client] + ETHENO.clients)))
+        ETHENO.logger.info("Initializing differential tests to compare clients %s" % ', '.join(
+            map(str, [ETHENO.master_client] + ETHENO.clients)
+        ))
         ETHENO.add_plugin(DifferentialTester())
 
     if args.echidna:
@@ -294,7 +340,7 @@ def main(argv = None):
     etheno = EthenoView()
     app.add_url_rule('/', view_func=etheno.as_view('etheno'))
 
-    etheno_thread = ETHENO.run(debug = args.debug, run_publicly = args.run_publicly, port = args.port)
+    ETHENO.run(debug=args.debug, run_publicly=args.run_publicly, port=args.port)
     if args.truffle:
         truffle_controller.terminate()
 
@@ -302,6 +348,7 @@ def main(argv = None):
         print("Log file saved to: %s" % os.path.realpath(args.log_file))
     if args.log_dir is not None:
         print("Logs %ssaved to: %s" % (['','also '][args.log_file is not None], os.path.realpath(args.log_dir)))
+
 
 if __name__ == '__main__':
     main()
