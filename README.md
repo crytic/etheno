@@ -21,7 +21,6 @@ Etheno is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/S
   * Deploy to and interact with multiple networks at the same time
 * **Integration with Test Frameworks** like Ganache and Truffle
   * Run a local test network with a single command
-  * Symbolic semantic annotations within unit tests
 
 ## Quickstart
 

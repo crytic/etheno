@@ -20,7 +20,7 @@ from . import parity
 from . import truffle
 
 def main(argv = None):
-    parser = argparse.ArgumentParser(description='An Ethereum JSON RPC multiplexer and Manticore wrapper')
+    parser = argparse.ArgumentParser(description='An Ethereum JSON RPC multiplexer, differential fuzzer, and test framework integration tool.')
     parser.add_argument('--debug', action='store_true', default=False, help='Enable debugging from within the web server')
     parser.add_argument('--run-publicly', action='store_true', default=False, help='Allow the web server to accept external connections')
     parser.add_argument('-p', '--port', type=int, default=GETH_DEFAULT_RPC_PORT, help='Port on which to run the JSON RPC webserver (default=%d)' % GETH_DEFAULT_RPC_PORT)
@@ -314,8 +314,9 @@ def main(argv = None):
         thread = Thread(target=truffle_thread)
         thread.start()
 
-    if args.run_differential and (ETHENO.master_client is not None) and \
-            next(filter(lambda c: not isinstance(c, ManticoreClient), ETHENO.clients), False):
+    # Without Manticore integration the only client types are geth, parity, and command-line raw/regular clients.
+    # So checking len() >= 2 should be sufficient.
+    if args.run_differential and (ETHENO.master_client is not None) and len(ETHENO.clients) >= 2:
         # There are at least two non-Manticore clients running
         ETHENO.logger.info("Initializing differential tests to compare clients %s" % ', '.join(
             map(str, [ETHENO.master_client] + ETHENO.clients)
