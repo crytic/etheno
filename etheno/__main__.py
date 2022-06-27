@@ -315,7 +315,7 @@ def main(argv = None):
         thread.start()
 
     # Without Manticore integration the only client types are geth, parity, and command-line raw/regular clients.
-    # So checking len() >= 2 should be sufficient.
+    # So checking len() >= 1 should be sufficient.
     if args.run_differential and (ETHENO.master_client is not None) and len(ETHENO.clients) >= 1:
         # There are at least two non-Manticore clients running
         ETHENO.logger.info("Initializing differential tests to compare clients %s" % ', '.join(

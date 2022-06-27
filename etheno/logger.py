@@ -108,13 +108,6 @@ def getLogger(name: str):
         ret = ETHENO_LOGGERS[name]
     else:
         ret = _LOGGING_GETLOGGER(name)
-    # ####BEGIN####
-    # Horrible hack to workaround Manticore's global logging system.
-    # This can be removed after https://github.com/trailofbits/manticore/issues/1369
-    # is resolved.
-    if name.startswith('manticore'):
-        ret.propagate = False
-    # ####END####
     return ret
 
 

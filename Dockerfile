@@ -59,9 +59,9 @@ WORKDIR /home/etheno
 
 COPY --chown=etheno:etheno LICENSE setup.py etheno/
 COPY --chown=etheno:etheno etheno/*.py etheno/etheno/
-# TODO: get rid of manticore --user flag here. will need to validate that it doesn't break anything.
+
 RUN cd etheno && \
-    pip3 install --no-cache-dir --user '.[manticore]' && \
+    pip3 install --no-cache-dir && \
     cd .. && \
     rm -rf etheno
 
