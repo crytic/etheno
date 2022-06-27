@@ -7,7 +7,7 @@
 <br />
 
 
-Etheno is the Ethereum testing Swiss Army knife. It’s a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools like [Manticore](https://github.com/trailofbits/manticore/) and [Echidna](https://github.com/trailofbits/echidna) on large, multi-contract projects. In particular, custom Manticore analysis scripts require less code, are simpler to write, and integrate with Truffle.
+Etheno is the Ethereum testing Swiss Army knife. It’s a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools like [Echidna](https://github.com/trailofbits/echidna) on large, multi-contract projects.
 
 If you are a smart contract developer, you should use Etheno to test your contracts. If you are an Ethereum client developer, you should use Etheno to perform differential testing on your implementation. For example, Etheno is [capable of automatically reproducing](examples/ConstantinopleGasUsage) the Constantinople gas usage consensus bug that caused a fork on Ropsten.
 
@@ -19,14 +19,8 @@ Etheno is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/S
   * API for filtering and modifying JSON RPC calls
   * Enables differential testing by sending JSON RPC sequences to multiple Ethereum clients
   * Deploy to and interact with multiple networks at the same time
-* **Analysis Tool Wrapper**: Etheno provides a JSON RPC client for advanced analysis tools like [Manticore](https://github.com/trailofbits/manticore/)
-  * Lowers barrier to entry for using advanced analysis tools
-  * No need for custom scripts to set up account and contract state
-  * Analyze arbitrary transactions without Solidity source code
 * **Integration with Test Frameworks** like Ganache and Truffle
   * Run a local test network with a single command
-  * Use Truffle migrations to bootstrap Manticore analyses
-  * Symbolic semantic annotations within unit tests
 
 ## Quickstart
 
@@ -35,10 +29,6 @@ Use our prebuilt Docker container to quickly install and try Etheno:
 ```
 docker pull trailofbits/etheno
 docker run -it trailofbits/etheno
-
-# Run one of the examples
-etheno@982abdc96791:~$ cd examples/BrokenMetaCoin/
-etheno@982abdc96791:~/examples/BrokenMetaCoin$ etheno --truffle --ganache --manticore --manticore-max-depth 2 --manticore-script ExploitMetaCoinManticoreScript.py
 ```
 
 Alternatively, natively install Etheno in a few shell commands:
@@ -52,7 +42,7 @@ pip3 install --user etheno
 
 # Use the Etheno CLI
 cd /path/to/a/truffle/project
-etheno --manticore --ganache --truffle
+etheno --ganache --truffle
 ```
 
 ## Usage
@@ -70,7 +60,7 @@ etheno https://client1.url.com:1234/ https://client2.url.com:8545/ http://client
 * `--port` or `-p` allows you to specify a port on which to run Etheno’s JSON RPC server (default is 8545)
 * `--run-publicly` allows incoming JSON RPC connections from external computers on the network
 * `--debug` will run a web-based interactive debugger in the event that an internal Etheno client throws an exception while processing a JSON RPC call; this should _never_ be used in conjunction with `--run-publicly`
-* `--master` or `-s` will set the “master” client, which will be used for synchronizing with Etheno clients like Manticore. If a master is not explicitly provided, it defaults to the first client listed.
+* `--master` or `-s` will set the “master” client, which will be used for synchronizing with Etheno clients. If a master is not explicitly provided, it defaults to the first client listed.
 * `--raw`, when prefixed before a client URL, will cause Etheno to auto-sign all transactions and submit then to the client as raw transactions
 
 ### Geth and Parity Integration
@@ -123,37 +113,12 @@ By default, Echidna deploys a generic fuzz testing contract to all clients, enum
 * `--fuzz-limit` limits the number of transactions that Echidna will emit
 * `--fuzz-contract` lets the user specify a custom contract for Echidna to deploy and fuzz
 
-### Manticore Client
-
-Manticore—which, by itself, does not implement a JSON RPC interface—can be run as an Etheno client, synchronizing its accounts with Etheno’s master client and symbolically executing all transactions sent to Etheno.
-```
-etheno --manticore
-```
-This alone will not run any Manticore analyses; they must either be run manually, or automated through [the `--truffle` command](#truffle-integration);
-
-* `--manticore-verbosity` sets Manticore’s logging verbosity (default is 3)
-* `--manticore-max-depth` sets the maximum state depth for Manticore to explore; if omitted, Manticore will have no depth limit
-
 ### Truffle Integration
 
 Truffle migrations can automatically be run within a Truffle project:
 ```
 etheno --truffle
 ```
-
-When combined with the `--manticore` option, this will automatically run Manticore’s default analyses on all contracts created once the Truffle migration completes:
-```
-etheno --truffle --manticore
-```
-
-This requires a master JSON RPC client, so will most often be used in conjunction with Ganache. If a local Ganache server is not running, you can simply add that to the command:
-```
-etheno --truffle --manticore --ganache
-```
-
-If you would like to run a custom Manticore script instead of the standard Manticore analysis and detectors, it can be specified using the `--manticore-script` or `-r` command.
-
-This script does not need to import Manticore or create a `ManticoreEVM` object; Etheno will run the script with a global variable called `manticore` that already contains all of the accounts and contracts automatically provisioned.  See the [`BrokenMetaCoin` Manticore script](examples/BrokenMetaCoin/ExploitMetaCoinManticoreScript.py) for an example.
 
 Additional arguments can be passed to Truffle using `--truffle-args`.
 
@@ -174,7 +139,6 @@ saved:
 ## Requirements
 
 * Python 3.6 or newer
-* [Manticore](https://github.com/trailofbits/manticore/) release 0.2.2 or newer
 * [Flask](http://flask.pocoo.org/), which is used to run the JSON RPC server
 
 ### Optional Requirements
