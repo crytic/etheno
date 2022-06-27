@@ -163,6 +163,7 @@ def main(argv=None):
     if args.export_summary is not None:
         ETHENO.add_plugin(EventSummaryExportPlugin(args.export_summary))
 
+
     # First, see if we need to install Echidna:
     if args.echidna:
         if not echidna_exists():
