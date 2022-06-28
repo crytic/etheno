@@ -7,6 +7,7 @@ from threading import Thread
 
 from .client import RpcProxyClient
 from .differentials import DifferentialTester
+from .echidna import echidna_exists, EchidnaPlugin, install_echidna
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ETHENO, VERSION_NAME
 from .genesis import Account, make_accounts, make_genesis
 from .jsonrpc import EventSummaryExportPlugin, JSONRPCExportPlugin
@@ -139,7 +140,21 @@ def main(argv = None):
 
     if args.export_summary is not None:
         ETHENO.add_plugin(EventSummaryExportPlugin(args.export_summary))
-        
+
+    # First, see if we need to install Echidna:
+    '''
+    Commenting this out and can re-use if needed
+    if args.echidna:
+        if not echidna_exists():
+            if not ynprompt('Echidna does not appear to be installed.\nWould you like to have Etheno attempt to '
+                            'install it now? [yN] '):
+                sys.exit(1)
+            install_echidna()
+            if not echidna_exists():
+                ETHENO.logger.error('Etheno failed to install Echidna. Please install it manually '
+                                    'https://github.com/trailofbits/echidna')
+                sys.exit(1)
+    '''
     if args.genesis is None:
         # Set defaults since no genesis was supplied
         if args.accounts is None:
@@ -313,7 +328,16 @@ def main(argv = None):
             map(str, [ETHENO.master_client] + ETHENO.clients)
         ))
         ETHENO.add_plugin(DifferentialTester())
-
+    
+    '''
+    Keeping in case we want it later
+    if args.echidna:
+        contract_source = None
+        if args.fuzz_contract is not None:
+            with open(args.fuzz_contract, 'rb') as c:
+                contract_source = c.read()
+        ETHENO.add_plugin(EchidnaPlugin(transaction_limit=args.fuzz_limit, contract_source=contract_source))
+    '''
     had_plugins = len(ETHENO.plugins) > 0
 
     if ETHENO.master_client is None and not ETHENO.clients and not ETHENO.plugins:
