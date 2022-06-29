@@ -29,7 +29,8 @@ RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:ethereum/ethereum &
 
 RUN curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && sudo apt-get install -y --no-install-recommends nodejs && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN npm install --production -g ganache-cli truffle && npm --force cache clean
+# TODO: need to check whether this installation is correct
+RUN npm install --production -g ganache truffle && npm --force cache clean
 
 RUN useradd -m etheno
 RUN usermod -aG sudo etheno
