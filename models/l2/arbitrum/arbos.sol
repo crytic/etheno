@@ -97,7 +97,7 @@ contract ArbSysEmulated is ArbSys {
     }
 
     function arbChainID() external view returns(uint) {
-        return 1;
+        return 42161;
     }
 
     /**
