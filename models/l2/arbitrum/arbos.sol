@@ -267,8 +267,15 @@ interface ArbRetryableTx {
 }
 
 contract ArbRetryableTxEmulated is ArbRetryableTx {
-    mapping(bytes32 => uint) private ticketTimeout;
+    mapping(bytes32 => uint256) private ticketTimeout;
     mapping(bytes32 => address) private ticketBeneficiary;
+
+
+    function createTicket(bytes32 userTxHash, address beneficiary) public {
+         require(ticketTimeout[userTxHash] == 0);
+         ticketTimeout[userTxHash] = block.timestamp + 1 days;
+         ticketBeneficiary[userTxHash] = beneficiary;
+    }
 
     /**
     * @notice Redeem a redeemable tx.
@@ -279,6 +286,8 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     */
     function redeem(bytes32 userTxHash) external {
         require(ticketTimeout[userTxHash] > 0);
+        delete ticketTimeout[userTxHash];
+        delete ticketBeneficiary[userTxHash]; 
     }
 
     /** 
@@ -286,7 +295,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @return lifetime in seconds
     */
     function getLifetime() external view returns(uint) {
-        return 60;
+        return 1 days;
     }
 
     /**
@@ -296,7 +305,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @return timestamp for ticket's deadline
     */
     function getTimeout(bytes32 userTxHash) external view returns(uint) {
-        return 0;
+        return ticketTimeout[userTxHash];
     }
 
     /** 
@@ -325,7 +334,10 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @return New timeout of userTxHash.
     */
     function keepalive(bytes32 userTxHash) external payable returns(uint) {
-        return 1;
+        require(msg.value > 0);
+        require(ticketTimeout[userTxHash] > 0);
+        ticketTimeout[userTxHash] += 1 days; 
+        return ticketTimeout[userTxHash];
     }
 
     /**
@@ -335,7 +347,8 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @return address of beneficiary for ticket
     */
     function getBeneficiary(bytes32 userTxHash) external view returns (address) {
-        return address(0x0);
+        require(ticketTimeout[userTxHash] > 0); 
+        return ticketBeneficiary[userTxHash];
     }
 
     /** 
@@ -344,6 +357,8 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @param userTxHash unique ticket identifier
     */
     function cancel(bytes32 userTxHash) external {
-    
+        require(ticketTimeout[userTxHash] > 0);
+        delete ticketTimeout[userTxHash];
+        delete ticketBeneficiary[userTxHash];
     }
 }
