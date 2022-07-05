@@ -148,8 +148,6 @@ class EventSummaryPlugin(EthenoPlugin):
             else:
                 value = original_transaction['value']
             if 'to' not in result['result'] or result['result']['to'] is None:
-                print(original_transaction)
-                print(result)
                 # this transaction is creating a contract:
                 # TODO: key errors are likely here...need to figure out a better way to do error handling
                 contract_address = result['result']['contractAddress']
