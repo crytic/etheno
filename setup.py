@@ -11,7 +11,7 @@ setup(
     install_requires=[
         'ptyprocess',
         'pysha3>=1.0.2',
-        'flask>=1.0.2',
+        'flask>=2.1.0',
         'web3',
         # The following two requirements are for our fork of `keyfile.py`,
         # but they should already be satisfied by the `web3` requirement
