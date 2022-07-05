@@ -121,7 +121,7 @@ class EventSummaryPlugin(EthenoPlugin):
             return
         # Fixes bug that occurs when a JSONRPCError is attempted to be logged
         if isinstance(result, JSONRPCError):
-            self.logger.error(f'Received a JSON RPC Error when logging transaction...skipping event logging')
+            self.logger.info(f'Received a JSON RPC Error when logging transaction...skipping event logging')
             return
 
         elif (post_data['method'] == 'eth_sendTransaction' or post_data['method'] == 'eth_sendRawTransaction') and 'result' in result:

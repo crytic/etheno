@@ -22,7 +22,7 @@ class Ganache(RpcHttpProxy):
             cmd = ['/usr/bin/env', 'ganache']
         if args is None:
             args = []
-        self.args = cmd + ['-d', '-p', str(port)] + args
+        self.args = cmd + ['-d', '-p', str(port), '--chain.allowUnlimitedContractSize'] + args
         self.ganache = None
         self._client = None
 

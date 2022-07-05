@@ -1,6 +1,7 @@
 import pkg_resources
 from threading import Thread
 from typing import Any, Dict, List, Optional
+from werkzeug.serving import make_server
 
 from flask import Flask, jsonify, request, abort
 from flask.views import MethodView
@@ -31,6 +32,8 @@ def to_account_address(raw_address: int) -> str:
 _CONTROLLER = threadwrapper.MainThreadController()
 
 
+# Using 'werkzeug.server.shutdown' is deprecated after Flask 2.1.x
+# TODO: Will probably remove this function
 @app.route('/shutdown')
 def _etheno_shutdown():
     # shut down the Flask server
@@ -320,6 +323,9 @@ class Etheno:
         for client in self.clients:
             client.shutdown()
         self.logger.close()
+        _CONTROLLER.quit()
+        """
+        Won't need this if shutdown() function is removed
         from urllib.request import urlopen
         import socket
         import urllib
@@ -329,19 +335,22 @@ class Etheno:
             pass
         except urllib.error.URLError:
             pass
+        """
 
     def run(self, debug=True, run_publicly=False, port=GETH_DEFAULT_RPC_PORT):
         # Manticore only works in the main thread, so use a threadsafe wrapper:
-        def flask_thread():
+        def server_thread():
             if run_publicly:
                 host='0.0.0.0'
             else:
-                host = None        
+                host = "localhost"        
             # Do not use the reloader, because Flask needs to run in the main thread to use the reloader
-            app.run(debug=debug, host=host, port=port, use_reloader=False)
-        thread = Thread(target=flask_thread)
+            server = make_server(host=host, port=port, app=app, threaded=True)
+            return server
+            # app.run(debug=debug, host=host, port=port, use_reloader=False)
+        server = server_thread()
+        thread = Thread(target=server.serve_forever)
         thread.start()
-
         self.logger.info("Etheno v%s" % VERSION)
 
         for plugin in self.plugins:
@@ -349,8 +358,9 @@ class Etheno:
 
         _CONTROLLER.run()
         self.shutdown()
+        self.logger.info("Shutting Etheno down")
+        server.shutdown()
         thread.join()
-
 
 ETHENO = Etheno()
 
