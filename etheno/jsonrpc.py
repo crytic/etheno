@@ -3,7 +3,7 @@ from typing import Dict, TextIO, Union
 
 from .etheno import EthenoPlugin
 from .utils import format_hex_address
-
+from .client import JSONRPCError
 
 # source: https://ethereum.stackexchange.com/a/83855
 import rlp
@@ -119,6 +119,11 @@ class EventSummaryPlugin(EthenoPlugin):
             result = result[0]
         if 'method' not in post_data:
             return
+        # Fixes bug that occurs when a JSONRPCError is attempted to be logged
+        if isinstance(result, JSONRPCError):
+            self.logger.error(f'Received a JSON RPC Error when logging transaction...skipping event logging')
+            return
+
         elif (post_data['method'] == 'eth_sendTransaction' or post_data['method'] == 'eth_sendRawTransaction') and 'result' in result:
             try:
                 transaction_hash = int(result['result'], 16)
