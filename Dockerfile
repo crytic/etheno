@@ -2,22 +2,42 @@
 FROM ubuntu:focal AS python-wheels
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential \
+    ca-certificates \
     cmake \
+    curl \
     python3-dev \
     python3-pip \
     python3-setuptools
 
+# Needed for rusty-rlp wheel
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
 RUN --mount=type=bind,target=/etheno \
     cd /etheno && \
-    pip3 install --upgrade wheel && \
-    pip3 wheel --no-cache-dir -w /wheels '.'
+    pip3 install --upgrade pip setuptools && \
+    pip3 wheel --no-cache-dir -w /wheels \
+    https://github.com/cburgdorf/rusty-rlp/archive/refs/tags/0.1.15.tar.gz \
+    .
+
+
+FROM ubuntu:focal AS ganache
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs
+RUN npm install --omit=dev --location=global --prefix /opt/node ganache truffle
+
 
 FROM ubuntu:focal AS final
 LABEL org.opencontainers.image.authors="Evan Sultanik"
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     bash-completion \
-    build-essential \
     ca-certificates \
     curl \
     gpg-agent \
@@ -25,7 +45,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     locales \
     python3 \
     python3-pip \
-    python3-dev \
     software-properties-common \
     sudo \
 && rm -rf /var/lib/apt/lists/*
@@ -41,14 +60,14 @@ RUN curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
     sudo apt-get install -y --no-install-recommends nodejs \
 && rm -rf /var/lib/apt/lists/*
 
-RUN npm install --production --location=global ganache truffle && npm --force cache clean
+COPY --from=ganache /opt/node /usr/local/
 
 # BEGIN Install Etheno
 RUN --mount=type=bind,target=/mnt/etheno \
     --mount=type=bind,target=/mnt/wheels,source=/wheels,from=python-wheels \
     cd /mnt/etheno && \
     pip3 install --upgrade pip setuptools && \
-    pip3 install --no-cache-dir --no-index --find-links /mnt/wheels '.'
+    pip3 install --no-cache-dir --no-index --find-links /mnt/wheels .
 
 RUN useradd -m -G sudo etheno
 
