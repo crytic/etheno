@@ -2,18 +2,16 @@ from setuptools import setup, find_packages
 
 setup(
     name='etheno',
-    description='Etheno is a JSON RPC multiplexer, Manticore wrapper, differential fuzzer, and test framework integration tool.',
+    description='Etheno is a JSON RPC multiplexer, differential fuzzer, and test framework integration tool.',
     url='https://github.com/trailofbits/etheno',
     author='Trail of Bits',
-    version='0.2.4',
+    version='0.2.5',
     packages=find_packages(),
     python_requires='>=3.6',
     install_requires=[
         'ptyprocess',
         'pysha3>=1.0.2',
-        'flask>=1.0.2',
-        # web3 3.16.3 and earlier use the older, deprecated `ethereum-*`
-        # libraries, which throw a deprecation warning when running etheno
+        'flask>=2.1.0',
         'web3>=3.16.4',
         # The following two requirements are for our fork of `keyfile.py`,
         # but they should already be satisfied by the `web3` requirement
@@ -21,11 +19,6 @@ setup(
         'pycryptodome>=3.4.7,<4.0.0',
         'setuptools'
     ],
-    extras_require={
-        # manticore 0.3.6 causes logging errors. See crytic/etheno#80
-        # rlp<3 is needed to stay compatible with manticore
-        'manticore': ['manticore>=0.2.2,<0.3.6', 'rlp<3']
-    },
     entry_points={
         'console_scripts': [
             'etheno = etheno.__main__:main'

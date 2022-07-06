@@ -58,6 +58,7 @@ class ChainSynchronizer(object):
         self._client = client
 
     def create_account(self, balance = 0, address = None):
+        # TODO: not sure what the data field is supposed to do here
         if self._client == self._client.etheno.master_client:
             return self._old_create_account(data)
         try:

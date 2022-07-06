@@ -3,7 +3,7 @@ from typing import Dict, TextIO, Union
 
 from .etheno import EthenoPlugin
 from .utils import format_hex_address
-
+from .client import JSONRPCError
 
 # source: https://ethereum.stackexchange.com/a/83855
 import rlp
@@ -119,6 +119,11 @@ class EventSummaryPlugin(EthenoPlugin):
             result = result[0]
         if 'method' not in post_data:
             return
+        # Fixes bug that occurs when a JSONRPCError is attempted to be logged
+        if isinstance(result, JSONRPCError):
+            self.logger.info(f'Received a JSON RPC Error when logging transaction...skipping event logging')
+            return
+
         elif (post_data['method'] == 'eth_sendTransaction' or post_data['method'] == 'eth_sendRawTransaction') and 'result' in result:
             try:
                 transaction_hash = int(result['result'], 16)
@@ -144,10 +149,11 @@ class EventSummaryPlugin(EthenoPlugin):
                 value = original_transaction['value']
             if 'to' not in result['result'] or result['result']['to'] is None:
                 # this transaction is creating a contract:
+                # TODO: key errors are likely here...need to figure out a better way to do error handling
                 contract_address = result['result']['contractAddress']
-                self.handle_contract_created(original_transaction['from'], contract_address, result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'], value)
+                self.handle_contract_created(original_transaction['from'], contract_address, result['result']['gasUsed'], result['result']['effectiveGasPrice'], original_transaction['data'], value)
             else:
-                self.handle_function_call(original_transaction['from'], original_transaction['to'], result['result']['gasUsed'], original_transaction['gasPrice'], original_transaction['data'], value)
+                self.handle_function_call(original_transaction['from'], original_transaction['to'], result['result']['gasUsed'], result['result']['effectiveGasPrice'], original_transaction['data'] if 'data' in original_transaction else '0x', value)
 
 
 class EventSummaryExportPlugin(EventSummaryPlugin):
