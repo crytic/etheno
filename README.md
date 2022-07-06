@@ -28,7 +28,7 @@ Use our prebuilt Docker container to quickly install and try Etheno:
 
 ```
 docker pull trailofbits/etheno
-docker run -it trailofbits/etheno
+docker run --rm -it trailofbits/etheno
 ```
 
 Alternatively, natively install Etheno in a few shell commands:
@@ -128,7 +128,7 @@ saved:
 * Python 3.6 or newer 
 
 ### Optional Requirements
-* [Ganache](https://www.npmjs.com/package/ganache) 7.3.3 or newer for its associated integrations
+* [Ganache](https://www.npmjs.com/package/ganache) 7.3.2 or newer for its associated integrations
 * [Truffle](https://www.npmjs.com/package/truffle) for its associated integrations
 * [Geth](https://github.com/ethereum/go-ethereum) and/or [Parity](https://github.com/paritytech/parity-ethereum), if you would like to have Etheno run them
 
