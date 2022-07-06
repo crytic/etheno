@@ -15,7 +15,7 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN --mount=type=bind,target=/etheno \
     cd /etheno && \
-    pip3 install --upgrade pip setuptools && \
+    pip3 install --no-cache-dir --upgrade pip setuptools && \
     pip3 wheel --no-cache-dir -w /wheels \
     https://github.com/cburgdorf/rusty-rlp/archive/refs/tags/0.1.15.tar.gz \
     .
@@ -66,7 +66,7 @@ COPY --from=ganache /opt/node /usr/local/
 RUN --mount=type=bind,target=/mnt/etheno \
     --mount=type=bind,target=/mnt/wheels,source=/wheels,from=python-wheels \
     cd /mnt/etheno && \
-    pip3 install --upgrade pip setuptools && \
+    pip3 install --no-cache-dir --upgrade pip setuptools && \
     pip3 install --no-cache-dir --no-index --find-links /mnt/wheels .
 
 RUN useradd -m -G sudo etheno
