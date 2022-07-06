@@ -22,12 +22,12 @@ setup(
         'eth-rlp==0.2.0',
         'rusty-rlp==0.1.15',
         # Commenting out these dependencies since we will be removing the parity integration soon enough
-        """
-        # The following two requirements are for our fork of `keyfile.py`,
-        # but they should already be satisfied by the `web3` requirement
-        'cytoolz>=0.9.0,<1.0.0',
-        'pycryptodome>=3.4.7,<4.0.0',
-        """
+        #"""
+        ## The following two requirements are for our fork of `keyfile.py`,
+        ## but they should already be satisfied by the `web3` requirement
+        #'cytoolz>=0.9.0,<1.0.0',
+        #'pycryptodome>=3.4.7,<4.0.0',
+        #"""
         'setuptools'
     ],
     entry_points={
