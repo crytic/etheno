@@ -1,61 +1,58 @@
-FROM ubuntu:bionic
-MAINTAINER Evan Sultanik
-
-RUN DEBIAN_FRONTEND=noninteractive \
-    apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    ca-certificates \
-    bash-completion \
-    sudo \
-    python3 \
-    libpython3-dev \
-    python3-pip \
-    python3-setuptools \
-    git \
+# syntax=docker/dockerfile:1.3
+FROM ubuntu:focal AS python-wheels
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     build-essential \
-    software-properties-common \
-    locales-all locales \
-    libudev-dev \
+    cmake \
+    python3-dev \
+    python3-pip \
+    python3-setuptools
+RUN --mount=type=bind,target=/etheno \
+    cd /etheno && \
+    pip3 wheel --no-cache-dir -w /wheels '.[manticore]'
+
+
+FROM ubuntu:focal AS final
+LABEL org.opencontainers.image.authors="Evan Sultanik"
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+    bash-completion \
+    ca-certificates \
+    curl \
     gpg-agent \
-&& apt-get clean \
+    libudev-dev \
+    locales \
+    python3 \
+    python3-pip \
+    software-properties-common \
+    sudo \
 && rm -rf /var/lib/apt/lists/*
 
-RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y ppa:ethereum/ethereum && \
+RUN add-apt-repository -y ppa:ethereum/ethereum && \
     apt-get update && apt-get install -y --no-install-recommends \
     solc \
     ethereum \
-&& apt-get clean \
 && rm -rf /var/lib/apt/lists/*
 
-RUN curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash - && sudo apt-get install -y --no-install-recommends nodejs && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
+    sudo apt-get install -y --no-install-recommends nodejs \
+&& rm -rf /var/lib/apt/lists/*
 
-# TODO: need to check whether this installation is correct
 RUN npm install --production -g ganache truffle && npm --force cache clean
 
-RUN useradd -m etheno
-RUN usermod -aG sudo etheno
-USER etheno
-WORKDIR /home/etheno
-USER root
-WORKDIR /root
+# BEGIN Install Etheno
+RUN --mount=type=bind,target=/mnt/etheno \
+    --mount=type=bind,target=/mnt/wheels,source=/wheels,from=python-wheels \
+    cd /mnt/etheno && \
+    pip3 install --no-cache-dir --no-index --find-links /mnt/wheels '.[manticore]'
 
-# Install Parity
-RUN curl https://get.parity.io -L | bash
+RUN useradd -m -G sudo etheno
 
 # Allow passwordless sudo for etheno
 RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
 USER etheno
-ENV HOME=/home/etheno PATH=$PATH:/home/etheno/.local/bin
+ENV HOME=/home/etheno
 WORKDIR /home/etheno
-
-COPY --chown=etheno:etheno LICENSE setup.py etheno/
-COPY --chown=etheno:etheno etheno/*.py etheno/etheno/
-
-RUN cd etheno && \
-    pip3 install --no-cache-dir && \
-    cd .. && \
-    rm -rf etheno
 
 COPY --chown=etheno:etheno examples examples/
 
