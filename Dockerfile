@@ -6,10 +6,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     python3-dev \
     python3-pip \
     python3-setuptools
-RUN --mount=type=bind,target=/etheno \
-    cd /etheno && \
-    pip3 wheel --no-cache-dir -w /wheels '.[manticore]'
-
 
 FROM ubuntu:focal AS final
 LABEL org.opencontainers.image.authors="Evan Sultanik"
@@ -41,9 +37,9 @@ RUN npm install --production -g ganache truffle && npm --force cache clean
 
 # BEGIN Install Etheno
 RUN --mount=type=bind,target=/mnt/etheno \
-    --mount=type=bind,target=/mnt/wheels,source=/wheels,from=python-wheels \
+    --mount=type=bind,target=/mnt/wheels,from=python-wheels \
     cd /mnt/etheno && \
-    pip3 install --no-cache-dir --no-index --find-links /mnt/wheels '.[manticore]'
+    pip3 install --no-cache-dir --no-index --find-links /mnt/wheels
 
 RUN useradd -m -G sudo etheno
 
@@ -53,7 +49,5 @@ RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 USER etheno
 ENV HOME=/home/etheno
 WORKDIR /home/etheno
-
-COPY --chown=etheno:etheno examples examples/
 
 CMD ["/bin/bash"]
