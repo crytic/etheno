@@ -56,8 +56,8 @@ RUN add-apt-repository -y ppa:ethereum/ethereum && \
     ethereum \
 && rm -rf /var/lib/apt/lists/*
 
-RUN curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
-    sudo apt-get install -y --no-install-recommends nodejs \
+RUN curl -fsSL https://deb.nodesource.com/setup_16.x | bash && \
+    apt-get install -y --no-install-recommends nodejs \
 && rm -rf /var/lib/apt/lists/*
 
 COPY --from=ganache /opt/node /usr/local/
