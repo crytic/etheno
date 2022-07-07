@@ -17,18 +17,18 @@ jobs:
         with:
           install: true
 
+      - name: DockerHub Login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
       - name: GitHub Container Registry Login
         uses: docker/login-action@v2
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: DockerHub Login
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
 
       - name: Set Docker Package and Version
         id: version
@@ -66,5 +66,5 @@ jobs:
             linux/arm64/v8
             linux/amd64
           tags: |
+            trailofbits/${{ steps.version.outputs.PKG }}:${{ steps.version.outputs.VER }}
             ghcr.io/${{ github.repository }}/${{ steps.version.outputs.PKG }}:${{ steps.version.outputs.VER }}
-            registry.hub.docker.com/trailofbits/${{ steps.version.outputs.PKG }}:${{ steps.version.outputs.VER }}
