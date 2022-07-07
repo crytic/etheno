@@ -212,6 +212,7 @@ def main(argv = None):
     else:
         args.raw = [r[0] for r in args.raw]
 
+    # TODO: This if/elif/else logic is flawed - needs rework
     if args.ganache and args.master:
         parser.print_help()
         sys.stderr.write('\nError: You cannot specify both --ganache and --master at the same time!\n')
