@@ -76,6 +76,9 @@ RUN echo 'etheno ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
 
 USER etheno
 ENV HOME=/home/etheno
+
+# Use the DOCKER env variable to set hostname accordingly
+ENV DOCKER=1
 WORKDIR /home/etheno
 
 CMD ["/bin/bash"]

@@ -1,4 +1,5 @@
 import pkg_resources
+import os
 from threading import Thread
 from typing import Any, Dict, List, Optional
 from werkzeug.serving import make_server
@@ -340,10 +341,11 @@ class Etheno:
     def run(self, debug=True, run_publicly=False, port=GETH_DEFAULT_RPC_PORT):
         # Manticore only works in the main thread, so use a threadsafe wrapper:
         def server_thread():
-            if run_publicly:
+            IS_DOCKER = os.environ.get("DOCKER", 0)
+            if run_publicly or IS_DOCKER:
                 host='0.0.0.0'
             else:
-                host = "localhost"        
+                host = "127.0.0.1"        
             # Do not use the reloader, because Flask needs to run in the main thread to use the reloader
             server = make_server(host=host, port=port, app=app, threaded=True)
             return server

@@ -20,7 +20,6 @@ setup(
         'eth-hash>=0.3.1,<0.4.0',
         'eth-utils==1.9.5',
         'eth-rlp==0.2.0',
-        'rusty-rlp==0.1.15',
         # Commenting out these dependencies since we will be removing the parity integration soon enough
         #"""
         ## The following two requirements are for our fork of `keyfile.py`,
@@ -30,6 +29,8 @@ setup(
         #"""
         'setuptools'
     ],
+    # rusty-rlp==0.1.15 has to be downloaded as a tarball
+    dependency_links = ['https://github.com/cburgdorf/rusty-rlp/archive/refs/tags/0.1.15.tar.gz'],
     entry_points={
         'console_scripts': [
             'etheno = etheno.__main__:main'
