@@ -11,7 +11,7 @@ setup(
     install_requires=[
         'ptyprocess',
         'pysha3>=1.0.2',
-        'flask>=2.1.0',
+        'flask',
         # Pinning web3 to a low version to prevent conflicts with other packages
         'web3>=3.16.4',
         # Contextual version conflicts between eth-hash, eth-utils, eth-rlp, and rusty-rlp
