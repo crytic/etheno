@@ -19,15 +19,20 @@ from . import logger
 from . import parity
 from . import truffle
 
+# Constant for converting whole units to wei
+ETHER = 1e18
+
 
 def main(argv = None):
     parser = argparse.ArgumentParser(description='An Ethereum JSON RPC multiplexer, differential fuzzer, and test framework integration tool.')
     parser.add_argument('--debug', action='store_true', default=False, help='Enable debugging from within the web server')
     parser.add_argument('--run-publicly', action='store_true', default=False, help='Allow the web server to accept external connections')
     parser.add_argument('-p', '--port', type=int, default=GETH_DEFAULT_RPC_PORT, help='Port on which to run the JSON RPC webserver (default=%d)' % GETH_DEFAULT_RPC_PORT)
-    parser.add_argument('-a', '--accounts', type=int, default=None, help='Number of accounts to create in the client (default=10)')
-    parser.add_argument('-b', '--balance', type=float, default=100.0, help='Default balance (in Ether) to seed to each account (default=100.0)')
-    parser.add_argument('-c', '--gas-price', type=int, default=None, help='Default gas price (default=20000000000)')
+    parser.add_argument('-a', '--accounts', type=int, default=10, help='Number of accounts to create in the client (default=10)')
+    parser.add_argument('-b', '--balance', type=float, default=1000.0, help='Default balance (in Ether) to seed to each account (default=100.0)')
+    # TODO: do we really need a gas price specified for ganache? is there a use case here?
+    parser.add_argument('-c', '--gas-price', type=int, default=20000000000, help='Default gas price (default=20000000000)')
+    # TODO: networkID can have a default value it seems like
     parser.add_argument('-i', '--network-id', type=int, default=None, help='Specify a network ID (default is the network ID of the master client)')
     '''
     We might need the Echidna feature later for differential fuzz testing but for reducing confusion we will remove the command-line arguments
@@ -42,7 +47,7 @@ def main(argv = None):
     parser.add_argument('-g', '--ganache', action='store_true', default=False,
                         help='Run Ganache as a master JSON RPC client (cannot be used in conjunction with --master)')
     parser.add_argument('--ganache-cmd', type=str, default=None, help='Specify a command that runs Ganache '
-                                                                      '(default="/usr/bin/env ganache-cli")')
+                                                                      '(default="/usr/bin/env ganache")')
     parser.add_argument('--ganache-args', type=str, default=None,
                         help='Additional arguments to pass to Ganache')
     parser.add_argument('--ganache-port', type=int, default=None,
@@ -164,6 +169,7 @@ def main(argv = None):
         
     accounts = []
 
+    # TODO: args.gas_price is not set if a genesis file is provided 
     if args.genesis:
         with open(args.genesis, 'rb') as f:
             genesis = json.load(f)
@@ -186,7 +192,7 @@ def main(argv = None):
         # We will generate it further below once we've resolved all of the parameters
         genesis = None
 
-    accounts += make_accounts(args.accounts, default_balance=int(args.balance * 1000000000000000000))
+    accounts += make_accounts(args.accounts, default_balance=int(args.balance * ETHER))
 
     if genesis is not None:
         # add the new accounts to the genesis
@@ -214,13 +220,14 @@ def main(argv = None):
         if args.network_id is None:
             args.network_id = 0x657468656E6F # 'etheno' in hex
 
-        ganache_accounts = ["--account=%s,0x%x" % (acct.private_key, acct.balance) for acct in accounts]
+        # Have to use hex() so that string is hex-encoded (prefixed with 0x) that is necessary for Ganache v7.0+
+        # https://github.com/trufflesuite/ganache/discussions/1075
+        ganache_accounts = ["--account=%s,0x%x" % (hex(acct.private_key), acct.balance) for acct in accounts]
 
         ganache_args = ganache_accounts + ['-g', str(args.gas_price), '-i', str(args.network_id)]
 
         if args.ganache_args is not None:
             ganache_args += shlex.split(args.ganache_args)
-
         ganache_instance = ganache.Ganache(cmd=args.ganache_cmd, args=ganache_args, port=args.ganache_port)
 
         ETHENO.master_client = ganache.GanacheClient(ganache_instance)

@@ -179,7 +179,8 @@ class SelfPostingClient(EthenoClient):
 
     def wait_until_running(self):
         pass
-
+    
+    # TODO: need to ensure that JSON RPC calls match latest API spec
     def post(self, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         ret = self.client.post(data)
         if ret is not None and 'error' in ret:

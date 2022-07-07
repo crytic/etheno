@@ -4,7 +4,7 @@ import os
 import tempfile
 import threading
 import time
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Optional, Union, Any
 
 import ptyprocess
 
@@ -33,7 +33,7 @@ LEVEL_COLORS = {
     NOTSET: CGAColors.BLUE
 }
 
-
+# TODO: seems like this function can be removed, no references?
 def formatter_message(message: str, use_color: bool = True) -> str:
     if use_color:
         message = message.replace("$RESET", RESET_SEQ).replace("$BOLD", BOLD_SEQ)
@@ -307,7 +307,8 @@ class StreamLogger(threading.Thread):
         self._newline_char = newline_char
         self._buffers = [b'' for i in range(len(streams))]
         self._done: bool = False
-        self.log: Callable[[logging.Logger, Union[str, bytes]], ...] = lambda lgr, message: lgr.info(message)
+        # TODO: Made a small change here due to the ellipses not being allowed, make sure it does not create any other issues 
+        self.log: Callable[[logging.Logger, Union[str, bytes]], Any] = lambda lgr, message: lgr.info(message)
 
     def is_done(self) -> bool:
         return self._done
