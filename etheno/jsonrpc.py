@@ -150,6 +150,7 @@ class EventSummaryPlugin(EthenoPlugin):
             if 'to' not in result['result'] or result['result']['to'] is None:
                 # this transaction is creating a contract:
                 # TODO: key errors are likely here...need to figure out a better way to do error handling
+                # TODO: log a warning about non-zero ether values
                 contract_address = result['result']['contractAddress']
                 self.handle_contract_created(original_transaction['from'], contract_address, result['result']['gasUsed'], result['result']['effectiveGasPrice'], original_transaction['data'], value)
             else:

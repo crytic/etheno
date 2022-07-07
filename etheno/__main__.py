@@ -46,8 +46,11 @@ def main(argv = None):
                         help='Arguments to pass to truffle (default=migrate)')
     parser.add_argument('-g', '--ganache', action='store_true', default=False,
                         help='Run Ganache as a master JSON RPC client (cannot be used in conjunction with --master)')
+    # TODO: This cmd-line argument is error-prone and should probably be removed. Commenting it out for now.
+    """
     parser.add_argument('--ganache-cmd', type=str, default=None, help='Specify a command that runs Ganache '
                                                                       '(default="/usr/bin/env ganache")')
+    """
     parser.add_argument('--ganache-args', type=str, default=None,
                         help='Additional arguments to pass to Ganache')
     parser.add_argument('--ganache-port', type=int, default=None,

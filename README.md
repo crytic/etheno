@@ -9,7 +9,7 @@
 
 Etheno is the Ethereum testing Swiss Army knife. It’s a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools like [Echidna](https://github.com/trailofbits/echidna) on large, multi-contract projects.
 
-If you are a smart contract developer, you should use Etheno to test test your contracts. If you are an Ethereum client developer, you should use Etheno to perform differential testing on your implementation.
+If you are a smart contract developer, you should use Etheno to test your contracts. If you are an Ethereum client developer, you should use Etheno to perform differential testing on your implementation.
 
 Etheno is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Stheno), sister of Medusa, and mother of Echidna—which also happens to be the name of [our EVM property-based fuzz tester](https://github.com/trailofbits/echidna).
 
@@ -28,8 +28,13 @@ Use our prebuilt Docker container to quickly install and try Etheno:
 
 ```
 docker pull trailofbits/etheno
-docker run --rm -it trailofbits/etheno
+docker run -it trailofbits/etheno
 ```
+
+**NOTE:** Many of Etheno's capabilities will require publishing one or more ports and persisting data using volumes as part of the `docker run` command.
+- To learn about publishing ports, click [here](https://docs.docker.com/storage/volumes/)
+- To learn more about persisting data using volumes, click [here](https://docs.docker.com/storage/volumes/)
+
 
 Alternatively, natively install Etheno in a few shell commands:
 
@@ -62,9 +67,15 @@ etheno --ganache
 * `--balance` or `-b` sets the default balance (in Ether) to seed to each Ganache account (default is 1000.0)
 * `--gas-price` or `-c` sets the default gas price in wei for Ganache (default is 20_000_000_000)
 
-Running a Ganache instance via Etheno can be used to deploy large, multi-contract projects in tandem with Echidna. To learn more on how to use Echidna and Ganache together, click [here](https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/end-to-end-testing.md)
+Running a Ganache instance via Etheno can be used to deploy large, multi-contract projects in tandem with Echidna. To learn more on how to use Echidna and Ganache together, click [here](https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/end-to-end-testing.md).
+
+
+**NOTE:** We recommend using the latest version of Ganache (v7.3.2) and Node 16.x. After the upstream bug (see below) is fixed, the Ganache package should be upgraded.
+
 
 **NOTE:** Currently, there is an upstream bug in the latest version of Ganache (v7.3.2) that prevents the Etheno integration from working if the contract size that is being tested is very large (https://github.com/trufflesuite/ganache/issues/3332). 
+
+
 ### JSON RPC Server and Multiplexing
 
 This command starts a JSON RPC server and forwards all messages to the given clients:
@@ -128,6 +139,7 @@ saved:
 * Python 3.6 or newer 
 
 ### Optional Requirements
+* [Node](https://nodejs.org/en/) 16.x or newer to install various integrations
 * [Ganache](https://www.npmjs.com/package/ganache) 7.3.2 or newer for its associated integrations
 * [Truffle](https://www.npmjs.com/package/truffle) for its associated integrations
 * [Geth](https://github.com/ethereum/go-ethereum) and/or [Parity](https://github.com/paritytech/parity-ethereum), if you would like to have Etheno run them
