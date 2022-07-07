@@ -9,7 +9,7 @@
 
 Etheno is the Ethereum testing Swiss Army knife. It’s a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools like [Echidna](https://github.com/trailofbits/echidna) on large, multi-contract projects.
 
-If you are a smart contract developer, you should use Etheno to test your contracts. If you are an Ethereum client developer, you should use Etheno to perform differential testing on your implementation. For example, Etheno is [capable of automatically reproducing](examples/ConstantinopleGasUsage) the Constantinople gas usage consensus bug that caused a fork on Ropsten.
+If you are a smart contract developer, you should use Etheno to test test your contracts. If you are an Ethereum client developer, you should use Etheno to perform differential testing on your implementation.
 
 Etheno is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Stheno), sister of Medusa, and mother of Echidna—which also happens to be the name of [our EVM property-based fuzz tester](https://github.com/trailofbits/echidna).
 
@@ -28,7 +28,7 @@ Use our prebuilt Docker container to quickly install and try Etheno:
 
 ```
 docker pull trailofbits/etheno
-docker run -it trailofbits/etheno
+docker run --rm -it trailofbits/etheno
 ```
 
 Alternatively, natively install Etheno in a few shell commands:
@@ -49,6 +49,22 @@ etheno --ganache --truffle
 
 Etheno can be used in many different ways and therefore has numerous command-line argument combinations.
 
+### Ganache Integration
+
+A Ganache instance can automatically be run within Etheno:
+```
+etheno --ganache
+```
+
+* `--ganache-port` will set the port on which Ganache is run; if omitted, Etheno will choose the lowest port higher than the port on which Etheno’s JSON RPC server is running
+* `--ganache-args` lets you pass additional arguments to Ganache
+* `--accounts` or `-a` sets the number of accounts to create in Ganache (default is 10)
+* `--balance` or `-b` sets the default balance (in Ether) to seed to each Ganache account (default is 1000.0)
+* `--gas-price` or `-c` sets the default gas price in wei for Ganache (default is 20_000_000_000)
+
+Running a Ganache instance via Etheno can be used to deploy large, multi-contract projects in tandem with Echidna. To learn more on how to use Echidna and Ganache together, click [here](https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/end-to-end-testing.md)
+
+**NOTE:** Currently, there is an upstream bug in the latest version of Ganache (v7.3.2) that prevents the Etheno integration from working if the contract size that is being tested is very large (https://github.com/trufflesuite/ganache/issues/3332). 
 ### JSON RPC Server and Multiplexing
 
 This command starts a JSON RPC server and forwards all messages to the given clients:
@@ -61,7 +77,7 @@ etheno https://client1.url.com:1234/ https://client2.url.com:8545/ http://client
 * `--run-publicly` allows incoming JSON RPC connections from external computers on the network
 * `--debug` will run a web-based interactive debugger in the event that an internal Etheno client throws an exception while processing a JSON RPC call; this should _never_ be used in conjunction with `--run-publicly`
 * `--master` or `-s` will set the “master” client, which will be used for synchronizing with Etheno clients. If a master is not explicitly provided, it defaults to the first client listed.
-* `--raw`, when prefixed before a client URL, will cause Etheno to auto-sign all transactions and submit then to the client as raw transactions
+* `--raw`, when prefixed before a client URL, will cause Etheno to auto-sign all transactions and submit them to the client as raw transactions
 
 ### Geth and Parity Integration
 
@@ -75,19 +91,6 @@ The network ID of each client will default to 0x657468656E6F (equal to the strin
 
 EIP and hard fork block numbers can be set within a custom genesis.json as usual, or they may be specified as command-line options such as `--constantinople`.
 
-### Ganache Integration
-
-A Ganache instance can automatically be run within Etheno:
-```
-etheno --ganache
-```
-
-* `--ganache-port` will set the port on which Ganache is run; if omitted, Etheno will choose the lowest port higher than the port on which Etheno’s JSON RPC server is running
-* `--ganache-args` lets you pass additional arguments to Ganache
-* `--accounts` or `-a` sets the number of accounts to create in Ganache (default is 10)
-* `--balance` or `-b` sets the default balance (in Ether) to seed to each Ganache account (default is 100.0)
-* `--gas-price` or `-c` sets the default gas price for Ganache (default is 20000000000)
-
 ### Differential Testing
 
 Whenever two or more clients are run within Etheno, the differential
@@ -96,17 +99,6 @@ variety of different discrepancies between the clients, such as gas
 usage differences. A report is printed when Etheno exits.
 
 This plugin can be disabled with the `--no-differential-testing` option.
-
-### Property-Based Fuzz Testing
-
-Echidna can be run to fuzz test the clients, which is useful for differential testing:
-```
-etheno --echidna
-```
-By default, Echidna deploys a generic fuzz testing contract to all clients, enumerates a minimal set of transactions that maximize the coverage of the contract, sends those transactions to the clients, and then exits.
-
-* `--fuzz-limit` limits the number of transactions that Echidna will emit
-* `--fuzz-contract` lets the user specify a custom contract for Echidna to deploy and fuzz
 
 ### Truffle Integration
 
@@ -133,25 +125,16 @@ saved:
 
 ## Requirements
 
-* Python 3.6 or newer
-* [Flask](http://flask.pocoo.org/), which is used to run the JSON RPC server
+* Python 3.6 or newer 
 
 ### Optional Requirements
-* [Truffle and Ganache](https://truffleframework.com/) for their associated integrations
+* [Ganache](https://www.npmjs.com/package/ganache) 7.3.2 or newer for its associated integrations
+* [Truffle](https://www.npmjs.com/package/truffle) for its associated integrations
 * [Geth](https://github.com/ethereum/go-ethereum) and/or [Parity](https://github.com/paritytech/parity-ethereum), if you would like to have Etheno run them
-* [Echidna](https://github.com/trailofbits/echidna), for smart contract fuzzing and differential testing
-  * Note that Etheno currently requires the features in the [`dev-no-hedgehog` branch](https://github.com/trailofbits/echidna/tree/dev-no-hedgehog); Etheno will prompt you to automatically install this when you try and run it the first time
-  * Running Echidna also requires the [`solc`](https://github.com/ethereum/solidity) compiler
 
 ## Getting Help
 
 Feel free to stop by our [Slack channel](https://empirehacking.slack.com/) for help on using or extending Etheno.
-
-Documentation is available in several places:
-
-  * The [wiki](https://github.com/trailofbits/etheno/wiki) contains some basic information about getting started with Etheno and contributing
-
-  * The [examples](examples) directory has some very minimal examples that showcase API features
 
 ## License
 
