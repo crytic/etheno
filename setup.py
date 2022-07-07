@@ -12,14 +12,15 @@ setup(
         'ptyprocess',
         'pysha3>=1.0.2',
         'flask>=2.1.0',
-        # Pinning web3 to a much higher version to prevent potential conflicts with the below packages
-        'web3>=5.29.2',
+        # Pinning web3 to a low version to prevent conflicts with other packages
+        'web3>=3.16.4',
         # Contextual version conflicts between eth-hash, eth-utils, eth-rlp, and rusty-rlp
         # This works only if `--platform linux/amd64` is set since rusty-rlp==0.1.15 is not available for ARM architectures
         # This is super hacky but it works for now 
+        # This is likely going to cause conflicts with other packages :(
         'eth-hash>=0.3.1,<0.4.0',
-        'eth-utils==1.9.5',
-        'eth-rlp==0.2.0',
+        'eth-utils==1.10.0',
+        'eth-rlp<0.3.0',
         # Commenting out these dependencies since we will be removing the parity integration soon enough
         #"""
         ## The following two requirements are for our fork of `keyfile.py`,
