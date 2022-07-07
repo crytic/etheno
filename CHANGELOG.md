@@ -2,8 +2,23 @@
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.2.3...HEAD)
+## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.2.4...HEAD)
 
+## 0.3.0 - 2022-07-08
+
+### Changed
+- We are now using `ganache` instead of `ganache-cli` for running Ganache
+- Using the latest Flask version
+
+### Fixed
+- Fixed a bug that occurred when a `JSONRPCError` was being logged
+- Fixed a bug that occurred when using non-hex strings during Ganache initialization
+- Fixed a bug that prevented Ganache from being used from within a Docker container
+
+### Removed
+- Removed Manticore integration and all associated command-line parameters
+- Removed Echidna integration and all associated command-line parameters
+- Removed `examples/` folder since it is outdated and uses deprecated features
 ## 0.2.3 — 2019-06-27
 
 ### Added
