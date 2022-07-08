@@ -7,10 +7,11 @@ setup(
     author='Trail of Bits',
     version='0.3a1',
     packages=find_packages(),
-    python_requires='>=3.6',
+    python_requires='>=3.7',
     install_requires=[
         'ptyprocess',
         'pysha3>=1.0.2',
+        # TODO: identify what is the oldest flask version that the new shutdown mechanism is compatible with
         'flask',
         # Pinning web3 to a low version to prevent conflicts with other packages
         'web3>=3.16.4',
@@ -21,13 +22,6 @@ setup(
         'eth-hash>=0.3.1,<0.4.0',
         'eth-utils==1.10.0',
         'eth-rlp<0.3.0',
-        # Commenting out these dependencies since we will be removing the parity integration soon enough
-        #"""
-        ## The following two requirements are for our fork of `keyfile.py`,
-        ## but they should already be satisfied by the `web3` requirement
-        #'cytoolz>=0.9.0,<1.0.0',
-        #'pycryptodome>=3.4.7,<4.0.0',
-        #"""
         'setuptools'
     ],
     # rusty-rlp==0.1.15 has to be downloaded as a tarball

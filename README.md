@@ -136,7 +136,7 @@ saved:
 
 ## Requirements
 
-* Python 3.6 or newer 
+* Python 3.7 or newer 
 
 ### Optional Requirements
 * [Node](https://nodejs.org/en/) 16.x or newer to install various integrations

@@ -32,20 +32,6 @@ def to_account_address(raw_address: int) -> str:
 
 _CONTROLLER = threadwrapper.MainThreadController()
 
-
-# Using 'werkzeug.server.shutdown' is deprecated after Flask 2.1.x
-# TODO: Will probably remove this function
-@app.route('/shutdown')
-def _etheno_shutdown():
-    # shut down the Flask server
-    shutdown = request.environ.get('werkzeug.server.shutdown')
-    if shutdown is None:
-        raise RuntimeError('Not running with the Werkzeug Server')
-    _CONTROLLER.quit()
-    shutdown()
-    return ''
-
-
 class DropPost(RuntimeError):
     pass
 
@@ -325,18 +311,7 @@ class Etheno:
             client.shutdown()
         self.logger.close()
         _CONTROLLER.quit()
-        """
-        Won't need this if shutdown() function is removed
-        from urllib.request import urlopen
-        import socket
-        import urllib
-        try:
-            urlopen("http://127.0.0.1:%d/shutdown" % port, timeout = 2)
-        except socket.timeout:
-            pass
-        except urllib.error.URLError:
-            pass
-        """
+
 
     def run(self, debug=True, run_publicly=False, port=GETH_DEFAULT_RPC_PORT):
         # Manticore only works in the main thread, so use a threadsafe wrapper:

@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/).
 ### Changed
 - We are now using `ganache` instead of `ganache-cli` for running Ganache
 - Using the latest Flask version
+- Python 3.7.x is now the lowest allowed version
 
 ### Fixed
 - Fixed a bug that occurred when a `JSONRPCError` was being logged
