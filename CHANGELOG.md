@@ -2,7 +2,7 @@
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.2.4...HEAD)
+## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.3.0...HEAD)
 
 ## 0.3.0 - 2022-07-08
 
