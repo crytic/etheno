@@ -6,3 +6,4 @@ venv/
 *egg*
 init.json
 tests/drizzle/node_modules/
+tests/drizzle/artifacts/*
