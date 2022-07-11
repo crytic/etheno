@@ -1,6 +1,8 @@
 import json
 from typing import Dict, TextIO, Union
 
+from pyrsistent import m
+
 from .etheno import EthenoPlugin
 from .utils import format_hex_address
 from .client import JSONRPCError
@@ -57,6 +59,14 @@ def decode_raw_tx(raw_tx: str):
         'v': tx.v
     }
 
+def get_transaction_by_receipt_object(tx_hash: int) -> Dict:
+    tx_hash = hex(tx_hash)
+    return {
+        'id': 1,
+        'jsonrpc': '2.0',
+        'method': 'eth_getTransactionReceipt',
+        'params': [tx_hash]
+    }
 
 class JSONExporter:
     def __init__(self, out_stream: Union[str, TextIO]):
@@ -114,6 +124,14 @@ class EventSummaryPlugin(EthenoPlugin):
     def handle_function_call(self, from_address: str, to_address: str, gas_used: str, gas_price: str, data: str, value: str):
         self.logger.info(f'Function call with {value} wei from {from_address} to {to_address} with {(len(data)-2)//2} bytes of data for {gas_used} gas with a gas price of {gas_price}')
 
+    def handle_unlogged_transactions(self):
+        unlogged_transactions = dict(filter(lambda txn: txn[1]["is_logged"] == False, self._transactions.items()))
+        for (tx_hash, txn) in unlogged_transactions.items():
+            # might not need first conditional
+            post_data = get_transaction_by_receipt_object(tx_hash)
+            self._etheno.post(post_data)
+
+
     def after_post(self, post_data, result):
         if len(result):
             result = result[0]
@@ -128,11 +146,19 @@ class EventSummaryPlugin(EthenoPlugin):
             try:
                 transaction_hash = int(result['result'], 16)
             except ValueError:
+                self.logger.error(f'Unable to parse transaction with the following post data: {post_data} and result: {result}')
                 return
+            # Add a boolean to check at shutdown whether everything has been logged.
             if post_data['method'] == 'eth_sendRawTransaction':
-                self._transactions[transaction_hash] = decode_raw_tx(post_data['params'][0])
+                self._transactions[transaction_hash] = {
+                    "transaction": decode_raw_tx(post_data['params'][0]), 
+                    "is_logged": False
+                }
             else:
-                self._transactions[transaction_hash] = post_data['params'][0]
+                self._transactions[transaction_hash] = {
+                    "transaction": post_data['params'][0], 
+                    "is_logged": False
+                }
         elif post_data['method'] == 'evm_mine':
             self.handle_increase_block_number()
         elif post_data['method'] == 'evm_increaseTime':
@@ -142,7 +168,11 @@ class EventSummaryPlugin(EthenoPlugin):
             if transaction_hash not in self._transactions:
                 self.logger.error(f'Received transaction receipt {result} for unknown transaction hash {post_data["params"][0]}')
                 return
-            original_transaction = self._transactions[transaction_hash]
+            (original_transaction, is_logged) = self._transactions[transaction_hash]["transaction"], self._transactions[transaction_hash]["is_logged"] 
+            # Check if it was logged already
+            if is_logged:
+                self.logger.debug(f"Transaction hash {transaction_hash} has already been logged. This should not happen.")
+                return
             if 'value' not in original_transaction or original_transaction['value'] is None:
                 value = '0x0'
             else:
@@ -155,7 +185,8 @@ class EventSummaryPlugin(EthenoPlugin):
                 self.handle_contract_created(original_transaction['from'], contract_address, result['result']['gasUsed'], result['result']['effectiveGasPrice'], original_transaction['data'], value)
             else:
                 self.handle_function_call(original_transaction['from'], original_transaction['to'], result['result']['gasUsed'], result['result']['effectiveGasPrice'], original_transaction['data'] if 'data' in original_transaction else '0x', value)
-
+            # Transaction has been logged successfully
+            self._transactions[transaction_hash]["is_logged"] = True
 
 class EventSummaryExportPlugin(EventSummaryPlugin):
     def __init__(self, out_stream: Union[str, TextIO]):
@@ -209,6 +240,7 @@ class EventSummaryExportPlugin(EventSummaryPlugin):
         super().handle_function_call(from_address, to_address, gas_used, gas_price, data, value)
 
     def finalize(self):
+        super().handle_unlogged_transactions()
         self._exporter.finalize()
         if hasattr(self._exporter.output, 'name'):
             self.logger.info(f'Event summary JSON saved to {self._exporter.output.name}')
