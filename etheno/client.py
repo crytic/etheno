@@ -237,9 +237,9 @@ class SelfPostingClient(EthenoClient):
         :param tx_hash: the transaction hash for the transaction to monitor
         :return: The transaction receipt
         """
-        if isinstance(tx_hash, int):
-            tx_hash = "0x%x" % tx_hash
-        tx_hash = tx_hash.lower()
+        #if isinstance(tx_hash, int):
+        #    tx_hash = "0x00%x" % tx_hash
+        #tx_hash = tx_hash.lower()
         while True:
             receipt = self.post({
                 'id': 1,

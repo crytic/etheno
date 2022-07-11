@@ -12,5 +12,7 @@ describe("Deploy SimpleStorage", function() {
     await SimpleStorage.set(89, { from: account.address });
     // Check stored value
     expect(await SimpleStorage.storedData()).to.equal(89);
+    // Deploy another
+    const SimpleStorageTwo = await SimpleStorageFactory.deploy();
   });
 });
