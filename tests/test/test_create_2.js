@@ -2,6 +2,7 @@ const {expect} = require("chai");
 const {ethers} = require("hardhat")
 
 describe("Test Create2 logging", function() {
+  // TODO: Need to isolate deployment, calling of function, etc.
   it("Deploy Deployer and ToDeploy contracts", async function() {
     // Get DeployerFactory
     const DeployerFactory = await ethers.getContractFactory("Deployer");

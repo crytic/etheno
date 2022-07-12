@@ -1,5 +1,5 @@
 {
-  "name": "simple-test",
+  "name": "test-etheno",
   "dependencies": {
     "@openzeppelin/contracts": "^2.4.0"
   },
