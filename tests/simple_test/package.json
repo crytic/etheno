@@ -1,5 +1,5 @@
 {
-  "name": "drizzle-box",
+  "name": "simple-test",
   "dependencies": {
     "@openzeppelin/contracts": "^2.4.0"
   },
