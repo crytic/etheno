@@ -3,8 +3,10 @@
 import threading
 from threading import Condition
 
+
 def is_main_thread():
     return isinstance(threading.current_thread(), threading._MainThread)
+
 
 class MainThreadController(object):
     def __init__(self):
@@ -18,6 +20,7 @@ class MainThreadController(object):
         self._kwargs = None
         self._return = None
         self._quit = False
+
     def invoke(self, obj, *args, **kwargs):
         if is_main_thread():
             return obj.__call__(*args, **kwargs)
@@ -46,6 +49,7 @@ class MainThreadController(object):
             self._return = None
             if not released:
                 self._main_wake_up.release()
+
     def quit(self):
         self._main_wake_up.acquire()
         try:
@@ -53,12 +57,15 @@ class MainThreadController(object):
             self._main_wake_up.notify_all()
         finally:
             self._main_wake_up.release()
+
     def run(self):
         if not is_main_thread():
             raise Exception("run can only be called from the main thread!")
         from . import signals
+
         def signal_handler(signal, frame):
             self._quit = True
+
         signals.add_sigint_handler(signal_handler)
         while True:
             try:
@@ -78,25 +85,30 @@ class MainThreadController(object):
                     if self._quit:
                         return
 
+
 class MainThreadWrapper(object):
     def __init__(self, mainobj, controller):
         self._main = mainobj
         self._controller = controller
+
     def __call__(self, *args, **kwargs):
         ret = self._controller.invoke(self._main, *args, **kwargs)
         if id(self._main) == id(ret):
             return MainThreadWrapper(ret, self._controller)
         else:
             return ret
+
     def __getattribute__(self, name):
-        if name == '_main' or name == '_controller':
+        if name == "_main" or name == "_controller":
             return object.__getattribute__(self, name)
         elif isinstance(getattr(type(self._main), name), property):
             return getattr(self._main, name)
         else:
             return MainThreadWrapper(getattr(self._main, name), self._controller)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
+
     class MainThreadOnlyClass(object):
         def do_stuff(self):
             if not is_main_thread():
@@ -109,9 +121,12 @@ if __name__ == '__main__':
 
     def dostuff(mtoc):
         print(mtoc.do_stuff())
-    
+
     from threading import Thread
-    thread = Thread(target = dostuff, args = (MainThreadWrapper(main_thread_only, controller),))
+
+    thread = Thread(
+        target=dostuff, args=(MainThreadWrapper(main_thread_only, controller),)
+    )
     thread.start()
     controller.run()
     thread.join()

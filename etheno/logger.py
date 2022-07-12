@@ -30,7 +30,7 @@ LEVEL_COLORS = {
     WARNING: CGAColors.YELLOW,
     INFO: CGAColors.GREEN,
     DEBUG: CGAColors.CYAN,
-    NOTSET: CGAColors.BLUE
+    NOTSET: CGAColors.BLUE,
 }
 
 # TODO: seems like this function can be removed, no references?
@@ -60,30 +60,30 @@ class ColorFormatter(ComposableFormatter):
     def reformat(self, fmt: str) -> str:
         for color in CGAColors:
             fmt = fmt.replace("$%s" % color.name, ANSI_COLOR % (30 + color.value))
-        fmt = fmt.replace('$RESET', ANSI_RESET)
-        fmt = fmt.replace('$BOLD', ANSI_BOLD)
+        fmt = fmt.replace("$RESET", ANSI_RESET)
+        fmt = fmt.replace("$BOLD", ANSI_BOLD)
         return fmt
 
     @staticmethod
     def remove_color(fmt: str) -> str:
         for color in CGAColors:
-            fmt = fmt.replace("$%s" % color.name, '')
-        fmt = fmt.replace('$RESET', '')
-        fmt = fmt.replace('$BOLD', '')
-        fmt = fmt.replace('$LEVELCOLOR', '')
+            fmt = fmt.replace("$%s" % color.name, "")
+        fmt = fmt.replace("$RESET", "")
+        fmt = fmt.replace("$BOLD", "")
+        fmt = fmt.replace("$LEVELCOLOR", "")
         return fmt
 
     def new_formatter(self, fmt: str, *args, **kwargs) -> logging.Formatter:
-        if 'datefmt' in kwargs:
-            kwargs['datefmt'] = self.reformat(kwargs['datefmt'])
+        if "datefmt" in kwargs:
+            kwargs["datefmt"] = self.reformat(kwargs["datefmt"])
         return super().new_formatter(self.reformat(fmt), *args, **kwargs)
 
     def format(self, *args, **kwargs) -> str:
         levelcolor = LEVEL_COLORS.get(args[0].levelno, LEVEL_COLORS[NOTSET])
         ret = self._parent_formatter.format(*args, **kwargs)
-        ret = ret.replace('$LEVELCOLOR', ANSI_COLOR % (30 + levelcolor.value))
-        ret = ret.replace('\n', self.reformat('$RESET $BOLD$BLUE\\$RESET\n'), 1)
-        ret = ret.replace('\n', self.reformat('\n$RESET$BOLD$BLUE> $RESET'))
+        ret = ret.replace("$LEVELCOLOR", ANSI_COLOR % (30 + levelcolor.value))
+        ret = ret.replace("\n", self.reformat("$RESET $BOLD$BLUE\\$RESET\n"), 1)
+        ret = ret.replace("\n", self.reformat("\n$RESET$BOLD$BLUE> $RESET"))
         return ret
 
 
@@ -115,17 +115,23 @@ logging.getLogger = getLogger
 
 
 class EthenoLogger:
-    DEFAULT_FORMAT = '$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD]$NAME$RESET ' \
-                     '%(message)s'
-    
-    def __init__(self,
-                 name: str,
-                 log_level: Optional[int] = None,
-                 parent: Optional["EthenoLogger"] = None,
-                 cleanup_empty: bool = False,
-                 displayname: Optional[str] = None):
+    DEFAULT_FORMAT = (
+        "$RESET$LEVELCOLOR$BOLD%(levelname)-8s $BLUE[$RESET$WHITE%(asctime)14s$BLUE$BOLD]$NAME$RESET "
+        "%(message)s"
+    )
+
+    def __init__(
+        self,
+        name: str,
+        log_level: Optional[int] = None,
+        parent: Optional["EthenoLogger"] = None,
+        cleanup_empty: bool = False,
+        displayname: Optional[str] = None,
+    ):
         if name in ETHENO_LOGGERS:
-            raise Exception(f'An EthenoLogger instance for name {name} already exists: {ETHENO_LOGGERS[name]}')
+            raise Exception(
+                f"An EthenoLogger instance for name {name} already exists: {ETHENO_LOGGERS[name]}"
+            )
         ETHENO_LOGGERS[name] = self
         self._directory: Optional[str] = None
         self.parent: Optional[EthenoLogger] = parent
@@ -138,14 +144,19 @@ class EthenoLogger:
             self.displayname = displayname
         if log_level is None:
             if parent is None:
-                raise ValueError('A logger must be provided a parent if `log_level` is None')
+                raise ValueError(
+                    "A logger must be provided a parent if `log_level` is None"
+                )
             log_level = parent.log_level
         self._log_level: int = log_level
         self._logger: logging.Logger = _LOGGING_GETLOGGER(name)
         self._handlers: List[logging.Handler] = [logging.StreamHandler()]
         if log_level is not None:
             self.log_level = log_level
-        formatter = ColorFormatter(self.DEFAULT_FORMAT.replace('$NAME', self._name_format()), datefmt='%m$BLUE-$WHITE%d$BLUE|$WHITE%H$BLUE:$WHITE%M$BLUE:$WHITE%S')
+        formatter = ColorFormatter(
+            self.DEFAULT_FORMAT.replace("$NAME", self._name_format()),
+            datefmt="%m$BLUE-$WHITE%d$BLUE|$WHITE%H$BLUE:$WHITE%M$BLUE:$WHITE%S",
+        )
         if self.parent is None:
             formatter = NonInfoFormatter(formatter)
         else:
@@ -168,8 +179,14 @@ class EthenoLogger:
                             os.remove(log_path)
             # next, check if the output directory can be cleaned up
             if self.directory:
-                for dirpath, dirnames, filenames in os.walk(self.directory, topdown=False):
-                    if len(dirnames) == 0 and len(filenames) == 0 and dirpath != self.directory:
+                for dirpath, dirnames, filenames in os.walk(
+                    self.directory, topdown=False
+                ):
+                    if (
+                        len(dirnames) == 0
+                        and len(filenames) == 0
+                        and dirpath != self.directory
+                    ):
                         os.rmdir(dirpath)
         if self._tmpdir is not None:
             self._tmpdir.cleanup()
@@ -180,11 +197,18 @@ class EthenoLogger:
         return self._directory
 
     def _add_child(self, child):
-        if child in self.children or any(c for c in self.children if c.name == child.name):
-            raise ValueError("Cannot double-add child logger %s to logger %s" % (child.name, self.name))
+        if child in self.children or any(
+            c for c in self.children if c.name == child.name
+        ):
+            raise ValueError(
+                "Cannot double-add child logger %s to logger %s"
+                % (child.name, self.name)
+            )
         self.children.append(child)
         if self.directory is not None:
-            child.save_to_directory(os.path.join(self.directory, child.name.replace(os.sep, '-')))
+            child.save_to_directory(
+                os.path.join(self.directory, child.name.replace(os.sep, "-"))
+            )
         else:
             child._tmpdir = tempfile.TemporaryDirectory()
             child.save_to_directory(child._tmpdir.name)
@@ -198,10 +222,15 @@ class EthenoLogger:
         if self.parent is not None and self.parent.parent is not None:
             ret = self.parent._name_format()
         else:
-            ret = ''
+            ret = ""
         return ret + "[$RESET$WHITE%s$BLUE$BOLD]" % self.displayname
 
-    def addHandler(self, handler: logging.Handler, include_descendants: bool = True, set_log_level: bool = True):
+    def addHandler(
+        self,
+        handler: logging.Handler,
+        include_descendants: bool = True,
+        set_log_level: bool = True,
+    ):
         if set_log_level:
             handler.setLevel(self.log_level)
         self._logger.addHandler(handler)
@@ -210,16 +239,24 @@ class EthenoLogger:
             self._descendant_handlers.append(handler)
             for child in self.children:
                 if isinstance(child, EthenoLogger):
-                    child.addHandler(handler, include_descendants=include_descendants, set_log_level=set_log_level)
+                    child.addHandler(
+                        handler,
+                        include_descendants=include_descendants,
+                        set_log_level=set_log_level,
+                    )
                 else:
                     child.addHandler(handler)
 
-    def make_logged_file(self, prefix=None, suffix=None, mode='w+b', dir: Optional[str] = None):
+    def make_logged_file(
+        self, prefix=None, suffix=None, mode="w+b", dir: Optional[str] = None
+    ):
         """Returns an opened file stream to a unique file created according to the provided naming scheme"""
         if dir is None:
-            dir = ''
+            dir = ""
         else:
-            dir = os.path.relpath(os.path.realpath(dir), start=os.path.realpath(self.directory))
+            dir = os.path.relpath(
+                os.path.realpath(dir), start=os.path.realpath(self.directory)
+            )
         os.makedirs(os.path.join(self.directory, dir), exist_ok=True)
         i = 1
         while True:
@@ -235,7 +272,7 @@ class EthenoLogger:
     def make_constant_logged_file(self, contents: Union[str, bytes], *args, **kwargs):
         """Creates a logged file, populates it with the provided contents, and returns the absolute path to the file."""
         if isinstance(contents, str):
-            contents = contents.encode('utf-8')
+            contents = contents.encode("utf-8")
         with self.make_logged_file(*args, **kwargs) as f:
             f.write(contents)  # type: ignore
             return os.path.realpath(f.name)
@@ -252,18 +289,33 @@ class EthenoLogger:
             log_level = self.log_level
         handler = logging.FileHandler(path)
         handler.setLevel(log_level)
-        handler.setFormatter(logging.Formatter(ColorFormatter.remove_color(self.DEFAULT_FORMAT.replace('$NAME', self._name_format())), datefmt='%m-%d|%H:%M:%S'))
-        self.addHandler(handler, include_descendants=include_descendants, set_log_level=False)
+        handler.setFormatter(
+            logging.Formatter(
+                ColorFormatter.remove_color(
+                    self.DEFAULT_FORMAT.replace("$NAME", self._name_format())
+                ),
+                datefmt="%m-%d|%H:%M:%S",
+            )
+        )
+        self.addHandler(
+            handler, include_descendants=include_descendants, set_log_level=False
+        )
 
     def save_to_directory(self, path):
         if self.directory == path:
             # we are already set to save to this directory
             return
         elif self.directory is not None:
-            raise ValueError("Logger %s's save directory is already set to %s" % (self.name, path))
+            raise ValueError(
+                "Logger %s's save directory is already set to %s" % (self.name, path)
+            )
         self._directory = os.path.realpath(path)
         os.makedirs(path, exist_ok=True)
-        self.save_to_file(os.path.join(path, "%s.log" % self.name.replace(os.sep, '-')), include_descendants=False, log_level=DEBUG)
+        self.save_to_file(
+            os.path.join(path, "%s.log" % self.name.replace(os.sep, "-")),
+            include_descendants=False,
+            log_level=DEBUG,
+        )
         for child in self.children:
             child.save_to_directory(os.path.join(path, child.name))
 
@@ -271,7 +323,9 @@ class EthenoLogger:
     def log_level(self):
         if self._log_level is None:
             if self.parent is None:
-                raise ValueError('A logger must be provided a parent if `log_level` is None')
+                raise ValueError(
+                    "A logger must be provided a parent if `log_level` is None"
+                )
             return self.parent.log_level
         else:
             return self._log_level
@@ -294,21 +348,23 @@ class EthenoLogger:
         return getattr(self._logger, name)
 
     def __repr__(self):
-        return f'{type(self).__name__}(name={self.name!r}, log_level={self.log_level!r}, parent={self.parent!r}, cleanup_empty={self.cleanup_empty!r}, displayname={self.displayname!r})'
+        return f"{type(self).__name__}(name={self.name!r}, log_level={self.log_level!r}, parent={self.parent!r}, cleanup_empty={self.cleanup_empty!r}, displayname={self.displayname!r})"
 
-    
+
 class StreamLogger(threading.Thread):
-    def __init__(self, logger: logging.Logger, *streams, newline_char=b'\n'):
+    def __init__(self, logger: logging.Logger, *streams, newline_char=b"\n"):
         super().__init__(daemon=True)
         self.logger: logging.Logger = logger
         self.streams = streams
         if isinstance(newline_char, str):
-            newline_char = newline_char.encode('utf-8')
+            newline_char = newline_char.encode("utf-8")
         self._newline_char = newline_char
-        self._buffers = [b'' for i in range(len(streams))]
+        self._buffers = [b"" for i in range(len(streams))]
         self._done: bool = False
-        # TODO: Made a small change here due to the ellipses not being allowed, make sure it does not create any other issues 
-        self.log: Callable[[logging.Logger, Union[str, bytes]], Any] = lambda lgr, message: lgr.info(message)
+        # TODO: Made a small change here due to the ellipses not being allowed, make sure it does not create any other issues
+        self.log: Callable[
+            [logging.Logger, Union[str, bytes]], Any
+        ] = lambda lgr, message: lgr.info(message)
 
     def is_done(self) -> bool:
         return self._done
@@ -322,10 +378,10 @@ class StreamLogger(threading.Thread):
                         byte = stream.read(1)
                         while byte is not None and len(byte):
                             if isinstance(byte, str):
-                                byte = byte.encode('utf-8')
+                                byte = byte.encode("utf-8")
                             if byte == self._newline_char:
                                 self.log(self.logger, self._buffers[i].decode())
-                                self._buffers[i] = b''
+                                self._buffers[i] = b""
                             else:
                                 self._buffers[i] += byte
                             got_byte = True
@@ -340,7 +396,11 @@ class StreamLogger(threading.Thread):
 class ProcessLogger(StreamLogger):
     def __init__(self, logger, process):
         self.process = process
-        super().__init__(logger, open(process.stdout.fileno(), buffering=1), open(process.stderr.fileno(), buffering=1))
+        super().__init__(
+            logger,
+            open(process.stdout.fileno(), buffering=1),
+            open(process.stderr.fileno(), buffering=1),
+        )
 
     def is_done(self):
         return self.process.poll() is not None
@@ -358,7 +418,7 @@ class PtyLogger(StreamLogger):
         return getattr(self.process, name)
 
 
-if __name__ == '__main__':
-    logger = EthenoLogger('Testing', DEBUG)
-    logger.info('Info')
-    logger.critical('Critical')
+if __name__ == "__main__":
+    logger = EthenoLogger("Testing", DEBUG)
+    logger.info("Info")
+    logger.critical("Critical")

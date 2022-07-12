@@ -9,7 +9,7 @@ class ContractSynchronizer(EthenoPlugin):
             source_client = RpcProxyClient(source_client)
         self.source = source_client
         self.contract = format_hex_address(contract_address, True)
-        
+
     def added(self):
         # get the contract:
         pass
