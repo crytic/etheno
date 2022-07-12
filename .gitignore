@@ -5,7 +5,7 @@ dist
 venv/
 *egg*
 init.json
-tests/drizzle/node_modules/
-tests/drizzle/artifacts/
-tests/drizzle/yarn.lock
-tests/drizzle/cache/
+tests/*/node_modules/
+tests/*/artifacts/
+tests/*/yarn.lock
+tests/*/cache/
