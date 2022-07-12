@@ -273,6 +273,7 @@ class Etheno:
         self.clients.append(client)
         self._create_accounts(client)
 
+
     def deploy_contract(self, from_address, bytecode, gas=0x99999, gas_price=None, value=0) -> Optional[int]:
         if gas_price is None:
             gas_price = self.master_client.get_gas_price()
@@ -299,6 +300,19 @@ class Etheno:
         else:
             return None
 
+
+    def get_transaction_receipt_request(self, tx_hash: str) -> Dict:
+        """
+        Takes in a transaction hash and returns the request object for an eth_getTransactionReceipt API call
+        """
+        return {
+            'id': 1,
+            'jsonrpc': '2.0',
+            'method': 'eth_getTransactionReceipt',
+            'params': [tx_hash]
+    }
+
+    
     def shutdown(self, port: int = GETH_DEFAULT_RPC_PORT):
         if self._shutting_down:
             return

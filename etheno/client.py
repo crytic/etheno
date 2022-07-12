@@ -237,16 +237,9 @@ class SelfPostingClient(EthenoClient):
         :param tx_hash: the transaction hash for the transaction to monitor
         :return: The transaction receipt
         """
-        #if isinstance(tx_hash, int):
-        #    tx_hash = "0x00%x" % tx_hash
-        #tx_hash = tx_hash.lower()
         while True:
-            receipt = self.post({
-                'id': 1,
-                'jsonrpc': '2.0',
-                'method': 'eth_getTransactionReceipt',
-                'params': [tx_hash]
-            })
+            request_object = self.etheno.get_transaction_receipt_request(tx_hash)
+            receipt = self.post(request_object)
             if tx_hash in self._failed_transactions or transaction_receipt_succeeded(receipt) is not None:
                 return receipt
             self.logger.info("Waiting to mine transaction %s..." % tx_hash)

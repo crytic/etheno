@@ -59,18 +59,6 @@ def decode_raw_tx(raw_tx: str):
         'v': tx.v
     }
 
-def get_transaction_by_receipt_object(tx_hash: int) -> Dict:
-
-    #if isinstance(tx_hash, int):
-    #    tx_hash = "0x00%x" % tx_hash
-    #tx_hash = tx_hash.lower()
-    return {
-        'id': 1,
-        'jsonrpc': '2.0',
-        'method': 'eth_getTransactionReceipt',
-        'params': [tx_hash]
-    }
-
 class JSONExporter:
     def __init__(self, out_stream: Union[str, TextIO]):
         self._was_path = isinstance(out_stream, str)
@@ -130,7 +118,7 @@ class EventSummaryPlugin(EthenoPlugin):
     def handle_unlogged_transactions(self):
         unlogged_transactions = dict(filter(lambda txn: txn[1]["is_logged"] == False, self._transactions.items()))
         for (tx_hash, txn) in unlogged_transactions.items():
-            post_data = get_transaction_by_receipt_object(tx_hash)
+            post_data = self._etheno.get_transaction_receipt_request(tx_hash)
             self._etheno.post(post_data)
 
 
@@ -146,13 +134,6 @@ class EventSummaryPlugin(EthenoPlugin):
 
         elif (post_data['method'] == 'eth_sendTransaction' or post_data['method'] == 'eth_sendRawTransaction') and 'result' in result:
             transaction_hash = result['result']
-            """
-            try:
-                transaction_hash = int(result['result'], 16)
-            except ValueError:
-                self.logger.error(f'Unable to parse transaction with the following post data: {post_data} and result: {result}')
-                return
-            """
             # Add a boolean to check at shutdown whether everything has been logged.
             if post_data['method'] == 'eth_sendRawTransaction':
                 self._transactions[transaction_hash] = {
@@ -170,7 +151,6 @@ class EventSummaryPlugin(EthenoPlugin):
             self.handle_increase_block_timestamp(post_data['params'][0])
         elif post_data['method'] == 'eth_getTransactionReceipt':
             transaction_hash = post_data['params'][0]
-            #transaction_hash = int(post_data['params'][0], 16)
             if transaction_hash not in self._transactions:
                 self.logger.error(f'Received transaction receipt {result} for unknown transaction hash {post_data["params"][0]}')
                 return
