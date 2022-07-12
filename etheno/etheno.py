@@ -215,7 +215,6 @@ class Etheno:
         else:
             if method == "eth_getTransactionReceipt":
                 # for eth_getTransactionReceipt, make sure we block until all clients have mined the transaction
-                print(data["params"][0])
                 ret = self.master_client.wait_for_transaction(data["params"][0])
                 if "id" in data and "id" in ret:
                     ret["id"] = data["id"]
