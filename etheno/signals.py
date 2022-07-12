@@ -10,6 +10,7 @@ def add_handler(signal_type, handler):
         if current_handler:
             current_handler(sig_type, frame)
         handler(sig_type, frame)
+
     signal.signal(signal_type, new_handler)
 
 

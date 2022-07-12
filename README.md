@@ -7,9 +7,9 @@
 <br />
 
 
-Etheno is the Ethereum testing Swiss Army knife. It’s a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools like [Manticore](https://github.com/trailofbits/manticore/) and [Echidna](https://github.com/trailofbits/echidna) on large, multi-contract projects. In particular, custom Manticore analysis scripts require less code, are simpler to write, and integrate with Truffle.
+Etheno is the Ethereum testing Swiss Army knife. It’s a JSON RPC multiplexer, analysis tool wrapper, and test integration tool. It eliminates the complexity of setting up analysis tools like [Echidna](https://github.com/trailofbits/echidna) on large, multi-contract projects.
 
-If you are a smart contract developer, you should use Etheno to test your contracts. If you are an Ethereum client developer, you should use Etheno to perform differential testing on your implementation. For example, Etheno is [capable of automatically reproducing](examples/ConstantinopleGasUsage) the Constantinople gas usage consensus bug that caused a fork on Ropsten.
+If you are a smart contract developer, you should use Etheno to test your contracts. If you are an Ethereum client developer, you should use Etheno to perform differential testing on your implementation.
 
 Etheno is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/Stheno), sister of Medusa, and mother of Echidna—which also happens to be the name of [our EVM property-based fuzz tester](https://github.com/trailofbits/echidna).
 
@@ -19,14 +19,8 @@ Etheno is named after the Greek goddess [Stheno](https://en.wikipedia.org/wiki/S
   * API for filtering and modifying JSON RPC calls
   * Enables differential testing by sending JSON RPC sequences to multiple Ethereum clients
   * Deploy to and interact with multiple networks at the same time
-* **Analysis Tool Wrapper**: Etheno provides a JSON RPC client for advanced analysis tools like [Manticore](https://github.com/trailofbits/manticore/)
-  * Lowers barrier to entry for using advanced analysis tools
-  * No need for custom scripts to set up account and contract state
-  * Analyze arbitrary transactions without Solidity source code
 * **Integration with Test Frameworks** like Ganache and Truffle
   * Run a local test network with a single command
-  * Use Truffle migrations to bootstrap Manticore analyses
-  * Symbolic semantic annotations within unit tests
 
 ## Quickstart
 
@@ -35,11 +29,12 @@ Use our prebuilt Docker container to quickly install and try Etheno:
 ```
 docker pull trailofbits/etheno
 docker run -it trailofbits/etheno
-
-# Run one of the examples
-etheno@982abdc96791:~$ cd examples/BrokenMetaCoin/
-etheno@982abdc96791:~/examples/BrokenMetaCoin$ etheno --truffle --ganache --manticore --manticore-max-depth 2 --manticore-script ExploitMetaCoinManticoreScript.py
 ```
+
+**NOTE:** Many of Etheno's capabilities will require publishing one or more ports and persisting data using volumes as part of the `docker run` command.
+- To learn about publishing ports, click [here](https://docs.docker.com/storage/volumes/)
+- To learn more about persisting data using volumes, click [here](https://docs.docker.com/storage/volumes/)
+
 
 Alternatively, natively install Etheno in a few shell commands:
 
@@ -52,12 +47,34 @@ pip3 install --user etheno
 
 # Use the Etheno CLI
 cd /path/to/a/truffle/project
-etheno --manticore --ganache --truffle
+etheno --ganache --truffle
 ```
 
 ## Usage
 
 Etheno can be used in many different ways and therefore has numerous command-line argument combinations.
+
+### Ganache Integration
+
+A Ganache instance can automatically be run within Etheno:
+```
+etheno --ganache
+```
+
+* `--ganache-port` will set the port on which Ganache is run; if omitted, Etheno will choose the lowest port higher than the port on which Etheno’s JSON RPC server is running
+* `--ganache-args` lets you pass additional arguments to Ganache
+* `--accounts` or `-a` sets the number of accounts to create in Ganache (default is 10)
+* `--balance` or `-b` sets the default balance (in Ether) to seed to each Ganache account (default is 1000.0)
+* `--gas-price` or `-c` sets the default gas price in wei for Ganache (default is 20_000_000_000)
+
+Running a Ganache instance via Etheno can be used to deploy large, multi-contract projects in tandem with Echidna. To learn more on how to use Echidna and Ganache together, click [here](https://github.com/crytic/building-secure-contracts/blob/master/program-analysis/echidna/end-to-end-testing.md).
+
+
+**NOTE:** We recommend using the latest version of Ganache (v7.3.2) and Node 16.x. After the upstream bug (see below) is fixed, the Ganache package should be upgraded.
+
+
+**NOTE:** Currently, there is an upstream bug in the latest version of Ganache (v7.3.2) that prevents the Etheno integration from working if the contract size that is being tested is very large (https://github.com/trufflesuite/ganache/issues/3332). 
+
 
 ### JSON RPC Server and Multiplexing
 
@@ -70,8 +87,8 @@ etheno https://client1.url.com:1234/ https://client2.url.com:8545/ http://client
 * `--port` or `-p` allows you to specify a port on which to run Etheno’s JSON RPC server (default is 8545)
 * `--run-publicly` allows incoming JSON RPC connections from external computers on the network
 * `--debug` will run a web-based interactive debugger in the event that an internal Etheno client throws an exception while processing a JSON RPC call; this should _never_ be used in conjunction with `--run-publicly`
-* `--master` or `-s` will set the “master” client, which will be used for synchronizing with Etheno clients like Manticore. If a master is not explicitly provided, it defaults to the first client listed.
-* `--raw`, when prefixed before a client URL, will cause Etheno to auto-sign all transactions and submit then to the client as raw transactions
+* `--master` or `-s` will set the “master” client, which will be used for synchronizing with Etheno clients. If a master is not explicitly provided, it defaults to the first client listed.
+* `--raw`, when prefixed before a client URL, will cause Etheno to auto-sign all transactions and submit them to the client as raw transactions
 
 ### Geth and Parity Integration
 
@@ -85,24 +102,6 @@ The network ID of each client will default to 0x657468656E6F (equal to the strin
 
 EIP and hard fork block numbers can be set within a custom genesis.json as usual, or they may be specified as command-line options such as `--constantinople`.
 
-### Ganache Integration
-
-A Ganache instance can automatically be run within Etheno:
-```
-etheno --ganache
-```
-
-* `--ganache-port` will set the port on which Ganache is run; if omitted, Etheno will choose the lowest port higher than the port on which Etheno’s JSON RPC server is running
-* `--ganache-args` lets you pass additional arguments to Ganache
-* `--accounts` or `-a` sets the number of accounts to create in Ganache (default is 10)
-* `--balance` or `-b` sets the default balance (in Ether) to seed to each Ganache account (default is 100.0)
-* `--gas-price` or `-c` sets the default gas price for Ganache (default is 20000000000)
-
-**NOTE**: As of September, 2020, there is
-[an upstream bug in `ganache-cli` that prevents it from being run on Node version 14](https://github.com/trufflesuite/ganache-cli/issues/732).
-If you intend to use Truffle and/or Ganache, we suggest using Node 12 (_e.g._,
-with [`nvm`](https://github.com/nvm-sh/nvm)). 
-
 ### Differential Testing
 
 Whenever two or more clients are run within Etheno, the differential
@@ -112,48 +111,12 @@ usage differences. A report is printed when Etheno exits.
 
 This plugin can be disabled with the `--no-differential-testing` option.
 
-### Property-Based Fuzz Testing
-
-Echidna can be run to fuzz test the clients, which is useful for differential testing:
-```
-etheno --echidna
-```
-By default, Echidna deploys a generic fuzz testing contract to all clients, enumerates a minimal set of transactions that maximize the coverage of the contract, sends those transactions to the clients, and then exits.
-
-* `--fuzz-limit` limits the number of transactions that Echidna will emit
-* `--fuzz-contract` lets the user specify a custom contract for Echidna to deploy and fuzz
-
-### Manticore Client
-
-Manticore—which, by itself, does not implement a JSON RPC interface—can be run as an Etheno client, synchronizing its accounts with Etheno’s master client and symbolically executing all transactions sent to Etheno.
-```
-etheno --manticore
-```
-This alone will not run any Manticore analyses; they must either be run manually, or automated through [the `--truffle` command](#truffle-integration);
-
-* `--manticore-verbosity` sets Manticore’s logging verbosity (default is 3)
-* `--manticore-max-depth` sets the maximum state depth for Manticore to explore; if omitted, Manticore will have no depth limit
-
 ### Truffle Integration
 
 Truffle migrations can automatically be run within a Truffle project:
 ```
 etheno --truffle
 ```
-
-When combined with the `--manticore` option, this will automatically run Manticore’s default analyses on all contracts created once the Truffle migration completes:
-```
-etheno --truffle --manticore
-```
-
-This requires a master JSON RPC client, so will most often be used in conjunction with Ganache. If a local Ganache server is not running, you can simply add that to the command:
-```
-etheno --truffle --manticore --ganache
-```
-
-If you would like to run a custom Manticore script instead of the standard Manticore analysis and detectors, it can be specified using the `--manticore-script` or `-r` command.
-
-This script does not need to import Manticore or create a `ManticoreEVM` object; Etheno will run the script with a global variable called `manticore` that already contains all of the accounts and contracts automatically provisioned.  See the [`BrokenMetaCoin` Manticore script](examples/BrokenMetaCoin/ExploitMetaCoinManticoreScript.py) for an example.
 
 Additional arguments can be passed to Truffle using `--truffle-args`.
 
@@ -173,26 +136,17 @@ saved:
 
 ## Requirements
 
-* Python 3.6 or newer
-* [Manticore](https://github.com/trailofbits/manticore/) release 0.2.2 or newer
-* [Flask](http://flask.pocoo.org/), which is used to run the JSON RPC server
+* Python 3.7 or newer 
 
 ### Optional Requirements
-* [Truffle and Ganache](https://truffleframework.com/) for their associated integrations
+* [Node](https://nodejs.org/en/) 16.x or newer to install various integrations
+* [Ganache](https://www.npmjs.com/package/ganache) 7.3.2 or newer for its associated integrations
+* [Truffle](https://www.npmjs.com/package/truffle) for its associated integrations
 * [Geth](https://github.com/ethereum/go-ethereum) and/or [Parity](https://github.com/paritytech/parity-ethereum), if you would like to have Etheno run them
-* [Echidna](https://github.com/trailofbits/echidna), for smart contract fuzzing and differential testing
-  * Note that Etheno currently requires the features in the [`dev-no-hedgehog` branch](https://github.com/trailofbits/echidna/tree/dev-no-hedgehog); Etheno will prompt you to automatically install this when you try and run it the first time
-  * Running Echidna also requires the [`solc`](https://github.com/ethereum/solidity) compiler
 
 ## Getting Help
 
 Feel free to stop by our [Slack channel](https://empirehacking.slack.com/) for help on using or extending Etheno.
-
-Documentation is available in several places:
-
-  * The [wiki](https://github.com/trailofbits/etheno/wiki) contains some basic information about getting started with Etheno and contributing
-
-  * The [examples](examples) directory has some very minimal examples that showcase API features
 
 ## License
 

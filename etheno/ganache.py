@@ -19,18 +19,22 @@ class Ganache(RpcHttpProxy):
         if cmd is not None:
             cmd = shlex.split(cmd)
         else:
-            cmd = ['/usr/bin/env', 'ganache-cli']
+            cmd = ["/usr/bin/env", "ganache"]
         if args is None:
             args = []
-        self.args = cmd + ['-d', '-p', str(port)] + args
+        self.args = (
+            cmd + ["-d", "-p", str(port), "--chain.allowUnlimitedContractSize"] + args
+        )
         self.ganache = None
         self._client = None
 
     def start(self):
         if self.ganache:
             return
-        if shutil.which("ganache-cli") is None:
-            raise ValueError("`ganache-cli` is not installed! Install it by running `npm -g i ganache-cli`")
+        if shutil.which("ganache") is None:
+            raise ValueError(
+                "`ganache` is not installed! Install it by running `npm -g i ganache`"
+            )
         if self._client:
             self.ganache = PtyLogger(self._client.logger, self.args)
             self.ganache.start()
@@ -39,9 +43,12 @@ class Ganache(RpcHttpProxy):
                 if self.ganache.is_done():
                     return self.ganache.exitstatus
                 return 0
+
         else:
             ETHENO.logger.debug(f"Running ganache: {self.args}")
-            self.ganache = subprocess.Popen(self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1)
+            self.ganache = subprocess.Popen(
+                self.args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1
+            )
 
             def ganache_errored():
                 try:
@@ -55,7 +62,9 @@ class Ganache(RpcHttpProxy):
             time.sleep(0.25)
         retcode = ganache_errored()
         if retcode != 0:
-            raise RuntimeError(f"{' '.join(self.args)} exited with non-zero status {retcode}")
+            raise RuntimeError(
+                f"{' '.join(self.args)} exited with non-zero status {retcode}"
+            )
 
     def post(self, data):
         if self.ganache is None:
