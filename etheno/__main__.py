@@ -23,6 +23,7 @@ from . import geth
 from . import logger
 from . import parity
 from . import truffle
+from .precompiler import Precompiler
 
 # Constant for converting whole units to wei
 ETHER = 1e18
@@ -125,6 +126,13 @@ def main(argv=None):
         default=None,
         help="Port on which to run Ganache (defaults to the closest available port to the port "
         "specified with --port plus one)",
+    )
+    parser.add_argument(
+        "-arb",
+        "--deploy-arbitrum-contracts",
+        action="store_true",
+        default=False,
+        help="Deploy ArbSys and ArbRetryableTx", # TODO: Improve description down the line
     )
     parser.add_argument(
         "-go",
@@ -517,6 +525,13 @@ def main(argv=None):
         thread = Thread(target=truffle_thread)
         thread.start()
 
+    # TODO: Will this only be allowed with Ganache?
+    if args.deploy_arbitrum_contracts and ETHENO.master_client is not None:
+        print("hello there!")
+        precompiler = Precompiler(deploy_arb=args.deploy_arbitrum_contracts)
+        ETHENO.add_plugin(precompiler)
+
+    
     # Without Manticore integration the only client types are geth, parity, and command-line raw/regular clients.
     # So checking len() >= 1 should be sufficient.
     if (
