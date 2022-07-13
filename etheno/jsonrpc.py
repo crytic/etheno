@@ -1,8 +1,6 @@
 import json
 from typing import Dict, TextIO, Union
 
-from pyrsistent import m
-
 from .etheno import EthenoPlugin
 from .utils import format_hex_address
 from .client import JSONRPCError
