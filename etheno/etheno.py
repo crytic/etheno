@@ -323,7 +323,9 @@ class Etheno:
             and "contractAddress" in receipt["result"]
             and receipt["result"]["contractAddress"]
         ):
-            return int(receipt["result"]["contractAddress"], 16)
+            # No longer returning an integer because if the address starts with zeros, those will be truncated when converted to integer
+            # and then back to a hex string.
+            return receipt["result"]["contractAddress"]
         else:
             return None
 

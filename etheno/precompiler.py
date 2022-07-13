@@ -12,16 +12,39 @@ class Precompiler(EthenoPlugin):
 
     
     def run(self):
+        from_address = self._etheno.accounts[0]
         if self._deploy_arb:
-            with open(self._arb_sys_file, 'rb') as arb_sys_file:
-                arb_sys_file_bytes = arb_sys_file.read()
-            arb_sys_bytecode = self.compile(arb_sys_file_bytes)
-            print(arb_sys_bytecode)
+            # Deploy ArbSys
+            # TODO: could decrease cyclomatic complexity here a bit
+            if os.path.exists(self._arb_sys_file):
+                with open(self._arb_sys_file, 'rb') as arb_sys_file:
+                    arb_sys_file_bytes = arb_sys_file.read()
+                arb_sys_bytecode = self.compile(arb_sys_file_bytes)   
+                # If solc returns None, throw error and move on.
+                if arb_sys_bytecode:
+                    arb_sys_contract_address = self._etheno.deploy_contract(from_address=from_address, bytecode=arb_sys_bytecode)
+                else:
+                    self.logger.error(f"Could not deploy ArbSys due to compilation issues")
+            else:
+                self.logger.error(f"Could not find ArbSys.sol file at:\n{self._arb_sys_file}")
+            
+            # Deploy ArbRetryableTx
+            if os.path.exists(self._arb_retryable_tx_file):
+                with open(self._arb_retryable_tx_file, 'rb') as arb_retryable_tx_file:
+                    arb_retryable_tx_file_bytes = arb_retryable_tx_file.read()
+                arb_retryable_tx_file_bytecode = self.compile(arb_retryable_tx_file_bytes)
+                # If solc returns None, throw error and move on.   
+                if arb_retryable_tx_file_bytecode:
+                    arb_retryable_tx_contract_address = self._etheno.deploy_contract(from_address=from_address, bytecode=arb_retryable_tx_file_bytecode)
+                    print(arb_retryable_tx_contract_address)
+                else:
+                    self.logger.error(f"Could not deploy ArbRetryableTx due to compilation issues")        
         return
     
 
     def compile(self, solidity):
-        with ConstantTemporaryFile(solidity, prefix='echidna', suffix='.sol') as contract:
+        # TODO: Why was prefix and suffix given?
+        with ConstantTemporaryFile(solidity) as contract:
             solc = subprocess.Popen(['/usr/bin/env', 'solc', '--bin', contract], stderr=subprocess.PIPE,
                                     stdout=subprocess.PIPE, bufsize=1, universal_newlines=True)
             errors = solc.stderr.read().strip()
@@ -30,17 +53,20 @@ class Precompiler(EthenoPlugin):
                 self.logger.error(f"{errors}\n{output}")
                 return None
             self.logger.warning(errors)
-            # There is an interface and a contract so there are two instances of "Binary" - both need to be removed
-            # TODO: do we need the interface
-            # TODO: can this be done better?
+            # Only the last contract in the compiled bytecode is deployed.
+            # TODO: do we need the interface?
             binary_key = 'Binary:'
             binary_key_len = len(binary_key)
-            offset_one = output.find(binary_key)
-            offset_two = output[(offset_one+binary_key_len):].find(binary_key)
-            if offset_one < 0 or offset_two < 0:
-                self.logger.error(f"Could not parse `solc` output:\n{output}")
+            total_offset = 0
+            while True:
+                offset = output[total_offset:].find(binary_key)
+                if offset < 0:
+                    break
+                total_offset += (offset + binary_key_len)
+            try:
+                code = hex(int(output[total_offset:].strip(), 16))
+                self.logger.debug(f"Compiled contract code: {code}")
+                return code
+            except Exception as e:
+                self.logger.error(f"Could not parse `solc` output:\n{output}\n with this error:\n{e}")
                 return None
-            final_offset = offset_one + offset_two + (binary_key_len * 2)
-            code = hex(int(output[final_offset:].strip(), 16))
-            self.logger.debug(f"Compiled contract code: {code}")
-            return code
