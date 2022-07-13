@@ -81,4 +81,5 @@ ENV HOME=/home/etheno
 ENV DOCKER=1
 WORKDIR /home/etheno
 
+# TODO: Need to copy tests and models 
 CMD ["/bin/bash"]
