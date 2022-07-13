@@ -77,7 +77,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     mapping(bytes32 => address) private ticketBeneficiary;
 
 
-    function createTicket(bytes32 userTxHash, address beneficiary) public {
+    function createTicket(bytes32 userTxHash, address beneficiary) public  {
          require(ticketTimeout[userTxHash] == 0);
          ticketTimeout[userTxHash] = block.timestamp + 1 days;
          ticketBeneficiary[userTxHash] = beneficiary;
@@ -90,7 +90,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * If this reverts, userTxHash is still available for redemption (until it times out or is canceled).
     * @param userTxHash unique identifier of retryable message: keccak256(keccak256(ArbchainId, inbox-sequence-number), uint(0) )
     */
-    function redeem(bytes32 userTxHash) external {
+    function redeem(bytes32 userTxHash) external override {
         require(ticketTimeout[userTxHash] > 0);
         delete ticketTimeout[userTxHash];
         delete ticketBeneficiary[userTxHash]; 
@@ -100,7 +100,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @notice Return the minimum lifetime of redeemable txn.
     * @return lifetime in seconds
     */
-    function getLifetime() external view returns(uint) {
+    function getLifetime() external override view returns(uint) {
         return 1 days;
     }
 
@@ -110,7 +110,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @param userTxHash unique ticket identifier
     * @return timestamp for ticket's deadline
     */
-    function getTimeout(bytes32 userTxHash) external view returns(uint) {
+    function getTimeout(bytes32 userTxHash) external override view returns(uint) {
         return ticketTimeout[userTxHash];
     }
 
@@ -119,7 +119,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @param calldataSize call data size to get price of (in wei)
     * @return (price, nextUpdateTimestamp). Price is guaranteed not to change until nextUpdateTimestamp.
     */ 
-    function getSubmissionPrice(uint calldataSize) external view returns (uint, uint) {
+    function getSubmissionPrice(uint calldataSize) external override view returns (uint, uint) {
         return (1, 1);
      }
 
@@ -128,7 +128,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
      * @param userTxHash unique ticket identifier
      * @return (price, nextUpdateTimestamp). Price is guaranteed not to change until nextUpdateTimestamp.
     */
-    function getKeepalivePrice(bytes32 userTxHash) external view returns(uint, uint) {
+    function getKeepalivePrice(bytes32 userTxHash) external override view returns(uint, uint) {
         return (1, 1);
     }
 
@@ -139,7 +139,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @param userTxHash unique ticket identifier
     * @return New timeout of userTxHash.
     */
-    function keepalive(bytes32 userTxHash) external payable returns(uint) {
+    function keepalive(bytes32 userTxHash) external override payable returns(uint) {
         require(msg.value > 0);
         require(ticketTimeout[userTxHash] > 0);
         ticketTimeout[userTxHash] += 1 days; 
@@ -152,7 +152,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * @param userTxHash unique ticket identifier
     * @return address of beneficiary for ticket
     */
-    function getBeneficiary(bytes32 userTxHash) external view returns (address) {
+    function getBeneficiary(bytes32 userTxHash) external override view returns (address) {
         require(ticketTimeout[userTxHash] > 0); 
         return ticketBeneficiary[userTxHash];
     }
@@ -162,7 +162,7 @@ contract ArbRetryableTxEmulated is ArbRetryableTx {
     * Revert if userTxHash doesn't exist, or if called by anyone other than userTxHash's beneficiary.
     * @param userTxHash unique ticket identifier
     */
-    function cancel(bytes32 userTxHash) external {
+    function cancel(bytes32 userTxHash) external override {
         require(ticketTimeout[userTxHash] > 0);
         delete ticketTimeout[userTxHash];
         delete ticketBeneficiary[userTxHash];
