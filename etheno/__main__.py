@@ -6,7 +6,6 @@ import sys
 from threading import Thread
 
 from .client import RpcProxyClient
-from .differentials import DifferentialTester
 from .echidna import echidna_exists, EchidnaPlugin, install_echidna
 from .etheno import app, EthenoView, GETH_DEFAULT_RPC_PORT, ETHENO, VERSION_NAME
 from .genesis import Account, make_accounts, make_genesis
@@ -89,8 +88,6 @@ def main(argv=None):
                         help='The block in which to enable Constantinople EIPs (default=do not enable Constantinople)')
     parser.add_argument('--constantinople', action='store_true', default=False,
                         help='Enables Constantinople EIPs; equivalent to `--constantinople-block 0`')
-    parser.add_argument('--no-differential-testing', action='store_false', dest='run_differential', default=True,
-                        help='Do not run differential testing, which is run by default')
     parser.add_argument('-l', '--log-level', type=str.upper, choices={'CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG'},
                         default='INFO', help='Set Etheno\'s log level (default=INFO)')
     parser.add_argument('--log-file', type=str, default=None,
@@ -381,14 +378,6 @@ def main(argv=None):
 
         thread = Thread(target=truffle_thread)
         thread.start()
-
-    if args.run_differential and (ETHENO.master_client is not None) and \
-            next(filter(lambda c: not isinstance(c, ManticoreClient), ETHENO.clients), False):
-        # There are at least two non-Manticore clients running
-        ETHENO.logger.info("Initializing differential tests to compare clients %s" % ', '.join(
-            map(str, [ETHENO.master_client] + ETHENO.clients)
-        ))
-        ETHENO.add_plugin(DifferentialTester())
 
     if args.echidna:
         contract_source = None
