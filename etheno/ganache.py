@@ -19,6 +19,8 @@ class Ganache(RpcHttpProxy):
         if cmd is not None:
             cmd = shlex.split(cmd)
         else:
+            if shutil.which("ganache-cli") is None:
+                raise ValueError("`ganache-cli` is not installed! Install it by running `npm -g i ganache-cli`")
             cmd = ['/usr/bin/env', 'ganache-cli']
         if args is None:
             args = []
@@ -29,8 +31,6 @@ class Ganache(RpcHttpProxy):
     def start(self):
         if self.ganache:
             return
-        if shutil.which("ganache-cli") is None:
-            raise ValueError("`ganache-cli` is not installed! Install it by running `npm -g i ganache-cli`")
         if self._client:
             self.ganache = PtyLogger(self._client.logger, self.args)
             self.ganache.start()
