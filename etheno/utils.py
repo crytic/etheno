@@ -41,6 +41,8 @@ def decode_hex(data: Optional[str]) -> Optional[bytes]:
 
 
 def decode_value(v: Union[str, int]) -> int:
+    if v is None:
+        return 0
     if isinstance(v, int):
         return v
     elif v.startswith('0x') or (frozenset(['a', 'b', 'c', 'd', 'e', 'f']) & frozenset(v)):
@@ -92,7 +94,7 @@ def find_open_port(starting_port: int = 1025) -> int:
 
 def clear_directory(path: str):
     """
-    Deletes the contents of a directory, but not the directory itself. 
+    Deletes the contents of a directory, but not the directory itself.
     This is safe to use on symlinked directories.
     Symlinks will be deleted, but the files and directories they point to will not be deleted.
     If `path` itself is a symlink, the symlink will be deleted.

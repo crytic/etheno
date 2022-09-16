@@ -55,16 +55,24 @@ class GethClient(JSONRPCClient):
             raise e
 
     def import_account(self, private_key):
+        if not private_key:
+            self.logger.warn("Skipping import of account without private key")
+            return
+
         content = format_hex_address(private_key).encode('utf-8') + bytes([ord('\n')])
         import_dir = os.path.join(self.log_directory, 'private_keys')
         keyfile = self.logger.make_constant_logged_file(content, prefix='private', suffix='.key', dir=import_dir)
         while True:
             args = ['/usr/bin/env', 'geth', 'account', 'import', '--datadir', self.logger.to_log_path(self.datadir), '--password', self.logger.to_log_path(self.passwords), self.logger.to_log_path(keyfile)]
+
             self.add_to_run_script(args)
+
             geth = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=self.log_directory)
+            geth.communicate()
             if geth.wait() == 0:
                 return
             # This sometimes happens with geth, I have no idea why, so just try again
+            self.logger.warn("Could not import account using command `%s` ..retrying", " ".join(args))
 
     def post(self, data):
         # geth takes a while to unlock all of the accounts, so check to see if that caused an error and just wait a bit
@@ -89,8 +97,9 @@ class GethClient(JSONRPCClient):
             verbosity = 3
         else:
             verbosity = 4
-        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--rpc', '--rpcport', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.logger.to_log_path(self.datadir), '--mine', '--etherbase', format_hex_address(self.miner_account.address), f"--verbosity={verbosity}", '--minerthreads=1']
+        base_args = ['/usr/bin/env', 'geth', '--nodiscover', '--http',  '--http.rpcprefix',  '/', '--rpc.allow-unprotected-txs', '--http.port', "%d" % self.port, '--networkid', "%d" % self.genesis['config']['chainId'], '--datadir', self.logger.to_log_path(self.datadir), '--mine', '--miner.etherbase', format_hex_address(self.miner_account.address), f"--verbosity={verbosity}", '--miner.threads=1']
         if unlock_accounts:
+            # FIXME Account unlock with HTTP access is now forbidden, we should catch that direcly during arg parsing
             addresses = filter(lambda a : a != format_hex_address(self.miner_account.address), map(format_hex_address, self.genesis['alloc']))
             unlock_args = ['--unlock', ','.join(addresses), '--password', self.passwords]
         else:
