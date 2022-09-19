@@ -1,9 +1,11 @@
-FROM ubuntu:bionic
+FROM ubuntu:focal
 MAINTAINER Evan Sultanik
 
+
 RUN DEBIAN_FRONTEND=noninteractive \
-    apt-get update && apt-get install -y --no-install-recommends \
+    apt-get update && apt-get install -y tcl --no-install-recommends \
     curl \
+    tzdata \
     ca-certificates \
     bash-completion \
     sudo \
