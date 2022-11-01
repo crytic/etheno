@@ -5,7 +5,7 @@ setup(
     description="Etheno is a JSON RPC multiplexer, differential fuzzer, and test framework integration tool.",
     url="https://github.com/trailofbits/etheno",
     author="Trail of Bits",
-    version="0.3.1",
+    version="0.3.2",
     packages=find_packages(),
     python_requires=">=3.7",
     install_requires=[
@@ -23,10 +23,6 @@ setup(
         "eth-utils==1.10.0",
         "eth-rlp<0.3.0",
         "setuptools",
-    ],
-    # rusty-rlp==0.1.15 has to be downloaded as a tarball
-    dependency_links=[
-        "https://github.com/cburgdorf/rusty-rlp/archive/refs/tags/0.1.15.tar.gz"
     ],
     entry_points={"console_scripts": ["etheno = etheno.__main__:main"]},
     classifiers=[

@@ -2,9 +2,14 @@
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/).
 
-## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.3.0...HEAD)
+## [Unreleased](https://github.com/trailofbits/etheno/compare/v0.3.2...HEAD)
 
-## 0.3.0 - 2022-07-08
+## 0.3.2 - 2022-11-01
+
+### Fixed
+- Dropped `rusty-rlp` dependency so that ARM Docker builds work as expected during QEMU emulation
+
+## 0.3.1 - 2022-11-01
 
 ### Changed
 - We are now using `ganache` instead of `ganache-cli` for running Ganache
