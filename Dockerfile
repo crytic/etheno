@@ -10,7 +10,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     python3-setuptools
 
 # Needed for rusty-rlp wheel
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.62.1
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 RUN --mount=type=bind,target=/etheno \
