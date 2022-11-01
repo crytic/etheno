@@ -9,15 +9,10 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-ins
     python3-pip \
     python3-setuptools
 
-# Needed for rusty-rlp wheel
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.62.1
-ENV PATH="/root/.cargo/bin:${PATH}"
-
 RUN --mount=type=bind,target=/etheno \
     cd /etheno && \
     pip3 install --no-cache-dir --upgrade pip setuptools && \
     pip3 wheel --no-cache-dir -w /wheels \
-    https://github.com/cburgdorf/rusty-rlp/archive/refs/tags/0.1.15.tar.gz \
     .
 
 

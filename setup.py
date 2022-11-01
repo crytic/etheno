@@ -24,10 +24,6 @@ setup(
         "eth-rlp<0.3.0",
         "setuptools",
     ],
-    # rusty-rlp==0.1.15 has to be downloaded as a tarball
-    dependency_links=[
-        "https://github.com/cburgdorf/rusty-rlp/archive/refs/tags/0.1.15.tar.gz"
-    ],
     entry_points={"console_scripts": ["etheno = etheno.__main__:main"]},
     classifiers=[
         "Development Status :: 4 - Beta",
