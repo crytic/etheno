@@ -5,7 +5,7 @@ setup(
     description="Etheno is a JSON RPC multiplexer, differential fuzzer, and test framework integration tool.",
     url="https://github.com/trailofbits/etheno",
     author="Trail of Bits",
-    version="0.3a1",
+    version="0.3.1",
     packages=find_packages(),
     python_requires=">=3.7",
     install_requires=[
