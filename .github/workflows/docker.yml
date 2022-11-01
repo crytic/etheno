@@ -8,18 +8,30 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
 
-      - name: GitHub Login
-        uses: azure/docker-login@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        id: buildx
         with:
-          login-server: docker.pkg.github.com
+          install: true
+
+      - name: DockerHub Login
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+
+      - name: GitHub Container Registry Login
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set Docker Package and Version
-        env:
-          ACTIONS_ALLOW_UNSECURE_COMMANDS: true
+        id: version
         run: |
           set +e
           _=$(echo "$GITHUB_REF" | grep "^refs/heads/")
@@ -41,20 +53,18 @@ jobs:
             PKG=etheno
           fi
           set -e
-          echo "::set-env name=PKG::$PKG"
-          echo "::set-env name=VER::$VER"
+          echo "::set-output name=PKG::$PKG"
+          echo "::set-output name=VER::$VER"
 
-      - name: Docker Build
-        run: docker build -t $PKG:$VER .
 
-      - name: DockerHub Login
-        uses: azure/docker-login@v1
+      - name: Docker build and push
+        uses: docker/build-push-action@v3
         with:
-          login-server: registry.hub.docker.com
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
-
-      - name: Docker Push
-        run: |
-          docker tag $PKG:$VER registry.hub.docker.com/trailofbits/$PKG:$VER
-          docker push registry.hub.docker.com/trailofbits/$PKG:$VER
+          push: true
+          target: final
+          platforms: |
+            linux/arm64/v8
+            linux/amd64
+          tags: |
+            trailofbits/${{ steps.version.outputs.PKG }}:${{ steps.version.outputs.VER }}
+            ghcr.io/${{ github.repository }}/${{ steps.version.outputs.PKG }}:${{ steps.version.outputs.VER }}
