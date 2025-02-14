@@ -1,3 +1,6 @@
+The repo is now archived. Use [medusa](https://github.com/crytic/medusa) for fuzzing. To learn more: https://secure-contracts.com/
+
+
 # Etheno
 [![Slack Status](https://slack.empirehacking.nyc/badge.svg)](https://slack.empirehacking.nyc)
 [![PyPI version](https://badge.fury.io/py/etheno.svg)](https://badge.fury.io/py/etheno)
